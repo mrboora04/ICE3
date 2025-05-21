@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="burnt_orange">#757575</color>
-    <color name="light_grey">#d1c4e9</color>
-    <color name="bright_orange">#512da8</color>
+    <color name="deep_purple">#6B2DB1</color>
+    <color name="darker_purple">#603B8A</color>
+    <color name="vibrant_purple">#7114DB</color>
+    <color name="dark_grayish_purple">#2C2733</color>
+    <color name="light_grayish_purple">#363438</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
 </resources>
