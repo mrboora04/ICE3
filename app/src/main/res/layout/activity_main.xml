@@ -7,7 +7,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-
     <LinearLayout
         android:id="@+id/Row6"
         android:layout_width="wrap_content"
@@ -36,6 +35,7 @@
             android:text="@string/result_default"
             android:textSize="@dimen/result_text_size" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/Row5"
         android:layout_width="wrap_content"
@@ -67,9 +67,9 @@
             android:layout_margin="@dimen/button_margin"
             android:layout_weight="1"
             android:backgroundTint="@color/bright_orange"
-            android:padding="@dimen/zero"
-            android:textColor="@color/black"
             android:fontFamily="@font/fa_solid_900"
+            android:textColor="@color/black"
+            android:padding="@dimen/zero"
             android:text="@string/clear_button_text"
             android:textSize="@dimen/button_text_size"
             app:cornerRadius="@dimen/button_corner_radius" />
@@ -101,8 +101,8 @@
             android:text="@string/divide_button_text"
             android:textSize="@dimen/button_text_size"
             app:cornerRadius="@dimen/button_corner_radius" />
-
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/Row4"
         android:layout_width="wrap_content"
@@ -168,8 +168,8 @@
             android:text="@string/multiply_button_text"
             android:textSize="@dimen/button_text_size"
             app:cornerRadius="@dimen/button_corner_radius" />
-
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/Row3"
         android:layout_width="wrap_content"
@@ -223,7 +223,7 @@
             app:cornerRadius="@dimen/button_corner_radius" />
 
         <Button
-            android:id="@+id/minusMinusButton"
+            android:id="@+id/minusButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/button_margin"
@@ -236,6 +236,7 @@
             android:textSize="@dimen/button_text_size"
             app:cornerRadius="@dimen/button_corner_radius" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/Row2"
         android:layout_width="wrap_content"
@@ -301,8 +302,8 @@
             android:text="@string/plus_button_text"
             android:textSize="@dimen/button_text_size"
             app:cornerRadius="@dimen/button_corner_radius" />
-
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/Row1"
         android:layout_width="wrap_content"
@@ -344,30 +345,29 @@
         <Button
             android:id="@+id/decimalButton"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="@dimen/button_margin"
-            android:layout_weight="1"
-            android:backgroundTint="@color/light_grey"
-            android:fontFamily="@font/fa_solid_900"
-            android:padding="@dimen/zero"
-            android:text="@string/decimal_button_text"
-            android:textColor="@color/white"
-            android:textSize="@dimen/button_text_size"
-            app:cornerRadius="@dimen/button_corner_radius" />
+            android:layout_height="60dp"
+        android:layout_margin="@dimen/button_margin"
+        android:layout_weight="1"
+        android:backgroundTint="@color/light_grey"
+        android:fontFamily="@font/fa_solid_900"
+        android:padding="@dimen/zero"
+        android:text="@string/decimal_button_text"
+        android:textColor="@color/white"
+        android:textSize="@dimen/button_text_size"
+        app:cornerRadius="@dimen/button_corner_radius" />
 
         <Button
             android:id="@+id/equalsButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/fa_solid_900"
             android:layout_margin="@dimen/button_margin"
             android:layout_weight="1"
-            android:textColor="@color/black"
-            android:backgroundTint="#CC5500"
-            android:padding="@dimen/zero"
-            android:text="@string/equals_button_text"
-            android:textSize="@dimen/button_text_size"
-            app:cornerRadius="@dimen/button_corner_radius" />
+            android:backgroundTint="@color/burnt_orange"
+        android:fontFamily="@font/fa_solid_900"
+        android:padding="@dimen/zero"
+        android:text="@string/equals_button_text"
+        android:textColor="@color/black"
+        android:textSize="@dimen/button_text_size"
+        app:cornerRadius="@dimen/button_corner_radius" />
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
