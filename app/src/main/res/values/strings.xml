@@ -33,6 +33,5 @@
     <string name="zero_button_text">0</string>
     <string name="decimal_button_text">.</string>
     <string name="equals_button_text">=</string>
-    <string name="spinner_icon"
-    \uf110 />
+    <string name="spinner_icon" />
 </resources>
