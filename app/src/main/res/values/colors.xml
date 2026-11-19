@@ -1,10 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="deep_purple">#6B2DB1</color>
-    <color name="darker_purple">#603B8A</color>
-    <color name="vibrant_purple">#7114DB</color>
-    <color name="dark_grayish_purple">#2C2733</color>
-    <color name="light_grayish_purple">#363438</color>
-    <color name="black">#000000</color>
-    <color name="white">#FFFFFF</color>
+    <color name="ground">#F7EEEA</color>
+    <color name="ground_dark">#1B1317</color>
+    <color name="icon_bg">#F7EEEA</color>
 </resources>
