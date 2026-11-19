@@ -2,6 +2,8 @@ package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.FoodCatalog
+import com.mrboora.plate.data.FoodItem
+import com.mrboora.plate.data.OpenFoodFacts
 import com.mrboora.plate.data.Goal
 import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.Profile
@@ -68,5 +70,21 @@ class NutritionTest {
         assertEquals("80", 80f.clean())
         assertEquals("0.25", 0.25f.clean())
         assertEquals("79.9", 79.9f.clean())
+    }
+
+    @Test fun perItemFoodsScaleByCount() {
+        val burger = FoodItem("Test burger", "Test", kcal100 = 700f, protein100 = 35f, carbs100 = 50f, fat100 = 40f, servingG = 1f, perItem = true)
+        assertEquals(1400f, burger.kcalFor(2f), 0.01f)
+        assertEquals(17.5f, burger.proteinFor(0.5f), 0.01f)
+        val rice = FoodCatalog.foods.first { it.name.startsWith("Basmati") }
+        assertEquals(rice.kcal100 * 2, rice.kcalFor(200f), 0.01f)
+    }
+
+    @Test fun parsesBothOpenFoodFactsFormats() {
+        val modern = org.json.JSONObject("""{"product_name":"Big Mac","brands":["McDonald's"],"nutriments":{"energy-kcal_100g":228,"proteins_100g":11.6}}""")
+        val classic = org.json.JSONObject("""{"product_name":"Cookie","brands":"Brand A, Brand B","nutriments":{"energy_100g":2092}}""")
+        assertEquals("McDonald's", OpenFoodFacts.parse(modern)!!.brand)
+        assertEquals("Brand A", OpenFoodFacts.parse(classic)!!.brand)
+        assertEquals(500f, OpenFoodFacts.parse(classic)!!.kcal100, 0.5f)
     }
 }

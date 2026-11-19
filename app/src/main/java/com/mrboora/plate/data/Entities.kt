@@ -1,5 +1,6 @@
 package com.mrboora.plate.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -39,15 +40,21 @@ data class FoodEntry(
     val meal: Meal,
     val name: String,
     val brand: String,
+    /** Amount eaten: grams when [unit] is "g", number of items when it is "item". */
     val grams: Float,
     val kcal: Float,
     val protein: Float,
     val carbs: Float,
     val fat: Float,
     val createdAt: Long = System.currentTimeMillis(),
-)
+    @ColumnInfo(defaultValue = "g") val unit: String = "g",
+) {
+    val amountText: String get() = if (unit == "item") "${trimNum(grams)} ×" else "${grams.toInt()} g"
+}
 
-/** A food the user has created or used before. Values are per 100 g. */
+private fun trimNum(v: Float) = "%.2f".format(java.util.Locale.US, v).trimEnd('0').trimEnd('.')
+
+/** A food the user has created or used before. Values are per 100 g, or per item when [perItem]. */
 @Entity(tableName = "saved_food")
 data class SavedFood(
     @PrimaryKey val key: String,
@@ -60,6 +67,7 @@ data class SavedFood(
     val servingG: Float,
     val custom: Boolean,
     val lastUsed: Long,
+    @ColumnInfo(defaultValue = "0") val perItem: Boolean = false,
 )
 
 @Entity(tableName = "weight")
@@ -70,7 +78,10 @@ data class Water(@PrimaryKey val day: Long, val ml: Int)
 
 data class DayTotal(val day: Long, val kcal: Float)
 
-/** Any food shown in search results, from any source. Values are per 100 g. */
+/**
+ * Any food shown in search results, from any source.
+ * Values are per 100 g, or per single item (a burger, a coffee) when [perItem] is true.
+ */
 data class FoodItem(
     val name: String,
     val brand: String = "",
@@ -81,18 +92,22 @@ data class FoodItem(
     val servingG: Float = 100f,
     val servingLabel: String = "",
     val source: Source = Source.BUILT_IN,
+    val perItem: Boolean = false,
 ) {
     enum class Source { BUILT_IN, SAVED, CUSTOM, ONLINE }
 
     val key: String get() = "${name.trim().lowercase()}|${brand.trim().lowercase()}"
 
-    fun kcalFor(g: Float) = kcal100 * g / 100f
-    fun proteinFor(g: Float) = protein100 * g / 100f
-    fun carbsFor(g: Float) = carbs100 * g / 100f
-    fun fatFor(g: Float) = fat100 * g / 100f
+    /** [amount] is grams, or a count of items for per-item foods. */
+    private fun factor(amount: Float) = if (perItem) amount else amount / 100f
+    fun kcalFor(amount: Float) = kcal100 * factor(amount)
+    fun proteinFor(amount: Float) = protein100 * factor(amount)
+    fun carbsFor(amount: Float) = carbs100 * factor(amount)
+    fun fatFor(amount: Float) = fat100 * factor(amount)
 }
 
 fun SavedFood.toItem() = FoodItem(
     name, brand, kcal100, protein100, carbs100, fat100, servingG,
     source = if (custom) FoodItem.Source.CUSTOM else FoodItem.Source.SAVED,
+    perItem = perItem,
 )

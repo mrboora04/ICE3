@@ -230,7 +230,7 @@ private fun MealCard(meal: Meal, items: List<FoodEntry>, onAdd: () -> Unit, onDe
                     Text(e.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val brand = if (e.brand.isNotBlank()) "${e.brand} · " else ""
                     Text(
-                        "$brand${e.grams.roundToInt()} g · P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
+                        "$brand${e.amountText} · P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
                         style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }

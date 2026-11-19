@@ -38,6 +38,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -162,7 +165,7 @@ fun AddFoodScreen(
                 } else {
                     item {
                         Text(
-                            "Search the built-in list, or tap Search online to look through Open Food Facts. Foods you add show up here next time.",
+                            "Search the built-in list, or tap Search online for packaged foods from Open Food Facts. For restaurant meals like an A&W burger, tap Create and enter the calories from the restaurant's menu once. Foods you add show up here next time.",
                             style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -181,6 +184,11 @@ fun AddFoodScreen(
                         "loading" -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         null -> if (online.isEmpty()) TextButton({ runOnline() }) { Text("Not here? Search Open Food Facts for \"$query\"") }
                         else -> Text(s, style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                    }
+                }
+                item {
+                    TextButton({ showCreate = true }) {
+                        Text("Eating out? Add \"$query\" from the restaurant's menu numbers")
                     }
                 }
             }
@@ -218,7 +226,7 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
                 Text(food.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val parts = buildList {
                     if (food.brand.isNotBlank()) add(food.brand)
-                    add("${food.kcal100.roundToInt()} kcal / 100 g")
+                    add(if (food.perItem) "${food.kcal100.roundToInt()} kcal each" else "${food.kcal100.roundToInt()} kcal / 100 g")
                     if (food.source == FoodItem.Source.CUSTOM) add("your food")
                 }
                 Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -234,20 +242,25 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
 @Composable
 private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float) -> Unit) {
     val c = Plate.colors
-    var text by remember(food) { mutableStateOf(food.servingG.clean()) }
-    val g = text.toNumber()?.takeIf { it > 0f && it <= 5000f }
+    var text by remember(food) { mutableStateOf(if (food.perItem) "1" else food.servingG.clean()) }
+    val g = text.toNumber()?.takeIf { it > 0f && it <= (if (food.perItem) 50f else 5000f) }
     ModalBottomSheet(onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = c.card) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().imePadding().padding(bottom = 16.dp)) {
             Text(food.name, style = MaterialTheme.typography.headlineSmall)
             if (food.brand.isNotBlank()) Text(food.brand, style = MaterialTheme.typography.bodyMedium, color = c.muted)
             Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = text, onValueChange = { text = it }, label = { Text("Amount (g or ml)") }, singleLine = true,
+                value = text, onValueChange = { text = it },
+                label = { Text(if (food.perItem) "How many" else "Amount (g or ml)") }, singleLine = true,
                 isError = g == null, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (food.perItem) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0.5f, 1f, 2f, 3f).forEach { v ->
+                    FilterChip(g == v, { text = v.clean() }, label = { Text("${v.clean()} ×") })
+                }
+            } else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val serving = food.servingG
                 val label = food.servingLabel.ifBlank { "serving" }
                 FilterChip(g == serving, { text = serving.clean() }, label = { Text("1 $label (${serving.clean()} g)") })
@@ -325,19 +338,31 @@ private fun CreateFoodDialog(initialName: String, onDismiss: () -> Unit, onCreat
     var cb by remember { mutableStateOf("") }
     var f by remember { mutableStateOf("") }
     var serving by remember { mutableStateOf("100") }
+    var brand by remember { mutableStateOf("") }
+    var perItem by remember { mutableStateOf(true) }
     val kcalN = kcal.toNumber()
-    val servingN = serving.toNumber()
-    val ok = name.isNotBlank() && kcalN != null && kcalN in 0f..900f && servingN != null && servingN > 0f
+    val servingN = if (perItem) 1f else serving.toNumber()
+    val maxKcal = if (perItem) 5000f else 900f
+    val ok = name.isNotBlank() && kcalN != null && kcalN in 0f..maxKcal && servingN != null && servingN > 0f
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create a food") },
+        title = { Text("Add your own food") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Values per 100 g, as printed on most labels.", style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    SegmentedButton(perItem, { perItem = true }, SegmentedButtonDefaults.itemShape(0, 2)) { Text("Per item") }
+                    SegmentedButton(!perItem, { perItem = false }, SegmentedButtonDefaults.itemShape(1, 2)) { Text("Per 100 g") }
+                }
+                Text(
+                    if (perItem) "For restaurant food: copy the numbers for one item from the restaurant's menu, app or nutrition guide."
+                    else "Values per 100 g, as printed on most packaged-food labels.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(name, { name = it }, label = { Text(if (perItem) "Item, e.g. Papa Burger" else "Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(brand, { brand = it }, label = { Text("Restaurant or brand (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Small("kcal", kcal, { kcal = it }, Modifier.weight(1f))
-                    Small("Serving g", serving, { serving = it }, Modifier.weight(1f))
+                    Small(if (perItem) "kcal per item" else "kcal", kcal, { kcal = it }, Modifier.weight(1f))
+                    if (!perItem) Small("Serving g", serving, { serving = it }, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Small("Protein", p, { p = it }, Modifier.weight(1f))
@@ -350,8 +375,8 @@ private fun CreateFoodDialog(initialName: String, onDismiss: () -> Unit, onCreat
             TextButton(enabled = ok, onClick = {
                 onCreate(
                     FoodItem(
-                        name.trim(), "", kcalN!!, p.toNumber() ?: 0f, cb.toNumber() ?: 0f, f.toNumber() ?: 0f,
-                        servingN!!, source = FoodItem.Source.CUSTOM,
+                        name.trim(), brand.trim(), kcalN!!, p.toNumber() ?: 0f, cb.toNumber() ?: 0f, f.toNumber() ?: 0f,
+                        servingN!!, source = FoodItem.Source.CUSTOM, perItem = perItem,
                     )
                 )
             }) { Text("Save") }

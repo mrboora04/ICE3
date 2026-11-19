@@ -89,6 +89,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         dao.addEntry(
             FoodEntry(
                 day = _day.value, meal = meal, name = food.name, brand = food.brand, grams = grams,
+                unit = if (food.perItem) "item" else "g",
                 kcal = food.kcalFor(grams), protein = food.proteinFor(grams),
                 carbs = food.carbsFor(grams), fat = food.fatFor(grams),
             )
@@ -141,7 +142,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun FoodItem.toSaved(custom: Boolean) = SavedFood(
         key, name.trim(), brand.trim(), kcal100, protein100, carbs100, fat100, servingG, custom,
-        System.currentTimeMillis(),
+        System.currentTimeMillis(), perItem,
     )
 
     companion object {
