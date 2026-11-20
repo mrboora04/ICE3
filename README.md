@@ -2,6 +2,8 @@
 
 Track calories and macros. No account, everything stays on your phone.
 
+**Website and download:** [mrboora04.github.io/ICE3](https://mrboora04.github.io/ICE3/)
+
 <p align="center">
   <a href="https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"><img src="https://img.shields.io/badge/Download_Plate_for_Android-brightgreen?logo=android&style=for-the-badge" width="720" alt="Download Plate for Android"></a>
 </p>
