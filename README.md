@@ -2,7 +2,7 @@
 
 Plate is an original calorie and macro tracker built with Kotlin and Jetpack Compose. All data stays on the phone and no account is needed.
 
-[![Download Plate APK](https://img.shields.io/badge/Download_Plate_APK-1.11-brightgreen?logo=android)](https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate-1.11.apk)
+[![Download Plate APK](https://img.shields.io/badge/Download_Plate_APK-1.12-brightgreen?logo=android)](https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate-1.12.apk)
 
 <p>
   <img src="docs/screenshots/today.png" width="24%" alt="Today screen">
@@ -13,7 +13,7 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 
 ## Install on your phone
 
-1. On the phone, open this repo on GitHub and download [`release/Plate-1.11.apk`](release/Plate-1.11.apk).
+1. On the phone, open this repo on GitHub and download [`release/Plate-1.12.apk`](release/Plate-1.12.apk).
 2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
 3. Tap **Install**. Requires Android 8.0 or newer.
 
