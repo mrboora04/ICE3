@@ -35,6 +35,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -105,16 +106,42 @@ fun AddFoodScreen(
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
     var showAi by remember { mutableStateOf(false) }
+    var ai by remember { mutableStateOf<AiFood?>(null) }
+    var aiState by remember { mutableStateOf<String?>(null) } // null idle, "loading", or an error message
 
     LaunchedEffect(query) {
         delay(150)
         local = searchLocal(query)
         online = emptyList()
         onlineState = null
+        ai = null
+        aiState = null
+    }
+
+    fun runAi() {
+        if (query.isBlank() || !hasAiKey || aiState == "loading") return
+        aiState = "loading"
+        val q = query
+        scope.launch {
+            aiLookup(q).fold(
+                onSuccess = { found ->
+                    if (q == query) { ai = found; aiState = null }
+                    onCreate(found.toFoodItem()) // keep it on the phone so the next search is instant and free
+                },
+                onFailure = { if (q == query) aiState = it.message ?: "AI lookup failed." },
+            )
+        }
+    }
+
+    /** Logs the usual serving straight away: one item, or the food's serving size in grams. */
+    fun quickAdd(food: FoodItem) {
+        onAdd(food, if (food.perItem) 1f else food.servingG)
+        onBack()
     }
 
     fun runOnline() {
         if (query.isBlank()) return
+        runAi()
         onlineState = "loading"
         scope.launch {
             searchOnline(query).fold(
@@ -148,7 +175,7 @@ fun AddFoodScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Search foods, e.g. dal, banana") },
+                    placeholder = { Text("Search anything, e.g. A&W Papa Burger") },
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
                     trailingIcon = { if (query.isNotEmpty()) IconButton({ query = "" }) { Icon(Icons.Rounded.Close, "Clear") } },
                     singleLine = true,
@@ -176,7 +203,7 @@ fun AddFoodScreen(
             if (query.isBlank()) {
                 if (recent.isNotEmpty()) {
                     item { Eyebrow("Recent and your foods", Modifier.padding(top = 8.dp)) }
-                    items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget) }
+                    items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 } else {
                     item {
                         Text(
@@ -186,18 +213,36 @@ fun AddFoodScreen(
                     }
                 }
             } else {
+                if (hasAiKey && (aiState != null || ai != null)) {
+                    item { Eyebrow("AI answer", Modifier.padding(top = 8.dp)) }
+                    item {
+                        when {
+                            aiState == "loading" -> PlateCard(padding = 14.dp) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                    Spacer(Modifier.size(10.dp))
+                                    Text("Searching the web for \"$query\"…", style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                                }
+                            }
+                            ai != null -> AiAnswerCard(ai!!, onOpen = { picked = ai!!.toFoodItem() }, onQuickAdd = { quickAdd(ai!!.toFoodItem()) })
+                            else -> Text(aiState ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
                 if (local.isNotEmpty()) {
                     item { Eyebrow("On this phone", Modifier.padding(top = 8.dp)) }
-                    items(local, key = { "l" + it.key }) { FoodRow(it, { picked = it }, onForget) }
+                    items(local, key = { "l" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 }
                 if (online.isNotEmpty()) {
                     item { Eyebrow("Open Food Facts", Modifier.padding(top = 8.dp)) }
-                    items(online, key = { "o" + it.key }) { FoodRow(it, { picked = it }, null) }
+                    items(online, key = { "o" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
                 }
                 item {
                     when (val s = onlineState) {
                         "loading" -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                        null -> if (online.isEmpty()) TextButton({ runOnline() }) { Text("Not here? Search Open Food Facts for \"$query\"") }
+                        null -> if (online.isEmpty() && ai == null) TextButton({ runOnline() }) {
+                            Text(if (hasAiKey) "Search the web for \"$query\"" else "Not here? Search Open Food Facts for \"$query\"")
+                        }
                         else -> Text(s, style = MaterialTheme.typography.bodyMedium, color = c.muted)
                     }
                 }
@@ -241,7 +286,7 @@ fun AddFoodScreen(
 }
 
 @Composable
-private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -> Unit)?) {
+private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -> Unit)?, onQuickAdd: ((FoodItem) -> Unit)? = null) {
     val c = Plate.colors
     PlateCard(Modifier.clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,6 +301,9 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
             }
             if (onForget != null && (food.source == FoodItem.Source.SAVED || food.source == FoodItem.Source.CUSTOM)) {
                 IconButton({ onForget(food) }) { Icon(Icons.Rounded.Close, "Forget ${food.name}", tint = c.muted) }
+            }
+            if (onQuickAdd != null) {
+                FilledTonalIconButton({ onQuickAdd(food) }) { Icon(Icons.Rounded.Add, "Add ${food.name}") }
             }
         }
     }
@@ -499,4 +547,35 @@ private fun AiLookupDialog(
         },
         dismissButton = { if (hasKey) TextButton(onDismiss, enabled = !busy) { Text("Cancel") } },
     )
+}
+
+@Composable
+private fun AiAnswerCard(r: AiFood, onOpen: () -> Unit, onQuickAdd: () -> Unit) {
+    val c = Plate.colors
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    PlateCard(Modifier.clickable(onClick = onOpen), padding = 14.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(r.name, style = MaterialTheme.typography.titleMedium)
+                Text(listOf(r.restaurant, r.serving).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.muted)
+            }
+            FilledTonalIconButton(onQuickAdd) { Icon(Icons.Rounded.Add, "Add ${r.name}") }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "${r.kcal.roundToInt()} kcal · P ${r.protein.roundToInt()} · C ${r.carbs.roundToInt()} · F ${r.fat.roundToInt()}",
+            style = MaterialTheme.typography.titleSmall.merge(tab),
+        )
+        val (label, color) = when (r.confidence) {
+            "official" -> "Restaurant's own numbers" to c.good
+            "third_party" -> "From nutrition sites, not the restaurant" to c.carbs
+            else -> "Estimate: no published numbers found" to c.over
+        }
+        Text(label, style = MaterialTheme.typography.labelMedium, color = color, modifier = Modifier.padding(top = 4.dp))
+        if (r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
+        r.sources.firstOrNull()?.let { (title, url) ->
+            Text("↗ $title", style = MaterialTheme.typography.bodySmall, color = c.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp).clickable { runCatching { uri.openUri(url) } })
+        }
+    }
 }
