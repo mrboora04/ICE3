@@ -296,6 +296,7 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
                     if (food.brand.isNotBlank()) add(food.brand)
                     add(if (food.perItem) "${food.kcal100.roundToInt()} kcal each" else "${food.kcal100.roundToInt()} kcal / 100 g")
                     if (food.source == FoodItem.Source.CUSTOM) add("your food")
+                    if (food.servingLabel.isNotBlank() && !food.perItem) add("${food.servingLabel} = ${food.servingG.roundToInt()} g")
                 }
                 Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

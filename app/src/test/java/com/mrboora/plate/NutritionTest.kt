@@ -2,6 +2,7 @@ package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.AiLookup
+import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.AiLookupException
 import com.mrboora.plate.data.FoodCatalog
 import com.mrboora.plate.data.FoodItem
@@ -112,5 +113,18 @@ class NutritionTest {
 
     @Test fun aiGarbageReturnsNull() {
         assertEquals(null, AiLookup.parse("sorry, no idea"))
+    }
+
+    @Test fun canadianFoodsFileParsesAndRanks() {
+        val file = java.io.File("src/main/assets/cnf_foods.csv")
+        val foods = file.readLines().mapNotNull { CanadianFoods.parseLine(it) }
+        assertTrue("expected thousands of foods, got ${foods.size}", foods.size > 5000)
+        val apple = CanadianFoods.rank(foods, "apple raw", 5).first()
+        assertTrue(apple.name, apple.name.startsWith("Apple, raw"))
+        assertTrue(apple.servingG in 100f..250f)
+        val quoted = CanadianFoods.parseLine("\"Bread, white\",265,9.0,49.0,3.2,33.0,1 slice")!!
+        assertEquals("Bread, white", quoted.name)
+        assertEquals(33f, quoted.servingG, 0.01f)
+        assertTrue(CanadianFoods.rank(foods, "poutine", 5).isNotEmpty())
     }
 }

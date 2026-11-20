@@ -205,7 +205,7 @@ fun ProfileScreen(
                 }
                 OutlinedButton({ confirmReset = true }, Modifier.fillMaxWidth()) { Text("Erase all data") }
                 Text(
-                    "Online food data from Open Food Facts, available under the Open Database License.",
+                    "Built-in foods include information from Health Canada's Canadian Nutrient File, licensed under the Open Government Licence – Canada. Online food data from Open Food Facts, available under the Open Database License.",
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
                 )
             }

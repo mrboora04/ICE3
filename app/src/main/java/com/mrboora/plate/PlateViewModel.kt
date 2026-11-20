@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mrboora.plate.data.AiFood
 import com.mrboora.plate.data.AiLookup
+import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.DayTotal
 import com.mrboora.plate.data.FoodCatalog
 import com.mrboora.plate.data.FoodEntry
@@ -38,6 +39,7 @@ sealed interface ProfileState {
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = PlateDatabase.get(app).dao()
+    private val canadian = CanadianFoods(app)
     private val prefs = app.getSharedPreferences("plate", android.content.Context.MODE_PRIVATE)
 
     /** The user's own Anthropic API key for AI lookup. Stored only on this phone. */
@@ -143,8 +145,11 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
         val saved = dao.searchSaved(q).map { it.toItem() }
-        val keys = saved.map { it.key }.toSet()
-        return saved + FoodCatalog.search(q).filter { it.key !in keys }
+        val keys = saved.map { it.key }.toMutableSet()
+        val everyday = FoodCatalog.search(q).filter { keys.add(it.key) }
+        val canada = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { canadian.search(q) }
+            .filter { keys.add(it.key) }
+        return saved + everyday + canada
     }
 
     suspend fun searchOnline(query: String): Result<List<FoodItem>> = runCatching { OpenFoodFacts.search(query) }
