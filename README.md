@@ -11,7 +11,7 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 
 ## Install on your phone
 
-1. On the phone, open this repo on GitHub and download [`release/Plate-1.1.apk`](release/Plate-1.1.apk).
+1. On the phone, open this repo on GitHub and download [`release/Plate-1.2.apk`](release/Plate-1.2.apk).
 2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
 3. Tap **Install**. Requires Android 8.0 or newer.
 
@@ -20,7 +20,8 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 - **Daily target**: uses the Mifflin-St Jeor resting energy formula × activity level, then adjusts for your goal (lose, maintain or gain 0.25–1 kg a week). Protein, carbs and fat targets come from the same calculation.
 - **Food diary**: breakfast, lunch, dinner and snacks. Browse past days, and undo removals.
 - **Food search**: a built-in list of about 60 everyday foods (including Indian staples) that works offline, plus online search and barcode-number lookup through [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
-- **Restaurant food**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.
+- **AI lookup**: type any restaurant item ("A&W Papa Burger") and Claude searches the web for its nutrition, preferring the restaurant's own published numbers. It shows the sources and whether the figures are official, from other sites, or an estimate. Needs your own Anthropic API key (Profile → AI lookup); each lookup is billed to your Anthropic account.
+- **Manual restaurant entries**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.
 - **Your foods**: create custom foods per item or per 100 g. Foods you use show up as recents.
 - **Water**: tap drops or use +/−, toward a daily goal.
 - **Progress**: weigh-ins with a trend line against your goal, and a 7-day calorie chart.

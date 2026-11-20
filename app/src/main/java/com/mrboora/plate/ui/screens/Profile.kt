@@ -84,9 +84,12 @@ fun ProfileScreen(
     contentPadding: PaddingValues,
     onEdit: () -> Unit,
     onReset: () -> Unit,
+    aiKeySet: Boolean = false,
+    onSetAiKey: (String) -> Unit = {},
 ) {
     val c = Plate.colors
     var confirmReset by remember { mutableStateOf(false) }
+    var editKey by remember { mutableStateOf(false) }
     val bmi = Nutrition.bmi(currentKg, profile.heightCm)
     val weeks = Nutrition.weeksToGoal(profile, currentKg)
 
@@ -180,6 +183,20 @@ fun ProfileScreen(
         }
 
         item {
+            PlateCard(Modifier.padding(horizontal = 16.dp)) {
+                Eyebrow("AI lookup")
+                Spacer(Modifier.height(4.dp))
+                Text(if (aiKeySet) "On: your Anthropic key is saved" else "Off: add an Anthropic API key", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Finds calories for restaurant meals and anything else by searching the web with Claude. Your key stays on this phone and is only sent to Anthropic. Lookups are billed to your Anthropic account, a few cents each.",
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp),
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton({ editKey = true }, Modifier.fillMaxWidth()) { Text(if (aiKeySet) "Change or remove key" else "Add API key") }
+            }
+        }
+
+        item {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onEdit, Modifier.fillMaxWidth().height(52.dp)) {
                     Icon(Icons.Rounded.Edit, null, Modifier.size(18.dp))
@@ -196,6 +213,30 @@ fun ProfileScreen(
         item { Spacer(Modifier.height(12.dp)) }
     }
 
+    if (editKey) {
+        var key by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { editKey = false },
+            title = { Text("Anthropic API key") },
+            text = {
+                Column {
+                    Text("Create one at console.anthropic.com → API keys, then paste it here.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        key, { key = it }, label = { Text("sk-ant-…") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    )
+                }
+            },
+            confirmButton = { TextButton({ onSetAiKey(key); editKey = false }, enabled = key.trim().startsWith("sk-ant-")) { Text("Save") } },
+            dismissButton = {
+                Row {
+                    if (aiKeySet) TextButton({ onSetAiKey(""); editKey = false }) { Text("Remove") }
+                    TextButton({ editKey = false }) { Text("Cancel") }
+                }
+            },
+        )
+    }
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },

@@ -1,6 +1,8 @@
 package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
+import com.mrboora.plate.data.AiLookup
+import com.mrboora.plate.data.AiLookupException
 import com.mrboora.plate.data.FoodCatalog
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.OpenFoodFacts
@@ -86,5 +88,29 @@ class NutritionTest {
         assertEquals("McDonald's", OpenFoodFacts.parse(modern)!!.brand)
         assertEquals("Brand A", OpenFoodFacts.parse(classic)!!.brand)
         assertEquals(500f, OpenFoodFacts.parse(classic)!!.kcal100, 0.5f)
+    }
+
+    @Test fun parsesAiAnswerWithStrayText() {
+        val reply = """Here you go:
+            ```json
+            {"found": true, "name": "Test Burger", "restaurant": "Test Diner", "serving": "1 burger",
+             "kcal": 610, "protein_g": 31, "carbs_g": 45, "fat_g": 33, "confidence": "official",
+             "note": "From the diner's guide.", "sources": [{"title": "Guide", "url": "https://example.com/n"}, {"title": "bad", "url": "ftp://x"}]}
+            ```"""
+        val food = AiLookup.parse(reply)!!
+        assertEquals(610f, food.kcal, 0.01f)
+        assertEquals("official", food.confidence)
+        assertEquals(1, food.sources.size)
+        val item = food.toFoodItem()
+        assertTrue(item.perItem)
+        assertEquals(1220f, item.kcalFor(2f), 0.01f)
+    }
+
+    @Test(expected = AiLookupException::class) fun aiNotFoundIsAnError() {
+        AiLookup.parse("""{"found": false, "note": "No such item."}""")
+    }
+
+    @Test fun aiGarbageReturnsNull() {
+        assertEquals(null, AiLookup.parse("sorry, no idea"))
     }
 }

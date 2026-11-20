@@ -3,6 +3,8 @@ package com.mrboora.plate
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mrboora.plate.data.AiFood
+import com.mrboora.plate.data.AiLookup
 import com.mrboora.plate.data.DayTotal
 import com.mrboora.plate.data.FoodCatalog
 import com.mrboora.plate.data.FoodEntry
@@ -36,6 +38,21 @@ sealed interface ProfileState {
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = PlateDatabase.get(app).dao()
+    private val prefs = app.getSharedPreferences("plate", android.content.Context.MODE_PRIVATE)
+
+    /** The user's own Anthropic API key for AI lookup. Stored only on this phone. */
+    private val _aiKey = MutableStateFlow(prefs.getString("anthropic_key", "").orEmpty())
+    val aiKey: StateFlow<String> = _aiKey
+
+    fun setAiKey(key: String) {
+        prefs.edit().putString("anthropic_key", key.trim()).apply()
+        _aiKey.value = key.trim()
+    }
+
+    suspend fun aiLookup(query: String): Result<AiFood> = runCatching {
+        val country = java.util.Locale.getDefault().displayCountry.ifBlank { "Canada" }
+        AiLookup.lookup(_aiKey.value, query, country)
+    }
 
     val profileState: StateFlow<ProfileState> = dao.profile()
         .map<Profile?, ProfileState> { ProfileState.Ready(it) }

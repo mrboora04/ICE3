@@ -91,6 +91,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val weights by vm.weights.collectAsStateWithLifecycle()
     val week by vm.week.collectAsStateWithLifecycle()
     val recent by vm.recentFoods.collectAsStateWithLifecycle()
+    val aiKey by vm.aiKey.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
 
     val showBar = Tab.entries.any { it.route == route }
@@ -145,6 +146,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     profile, targets, currentKg, weights.firstOrNull()?.kg ?: profile.weightKg, content,
                     onEdit = { nav.navigate("edit") },
                     onReset = vm::resetAll,
+                    aiKeySet = aiKey.isNotBlank(),
+                    onSetAiKey = vm::setAiKey,
                 )
             }
             composable("add/{meal}") { entry ->
@@ -156,6 +159,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     searchLocal = vm::searchLocal,
                     searchOnline = vm::searchOnline,
                     lookupBarcode = vm::lookupBarcode,
+                    hasAiKey = aiKey.isNotBlank(),
+                    aiLookup = vm::aiLookup,
                     onCreate = { vm.createFood(it) },
                     onForget = { vm.forgetFood(it) },
                     onAdd = { food, g -> vm.addEntry(meal, food, g) },

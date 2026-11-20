@@ -1,6 +1,8 @@
 package com.mrboora.plate.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.QrCode2
@@ -63,6 +66,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mrboora.plate.data.AiFood
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.Meal
 import com.mrboora.plate.ui.components.Eyebrow
@@ -84,6 +88,8 @@ fun AddFoodScreen(
     searchLocal: suspend (String) -> List<FoodItem>,
     searchOnline: suspend (String) -> Result<List<FoodItem>>,
     lookupBarcode: suspend (String) -> Result<FoodItem?>,
+    hasAiKey: Boolean,
+    aiLookup: suspend (String) -> Result<AiFood>,
     onCreate: (FoodItem) -> Unit,
     onForget: (FoodItem) -> Unit,
     onAdd: (FoodItem, Float) -> Unit,
@@ -98,6 +104,7 @@ fun AddFoodScreen(
     var picked by remember { mutableStateOf<FoodItem?>(null) }
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
+    var showAi by remember { mutableStateOf(false) }
 
     LaunchedEffect(query) {
         delay(150)
@@ -151,6 +158,14 @@ fun AddFoodScreen(
                 )
             }
             item {
+                AssistChip(
+                    { showAi = true },
+                    { Text("AI lookup: restaurants & anything") },
+                    leadingIcon = { Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(18.dp), tint = c.accent) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip({ runOnline() }, { Text("Search online") }, leadingIcon = { Icon(Icons.Rounded.Public, null, Modifier.size(18.dp)) }, enabled = query.isNotBlank())
                     AssistChip({ showBarcode = true }, { Text("Barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
@@ -165,7 +180,7 @@ fun AddFoodScreen(
                 } else {
                     item {
                         Text(
-                            "Search the built-in list, or tap Search online for packaged foods from Open Food Facts. For restaurant meals like an A&W burger, tap Create and enter the calories from the restaurant's menu once. Foods you add show up here next time.",
+                            "Search the built-in list, or tap Search online for packaged foods from Open Food Facts. For restaurant meals like an A&W burger, use AI lookup. Foods you add show up here next time.",
                             style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -187,8 +202,8 @@ fun AddFoodScreen(
                     }
                 }
                 item {
-                    TextButton({ showCreate = true }) {
-                        Text("Eating out? Add \"$query\" from the restaurant's menu numbers")
+                    TextButton({ showAi = true }) {
+                        Text("Eating out? Ask AI lookup for \"$query\"")
                     }
                 }
             }
@@ -206,6 +221,14 @@ fun AddFoodScreen(
         BarcodeDialog(lookupBarcode, onDismiss = { showBarcode = false }) { found ->
             showBarcode = false
             picked = found
+        }
+    }
+    if (showAi) {
+        AiLookupDialog(query, hasAiKey, aiLookup, onDismiss = { showAi = false }) { found ->
+            showAi = false
+            val item = found.toFoodItem()
+            onCreate(item)
+            picked = item
         }
     }
     if (showCreate) {
@@ -388,4 +411,92 @@ private fun CreateFoodDialog(initialName: String, onDismiss: () -> Unit, onCreat
 @Composable
 private fun Small(label: String, v: String, on: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(v, on, label = { Text(label) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = modifier)
+}
+
+@Composable
+private fun AiLookupDialog(
+    initial: String,
+    hasKey: Boolean,
+    lookup: suspend (String) -> Result<AiFood>,
+    onDismiss: () -> Unit,
+    onUse: (AiFood) -> Unit,
+) {
+    val c = Plate.colors
+    val scope = rememberCoroutineScope()
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    var q by remember { mutableStateOf(initial) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<AiFood?>(null) }
+
+    fun go() {
+        if (q.isBlank() || busy) return
+        busy = true; error = null; result = null
+        scope.launch {
+            lookup(q.trim()).fold(onSuccess = { result = it }, onFailure = { error = it.message ?: "Lookup failed." })
+            busy = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text("AI lookup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                if (!hasKey) {
+                    Text(
+                        "Add your Anthropic API key in Profile → AI lookup first. Each lookup searches the web with Claude and costs a few cents on your Anthropic account.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    return@Column
+                }
+                OutlinedTextField(
+                    q, { q = it }, label = { Text("Restaurant and item, e.g. A&W Papa Burger") }, singleLine = true,
+                    enabled = !busy, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { go() }), modifier = Modifier.fillMaxWidth(),
+                )
+                if (busy) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.size(10.dp))
+                        Text("Searching the web… usually 10–30 seconds", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                    }
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                result?.let { r ->
+                    PlateCard(padding = 14.dp) {
+                        Text(r.name, style = MaterialTheme.typography.titleMedium)
+                        Text(listOf(r.restaurant, r.serving).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.muted)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Num("kcal", r.kcal); Num("Protein", r.protein, "g"); Num("Carbs", r.carbs, "g"); Num("Fat", r.fat, "g")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        val (label, color) = when (r.confidence) {
+                            "official" -> "From the restaurant's own nutrition info" to c.good
+                            "third_party" -> "From other nutrition sites, not the restaurant" to c.carbs
+                            else -> "Estimate: no published numbers found" to c.over
+                        }
+                        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+                        if (r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
+                        r.sources.take(4).forEach { (title, url) ->
+                            Text(
+                                "↗ $title", style = MaterialTheme.typography.bodySmall, color = c.accent, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 4.dp).clickable { runCatching { uri.openUri(url) } },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when {
+                !hasKey -> TextButton(onDismiss) { Text("OK") }
+                result != null -> TextButton({ onUse(result!!) }) { Text("Use this") }
+                else -> TextButton(::go, enabled = q.isNotBlank() && !busy) { Text("Look up") }
+            }
+        },
+        dismissButton = { if (hasKey) TextButton(onDismiss, enabled = !busy) { Text("Cancel") } },
+    )
 }
