@@ -270,7 +270,7 @@ fun AddFoodScreen(
                 if (s?.restaurants == true && chain == null) {
                     item {
                         Text(
-                            "Canadian menus come from each chain's official nutrition information. Chains marked US menu use USDA data for US recipes, so Canadian items can differ. Missing a place? Add its items with Create.",
+                            "Canadian menus come from each chain's official nutrition information. Estimated menus are for restaurants that publish none: numbers are estimated from the dish and serving size. US menus use USDA data for US recipes. Missing a place? Request it.",
                             style = MaterialTheme.typography.bodySmall, color = c.muted,
                         )
                     }
@@ -282,8 +282,13 @@ fun AddFoodScreen(
                                 Column(Modifier.weight(1f)) {
                                     Text(ch.name, style = MaterialTheme.typography.titleMedium)
                                     Text(
-                                        if (ch.canadian) "${ch.items} items · Canadian menu" else "${ch.items} items · US menu",
-                                        style = MaterialTheme.typography.bodySmall, color = if (ch.canadian) c.good else c.muted,
+                                        when {
+                                            ch.estimated -> "${ch.items} items · Estimated menu"
+                                            ch.canadian -> "${ch.items} items · Canadian menu"
+                                            else -> "${ch.items} items · US menu"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = when { ch.estimated -> c.carbs; ch.canadian -> c.good; else -> c.muted },
                                     )
                                 }
                                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.muted)
@@ -412,7 +417,9 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
                 Text(food.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val parts = buildList {
                     if (food.brand.isNotBlank()) add(food.brand)
-                    add(if (food.perItem) "${food.kcal100.roundToInt()} kcal" else "${food.kcal100.roundToInt()} kcal / 100 g")
+                    val approx = if (food.isEstimate) "≈" else ""
+                    add(if (food.perItem) "$approx${food.kcal100.roundToInt()} kcal" else "${food.kcal100.roundToInt()} kcal / 100 g")
+                    if (food.isEstimate) add("estimate")
                     if (food.source == FoodItem.Source.CUSTOM) add("your food")
                     if (food.servingLabel.isNotBlank()) add(if (food.perItem) food.servingLabel else "${food.servingLabel} = ${food.servingG.roundToInt()} g")
                 }
@@ -462,12 +469,17 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
             Spacer(Modifier.height(16.dp))
             val gg = g ?: 0f
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Num("kcal", food.kcalFor(gg))
+                Num("kcal", food.kcalFor(gg), estimated = food.isEstimate)
                 Num("Protein", food.proteinFor(gg), "g", 'p' in food.unknown, 'p' in food.estimated)
                 Num("Carbs", food.carbsFor(gg), "g", 'c' in food.unknown, 'c' in food.estimated)
                 Num("Fat", food.fatFor(gg), "g", 'f' in food.unknown, 'f' in food.estimated)
             }
-            if (food.estimated.isNotEmpty()) {
+            if (food.isEstimate) {
+                Text(
+                    "≈ = estimated from the dish and serving size; this restaurant doesn't publish nutrition info.",
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),
+                )
+            } else if (food.estimated.isNotEmpty()) {
                 Text(
                     "≈ = not published by the restaurant; worked out from its calories, protein and fat.",
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),

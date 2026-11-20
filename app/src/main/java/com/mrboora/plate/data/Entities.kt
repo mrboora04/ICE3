@@ -107,9 +107,12 @@ data class FoodItem(
     val perItem: Boolean = false,
     /** Macros the source doesn't publish: any of 'p', 'c', 'f'. Shown as "–" rather than 0. */
     val unknown: String = "",
-    /** Macros worked out from the others rather than published: any of 'p', 'c', 'f'. Shown with "≈". */
+    /** Values worked out rather than published: any of 'p', 'c', 'f', or 'k' for the whole item. Shown with "≈". */
     val estimated: String = "",
 ) {
+    /** True when the whole item is an estimate (calories included), not the restaurant's published numbers. */
+    val isEstimate: Boolean get() = 'k' in estimated
+
     enum class Source { BUILT_IN, SAVED, CUSTOM, ONLINE }
 
     val key: String get() = "${name.trim().lowercase()}|${brand.trim().lowercase()}"

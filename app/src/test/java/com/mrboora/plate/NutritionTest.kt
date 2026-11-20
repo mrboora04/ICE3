@@ -176,4 +176,14 @@ class NutritionTest {
         assertEquals(listOf(1L), MenuUpdates.fulfilled(listOf(req), after).map { it.id })
         assertTrue(MenuUpdates.fulfilled(listOf(req.copy(done = true)), after).isEmpty())
     }
+
+    @Test fun estimatedMenusAreFlagged() {
+        val est = RestaurantFoods.parseCanadianLine("Amaya,Butter Chicken,600,35,20,40,350,1 bowl,https://example.com/menu,estimate")!!
+        assertTrue(est.isEstimate)
+        val official = RestaurantFoods.parseCanadianLine("Tim Hortons,Coffee (Medium),4,0,1,0,,Medium,https://example.com/pdf")!!
+        assertTrue(!official.isEstimate)
+        val rows = java.io.File("src/main/assets/canada_restaurants.csv").readLines().mapNotNull { RestaurantFoods.parseCanadianLine(it) }
+        assertTrue(rows.filter { it.brand == "Amaya" }.let { it.isNotEmpty() && it.all { f -> f.isEstimate } })
+        assertTrue(rows.filter { it.brand == "Tim Hortons" }.none { it.isEstimate })
+    }
 }

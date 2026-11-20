@@ -29,8 +29,11 @@ object Shelves {
     fun byTitle(title: String) = all.firstOrNull { it.title == title }
 }
 
-/** One restaurant chain in Browse. [canadian] is true for official Canadian menus. */
-data class Chain(val name: String, val items: Int, val canadian: Boolean)
+/**
+ * One restaurant chain in Browse. [canadian] is true for Canadian menus; [estimated] when its
+ * numbers are estimates (the restaurant publishes none), not official nutrition info.
+ */
+data class Chain(val name: String, val items: Int, val canadian: Boolean, val estimated: Boolean = false)
 
 /**
  * Restaurant menus from two sources:
@@ -58,8 +61,8 @@ class RestaurantFoods(private val context: Context) {
 
     /** Chains with Canadian menus first, then by number of items. */
     fun chains(): List<Chain> = load().groupBy { it.first.brand }
-        .map { (name, items) -> Chain(name, items.size, items.first().second) }
-        .sortedWith(compareBy({ !it.canadian }, { -it.items }, { it.name }))
+        .map { (name, items) -> Chain(name, items.size, items.first().second, items.all { it.first.isEstimate }) }
+        .sortedWith(compareBy({ !it.canadian }, { it.estimated }, { -it.items }, { it.name }))
 
     fun names(): List<String> = load().map { "${it.first.brand} ${it.first.name}" }
 
@@ -92,7 +95,10 @@ class RestaurantFoods(private val context: Context) {
             )
         }
 
-        /** Canadian row: chain,item,kcal,protein_g,carbs_g,fat_g,serving_g,serving_label,source_url (per item). */
+        /**
+         * Canadian row: chain,item,kcal,protein_g,carbs_g,fat_g,serving_g,serving_label,source_url[,basis]
+         * (per item). basis "estimate" marks numbers estimated from the dish and serving, not published.
+         */
         fun parseCanadianLine(line: String): FoodItem? {
             val cols = splitCsv(line)
             if (cols.size < 8) return null
@@ -121,7 +127,11 @@ class RestaurantFoods(private val context: Context) {
                     if (carbs == null) append('c')
                     if (f == null) append('f')
                 },
-                estimated = if (cols[4].isBlank() && carbs != null) "c" else "",
+                estimated = when {
+                    cols.getOrNull(9)?.trim()?.equals("estimate", ignoreCase = true) == true -> "kpcf"
+                    cols[4].isBlank() && carbs != null -> "c"
+                    else -> ""
+                },
             )
         }
     }

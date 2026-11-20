@@ -52,7 +52,7 @@ The release build is signed with the debug key so it installs directly. Create y
 ## Data and licences
 
 - Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada): Health Canada, *Canadian Nutrient File, 2026* (`app/src/main/assets/cnf_foods.csv`, reduced to energy, protein, carbohydrate, fat and one household measure per food).
-- Canadian restaurant menus (`canada_restaurants.csv`) collected from each chain's official Canadian nutrition information in November 2026; each row records its source URL. Most McDonald's figures come from their 2019 nutrition PDF, with 43 newer items read from their current site.
+- Canadian restaurant menus (`canada_restaurants.csv`): rows may end in a 10th column `estimate` for restaurants that publish no nutrition info (e.g. Amaya). Those numbers are estimated from the dish and serving size and are labelled “Estimated menu” and “≈” in the app. All other rows were collected from each chain's official Canadian nutrition information in November 2026; each row records its source URL. Most McDonald's figures come from their 2019 nutrition PDF, with 43 newer items read from their current site.
 - Restaurant menu items from USDA [FoodData Central](https://fdc.nal.usda.gov) SR Legacy (public domain); US recipes, so Canadian menus can differ.
 - Online food data from [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License.
 
