@@ -2,7 +2,7 @@
 
 Plate is an original calorie and macro tracker built with Kotlin and Jetpack Compose. All data stays on the phone and no account is needed.
 
-[![Download Plate APK](https://img.shields.io/badge/Download_Plate_APK-1.12-brightgreen?logo=android)](https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate-1.12.apk)
+[![Download latest](https://img.shields.io/badge/Download_latest-Plate-brightgreen?logo=android)](https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate.apk)
 
 <p>
   <img src="docs/screenshots/today.png" width="24%" alt="Today screen">
@@ -13,7 +13,7 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 
 ## Install on your phone
 
-1. On the phone, open this repo on GitHub and download [`release/Plate-1.12.apk`](release/Plate-1.12.apk).
+1. On the phone, open this repo on GitHub and download [`release/Plate.apk`](release/Plate.apk).
 2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
 3. Tap **Install**. Requires Android 8.0 or newer.
 
@@ -23,7 +23,6 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 - **Food diary**: one list of the day's meals with the time each was logged. Browse past days, and undo removals.
 - **Food search**: about 6,000 foods from Health Canada's Canadian Nutrient File (2026) plus 60 everyday staples (including Indian dishes), all offline and free, plus online search and camera barcode scanning through [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
 - **Browse**: Restaurants, with official Canadian menus for Tim Hortons, McDonald's, Dairy Queen, Harvey's, Pizza Pizza, A&W, Burger King, Subway, Wendy's, KFC, Mary Brown's, Popeyes and Starbucks (about 2,000 items; A&W doesn't publish carbs and Harvey's publishes calories only), plus US menus for other chains, plus shelves like Drinks, Fast food, Snacks, Meals & dishes, Fruit and more. Every item has a + to log its usual serving.
-- **Typos and missing foods**: searches suggest "Did you mean…?" for misspellings. If something isn't there, **Request it** emails the request; once it's added to `canada_restaurants.csv` on `main`, the app picks it up within a day (no app update) and notifies the person who asked.
 - **Manual restaurant entries**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.
 - **Your foods**: create custom foods per item or per 100 g. Foods you use show up as recents.
 - **Water**: tap drops or use +/−, toward a daily goal.
