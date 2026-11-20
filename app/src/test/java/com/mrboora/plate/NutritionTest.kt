@@ -1,6 +1,7 @@
 package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
+import com.mrboora.plate.data.AppUpdates
 import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.FoodRequest
 import com.mrboora.plate.data.MenuUpdates
@@ -185,5 +186,17 @@ class NutritionTest {
         val rows = java.io.File("src/main/assets/canada_restaurants.csv").readLines().mapNotNull { RestaurantFoods.parseCanadianLine(it) }
         assertTrue(rows.filter { it.brand == "Amaya" }.let { it.isNotEmpty() && it.all { f -> f.isEstimate } })
         assertTrue(rows.filter { it.brand == "Tim Hortons" }.none { it.isEstimate })
+    }
+
+    @Test fun latestJsonParsesAndMatchesTheBuild() {
+        val info = AppUpdates.parse(java.io.File("../release/latest.json").readText())!!
+        val gradle = java.io.File("build.gradle.kts").readText()
+        val code = Regex("versionCode = (\\d+)").find(gradle)!!.groupValues[1].toLong()
+        val name = Regex("versionName = \"([^\"]+)\"").find(gradle)!!.groupValues[1]
+        assertEquals(code, info.versionCode)
+        assertEquals(name, info.versionName)
+        assertTrue(info.notes.isNotEmpty())
+        // Downloads only from this repository.
+        assertEquals(null, AppUpdates.parse("""{"versionCode":99,"versionName":"9","apk":"https://evil.example/x.apk"}"""))
     }
 }

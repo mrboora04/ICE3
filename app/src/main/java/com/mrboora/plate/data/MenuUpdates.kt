@@ -104,6 +104,7 @@ object MenuUpdates {
     class Worker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
             notify(applicationContext, refresh(applicationContext))
+            AppUpdates.check(applicationContext)?.let { AppUpdates.notify(applicationContext, it) }
             return Result.success()
         }
     }

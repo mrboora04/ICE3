@@ -43,6 +43,16 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val canadian = CanadianFoods(app)
     private val restaurants = RestaurantFoods(app)
 
+    /** A newer Plate release, if there is one. Checked when the app opens. */
+    private val _update = MutableStateFlow<com.mrboora.plate.data.UpdateInfo?>(null)
+    val update: StateFlow<com.mrboora.plate.data.UpdateInfo?> = _update
+
+    init {
+        viewModelScope.launch { _update.value = com.mrboora.plate.data.AppUpdates.check(getApplication()) }
+    }
+
+    fun dismissUpdate() { _update.value = null }
+
     @Volatile private var vocab: Set<String>? = null
 
     /** A corrected query for typos ("osmaos" -> "osmows"), or null if the words are already known. */

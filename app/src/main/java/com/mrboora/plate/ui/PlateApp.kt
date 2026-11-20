@@ -91,6 +91,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val weights by vm.weights.collectAsStateWithLifecycle()
     val week by vm.week.collectAsStateWithLifecycle()
     val recent by vm.recentFoods.collectAsStateWithLifecycle()
+    val update by vm.update.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -160,6 +161,11 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                         }
                     },
                     onWater = vm::addWater,
+                    banner = {
+                        update?.let { info ->
+                            com.mrboora.plate.ui.components.UpdateCard(info, onLater = vm::dismissUpdate, modifier = Modifier.padding(horizontal = 16.dp))
+                        }
+                    },
                 )
             }
             composable(Tab.PROGRESS.route) {

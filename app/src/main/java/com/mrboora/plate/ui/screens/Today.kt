@@ -81,12 +81,14 @@ fun TodayScreen(
     onAdd: (Meal) -> Unit,
     onDelete: (FoodEntry) -> Unit,
     onWater: (Int) -> Unit,
+    banner: @Composable () -> Unit = {},
 ) {
     val c = Plate.colors
     val eaten = entries.sumOf { it.kcal.toDouble() }.toFloat()
     val isToday = day == LocalDate.now().toEpochDay()
 
     LazyColumn(contentPadding = contentPadding, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { banner() }
         item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton({ onShiftDay(-1) }) { Icon(Icons.Rounded.ChevronLeft, "Previous day") }

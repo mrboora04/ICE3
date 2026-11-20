@@ -49,6 +49,15 @@ Fonts: Bricolage Grotesque (display) and Instrument Sans (text), both under the 
 
 The release build is signed with the debug key so it installs directly. Create your own signing key before publishing to a store.
 
+## Releasing an update
+
+Installed copies check `release/latest.json` when opened and once a day, show what's new, and update in one tap.
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
+2. Build with Plate's release key (set in `local.properties`, never committed). Updates only install over an existing Plate if they're signed with the same key.
+3. Copy the APK to `release/Plate.apk` (and `release/Plate-<version>.apk`).
+4. Update `release/latest.json`: the new `versionCode`, `versionName` and two or three short `notes`. Push to `main`.
+
 ## Data and licences
 
 - Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada): Health Canada, *Canadian Nutrient File, 2026* (`app/src/main/assets/cnf_foods.csv`, reduced to energy, protein, carbohydrate, fat and one household measure per food).

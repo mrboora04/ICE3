@@ -1,3 +1,14 @@
+import java.util.Properties
+
+// The release key comes from local.properties (never committed):
+//   plate.keystore=/path/to/plate-release.keystore
+//   plate.storePassword=...  plate.keyAlias=...  plate.keyPassword=...
+// Updates only install over an existing Plate if they're signed with the same key.
+val signing = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,16 +24,27 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "1.14"
+        versionCode = 16
+        versionName = "1.15"
+    }
+
+    signingConfigs {
+        signing.getProperty("plate.keystore")?.let { path ->
+            create("plate") {
+                storeFile = file(path)
+                storePassword = signing.getProperty("plate.storePassword")
+                keyAlias = signing.getProperty("plate.keyAlias")
+                keyPassword = signing.getProperty("plate.keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key so the release APK installs directly on a phone.
-            signingConfig = signingConfigs.getByName("debug")
+            // Plate's own key if configured, else the machine's debug key (fine for local testing only).
+            signingConfig = signingConfigs.findByName("plate") ?: signingConfigs.getByName("debug")
         }
     }
 
