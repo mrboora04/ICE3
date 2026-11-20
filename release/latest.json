@@ -1,10 +1,10 @@
 {
-  "versionCode": 17,
-  "versionName": "1.16",
+  "versionCode": 18,
+  "versionName": "2.0",
   "notes": [
-    "Recent restaurant foods now use the latest menu numbers (fixes 0 g carbs on A&W items)",
-    "An Update badge stays on Today until you update",
-    "Share Plate with a friend from your Profile"
+    "Important: 2.0 is signed with Plate's new security key. Uninstall your current Plate first, then download 2.0 from mrboora04.github.io/ICE3",
+    "Plate no longer asks for permission to install apps",
+    "Recent restaurant foods use the latest menu numbers, an Update badge on Today, and Share Plate"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

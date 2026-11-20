@@ -9,17 +9,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import com.mrboora.plate.MainActivity
 import com.mrboora.plate.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -27,9 +24,8 @@ import java.net.URL
 data class UpdateInfo(val versionCode: Long, val versionName: String, val notes: List<String>, val apkUrl: String)
 
 /**
- * Plate is installed from GitHub, not a store, so it checks for new versions itself:
- * it reads release/latest.json, shows what's new, downloads the APK and opens Android's installer.
- * Android only installs it if it's signed with the same key as the installed app.
+ * Plate is installed from its website, not a store, so it checks for new versions itself:
+ * it reads release/latest.json and shows what's new. Updating opens the download page.
  */
 object AppUpdates {
     const val URL_LATEST = "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/latest.json"
@@ -85,49 +81,10 @@ object AppUpdates {
         prefs.edit().putLong("notified", info.versionCode).apply()
     }
 
-    /** Whether Android lets Plate open an APK; if not, [installSettings] shows the switch. */
-    fun canInstall(context: Context) = context.packageManager.canRequestPackageInstalls()
+    /** The download page; Plate doesn't install APKs itself (so it needs no install permission). */
+    const val DOWNLOAD_PAGE = "https://mrboora04.github.io/ICE3/"
 
-    fun installSettings(context: Context) = Intent(
-        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"),
-    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-    /** Downloads the APK into the app's cache, reporting progress 0..1. */
-    suspend fun download(context: Context, info: UpdateInfo, progress: (Float) -> Unit): File = withContext(Dispatchers.IO) {
-        val dir = File(context.cacheDir, "updates").apply { mkdirs() }
-        dir.listFiles()?.forEach { it.delete() }
-        val out = File(dir, "Plate-${info.versionName}.apk")
-        val conn = URL(info.apkUrl).openConnection() as HttpURLConnection
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 60_000
-        try {
-            if (conn.responseCode != 200) throw java.io.IOException("HTTP ${conn.responseCode}")
-            val total = conn.contentLengthLong.takeIf { it > 0 }
-            conn.inputStream.use { input ->
-                out.outputStream().use { output ->
-                    val buf = ByteArray(64 * 1024)
-                    var done = 0L
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        output.write(buf, 0, n)
-                        done += n
-                        if (total != null) progress((done.toFloat() / total).coerceIn(0f, 1f))
-                    }
-                }
-            }
-        } finally {
-            conn.disconnect()
-        }
-        out
-    }
-
-    /** Opens Android's installer for a downloaded APK. */
-    fun install(context: Context, apk: File) {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.updates", apk)
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, "application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+    fun openDownloadPage(context: Context) {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DOWNLOAD_PAGE)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
