@@ -11,7 +11,6 @@ room = "2.6.1"
 coroutines = "1.9.0"
 junit = "4.13.2"
 orgJson = "20240303"
-anthropic = "3.11.0"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
 
@@ -33,7 +32,6 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-anthropic-java = { group = "com.anthropic", name = "anthropic-java", version.ref = "anthropic" }
 org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }

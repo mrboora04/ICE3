@@ -1,9 +1,9 @@
 package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
-import com.mrboora.plate.data.AiLookup
 import com.mrboora.plate.data.CanadianFoods
-import com.mrboora.plate.data.AiLookupException
+import com.mrboora.plate.data.RestaurantFoods
+import com.mrboora.plate.data.Shelves
 import com.mrboora.plate.data.FoodCatalog
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.OpenFoodFacts
@@ -91,30 +91,6 @@ class NutritionTest {
         assertEquals(500f, OpenFoodFacts.parse(classic)!!.kcal100, 0.5f)
     }
 
-    @Test fun parsesAiAnswerWithStrayText() {
-        val reply = """Here you go:
-            ```json
-            {"found": true, "name": "Test Burger", "restaurant": "Test Diner", "serving": "1 burger",
-             "kcal": 610, "protein_g": 31, "carbs_g": 45, "fat_g": 33, "confidence": "official",
-             "note": "From the diner's guide.", "sources": [{"title": "Guide", "url": "https://example.com/n"}, {"title": "bad", "url": "ftp://x"}]}
-            ```"""
-        val food = AiLookup.parse(reply)!!
-        assertEquals(610f, food.kcal, 0.01f)
-        assertEquals("official", food.confidence)
-        assertEquals(1, food.sources.size)
-        val item = food.toFoodItem()
-        assertTrue(item.perItem)
-        assertEquals(1220f, item.kcalFor(2f), 0.01f)
-    }
-
-    @Test(expected = AiLookupException::class) fun aiNotFoundIsAnError() {
-        AiLookup.parse("""{"found": false, "note": "No such item."}""")
-    }
-
-    @Test fun aiGarbageReturnsNull() {
-        assertEquals(null, AiLookup.parse("sorry, no idea"))
-    }
-
     @Test fun canadianFoodsFileParsesAndRanks() {
         val file = java.io.File("src/main/assets/cnf_foods.csv")
         val foods = file.readLines().mapNotNull { CanadianFoods.parseLine(it) }
@@ -139,5 +115,23 @@ class NutritionTest {
         assertEquals(listOf("Big Mac"), OpenFoodFacts.relevant(good, "big mac").map { it.name })
         assertEquals(listOf("Big Mac"), OpenFoodFacts.relevant(good, "mcdonalds big mac").map { it.name })
         assertEquals(listOf("Cheddar slices"), OpenFoodFacts.relevant(good, "cheddar slice").map { it.name })
+    }
+
+    @Test fun restaurantFileHasChainsWithServings() {
+        val foods = java.io.File("src/main/assets/restaurants.csv").readLines().mapNotNull { RestaurantFoods.parseLine(it) }
+        assertTrue(foods.size > 200)
+        val bigMac = foods.first { it.brand == "McDonald's" && it.name == "Big Mac" }
+        assertEquals(219f, bigMac.servingG, 0.5f)
+        val kcal = bigMac.kcalFor(bigMac.servingG)
+        assertTrue("Big Mac kcal $kcal", kcal in 500f..600f)
+        assertTrue(foods.none { it.name.startsWith("McDONALD", ignoreCase = true) })
+    }
+
+    @Test fun everyShelfHasFoods() {
+        val entries = java.io.File("src/main/assets/cnf_foods.csv").readLines().mapNotNull { CanadianFoods.parseEntry(it) }
+        for (s in Shelves.all.filter { !it.restaurants }) {
+            val n = entries.count { it.second in s.cnfGroups }
+            assertTrue("${s.title} has $n foods", n >= 20)
+        }
     }
 }

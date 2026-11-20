@@ -3,8 +3,6 @@ package com.mrboora.plate
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mrboora.plate.data.AiFood
-import com.mrboora.plate.data.AiLookup
 import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.DayTotal
 import com.mrboora.plate.data.FoodCatalog
@@ -15,11 +13,13 @@ import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.OpenFoodFacts
 import com.mrboora.plate.data.PlateDatabase
 import com.mrboora.plate.data.Profile
+import com.mrboora.plate.data.RestaurantFoods
 import com.mrboora.plate.data.SavedFood
 import com.mrboora.plate.data.Targets
 import com.mrboora.plate.data.Water
 import com.mrboora.plate.data.WeightEntry
 import com.mrboora.plate.data.toItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 sealed interface ProfileState {
@@ -40,21 +41,13 @@ sealed interface ProfileState {
 class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val dao = PlateDatabase.get(app).dao()
     private val canadian = CanadianFoods(app)
-    private val prefs = app.getSharedPreferences("plate", android.content.Context.MODE_PRIVATE)
+    private val restaurants = RestaurantFoods(app)
 
-    /** The user's own Anthropic API key for AI lookup. Stored only on this phone. */
-    private val _aiKey = MutableStateFlow(prefs.getString("anthropic_key", "").orEmpty())
-    val aiKey: StateFlow<String> = _aiKey
+    suspend fun restaurantChains(): List<Pair<String, Int>> = withContext(Dispatchers.Default) { restaurants.chains() }
 
-    fun setAiKey(key: String) {
-        prefs.edit().putString("anthropic_key", key.trim()).apply()
-        _aiKey.value = key.trim()
-    }
+    suspend fun restaurantMenu(chain: String): List<FoodItem> = withContext(Dispatchers.Default) { restaurants.menu(chain) }
 
-    suspend fun aiLookup(query: String): Result<AiFood> = runCatching {
-        val country = java.util.Locale.getDefault().displayCountry.ifBlank { "Canada" }
-        AiLookup.lookup(_aiKey.value, query, country)
-    }
+    suspend fun shelfFoods(groups: Set<String>): List<FoodItem> = withContext(Dispatchers.Default) { canadian.inGroups(groups) }
 
     val profileState: StateFlow<ProfileState> = dao.profile()
         .map<Profile?, ProfileState> { ProfileState.Ready(it) }
@@ -147,9 +140,8 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         val saved = dao.searchSaved(q).map { it.toItem() }
         val keys = saved.map { it.key }.toMutableSet()
         val everyday = FoodCatalog.search(q).filter { keys.add(it.key) }
-        val canada = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { canadian.search(q) }
-            .filter { keys.add(it.key) }
-        return saved + everyday + canada
+        val (chains, canada) = withContext(Dispatchers.Default) { restaurants.search(q) to canadian.search(q) }
+        return saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
     }
 
     suspend fun searchOnline(query: String): Result<List<FoodItem>> = runCatching { OpenFoodFacts.search(query) }

@@ -11,7 +11,7 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 
 ## Install on your phone
 
-1. On the phone, open this repo on GitHub and download [`release/Plate-1.5.apk`](release/Plate-1.5.apk).
+1. On the phone, open this repo on GitHub and download [`release/Plate-1.6.apk`](release/Plate-1.6.apk).
 2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
 3. Tap **Install**. Requires Android 8.0 or newer.
 
@@ -20,7 +20,7 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 - **Daily target**: uses the Mifflin-St Jeor resting energy formula × activity level, then adjusts for your goal (lose, maintain or gain 0.25–1 kg a week). Protein, carbs and fat targets come from the same calculation.
 - **Food diary**: one list of the day's meals with the time each was logged. Browse past days, and undo removals.
 - **Food search**: about 6,000 foods from Health Canada's Canadian Nutrient File (2026) plus 60 everyday staples (including Indian dishes), all offline and free, plus online search and barcode-number lookup through [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
-- **AI lookup**: type any restaurant item ("A&W Papa Burger") and Claude searches the web for its nutrition, preferring the restaurant's own published numbers. It shows the sources and whether the figures are official, from other sites, or an estimate. Needs your own Anthropic API key (Profile → AI lookup); each lookup is billed to your Anthropic account.
+- **Browse**: Restaurants (about 230 menu items from 20 chains such as McDonald's, KFC, Burger King, Wendy's, Subway, Taco Bell, Popeyes and pizza chains), plus shelves like Drinks, Fast food, Snacks, Meals & dishes, Fruit and more. Every item has a + to log its usual serving.
 - **Manual restaurant entries**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.
 - **Your foods**: create custom foods per item or per 100 g. Foods you use show up as recents.
 - **Water**: tap drops or use +/−, toward a daily goal.
@@ -50,6 +50,7 @@ The release build is signed with the debug key so it installs directly. Create y
 ## Data and licences
 
 - Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada): Health Canada, *Canadian Nutrient File, 2026* (`app/src/main/assets/cnf_foods.csv`, reduced to energy, protein, carbohydrate, fat and one household measure per food).
+- Restaurant menu items from USDA [FoodData Central](https://fdc.nal.usda.gov) SR Legacy (public domain); US recipes, so Canadian menus can differ.
 - Online food data from [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License.
 
 Calorie targets are estimates, not medical advice.

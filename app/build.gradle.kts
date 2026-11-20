@@ -13,8 +13,8 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.5"
+        versionCode = 7
+        versionName = "1.6"
     }
 
     buildTypes {
@@ -28,9 +28,6 @@ android {
 
     buildFeatures { compose = true }
 
-    packaging {
-        resources.excludes += setOf("META-INF/*.md", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/DEPENDENCIES", "META-INF/*.kotlin_module", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -63,7 +60,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.anthropic.java)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
     testImplementation(libs.robolectric)

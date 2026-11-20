@@ -25,7 +25,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.QrCode2
@@ -52,6 +53,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +69,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mrboora.plate.data.AiFood
+import com.mrboora.plate.data.Shelf
+import com.mrboora.plate.data.Shelves
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.Meal
 import com.mrboora.plate.ui.components.Eyebrow
@@ -80,7 +83,7 @@ import kotlin.math.roundToInt
 
 private val tab = TextStyle(fontFeatureSettings = TABULAR)
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddFoodScreen(
     meal: Meal,
@@ -89,8 +92,9 @@ fun AddFoodScreen(
     searchLocal: suspend (String) -> List<FoodItem>,
     searchOnline: suspend (String) -> Result<List<FoodItem>>,
     lookupBarcode: suspend (String) -> Result<FoodItem?>,
-    hasAiKey: Boolean,
-    aiLookup: suspend (String) -> Result<AiFood>,
+    restaurantChains: suspend () -> List<Pair<String, Int>>,
+    restaurantMenu: suspend (String) -> List<FoodItem>,
+    shelfFoods: suspend (Set<String>) -> List<FoodItem>,
     onCreate: (FoodItem) -> Unit,
     onForget: (FoodItem) -> Unit,
     onAdd: (FoodItem, Float) -> Unit,
@@ -105,32 +109,34 @@ fun AddFoodScreen(
     var picked by remember { mutableStateOf<FoodItem?>(null) }
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
-    var showAi by remember { mutableStateOf(false) }
-    var ai by remember { mutableStateOf<AiFood?>(null) }
-    var aiState by remember { mutableStateOf<String?>(null) } // null idle, "loading", or an error message
 
-    LaunchedEffect(query) {
+    // Browsing: a shelf title ("Drinks", "Restaurants") and, for restaurants, a chain.
+    var shelf by rememberSaveable { mutableStateOf<String?>(null) }
+    var chain by rememberSaveable { mutableStateOf<String?>(null) }
+    var chains by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var shelfItems by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
+    val browsing = shelf != null
+
+    BackHandler(enabled = browsing) {
+        if (chain != null) chain = null else shelf = null
+    }
+
+    LaunchedEffect(shelf, chain) {
+        val s = shelf?.let(Shelves::byTitle)
+        shelfItems = when {
+            s == null -> emptyList()
+            s.restaurants && chain != null -> restaurantMenu(chain!!)
+            s.restaurants -> { chains = restaurantChains(); emptyList() }
+            else -> shelfFoods(s.cnfGroups)
+        }
+    }
+
+    LaunchedEffect(query, browsing) {
+        if (browsing) return@LaunchedEffect
         delay(150)
         local = searchLocal(query)
         online = emptyList()
         onlineState = null
-        ai = null
-        aiState = null
-    }
-
-    fun runAi() {
-        if (query.isBlank() || !hasAiKey || aiState == "loading") return
-        aiState = "loading"
-        val q = query
-        scope.launch {
-            aiLookup(q).fold(
-                onSuccess = { found ->
-                    if (q == query) { ai = found; aiState = null }
-                    onCreate(found.toFoodItem()) // keep it on the phone so the next search is instant and free
-                },
-                onFailure = { if (q == query) aiState = it.message ?: "AI lookup failed." },
-            )
-        }
     }
 
     /** Logs the usual serving straight away: one item, or the food's serving size in grams. */
@@ -141,33 +147,40 @@ fun AddFoodScreen(
 
     fun runOnline() {
         if (query.isBlank()) return
-        runAi()
         onlineState = "loading"
         scope.launch {
             searchOnline(query).fold(
                 onSuccess = {
                     online = it
-                    onlineState = when {
-                        it.isNotEmpty() -> null
-                        hasAiKey -> "No packaged products match \"$query\"."
-                        else -> "nokey"
-                    }
+                    onlineState = if (it.isEmpty()) "none" else null
                 },
                 onFailure = { onlineState = "Couldn't reach Open Food Facts. Check your connection." },
             )
         }
     }
 
+    val title = when {
+        chain != null -> chain!!
+        shelf != null -> shelf!!
+        else -> "Add food"
+    }
+    val filter = query.trim().lowercase()
+    fun matches(f: FoodItem) = filter.isEmpty() || filter.split(' ').all { "${f.brand} ${f.name}".lowercase().contains(it) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Add food", style = MaterialTheme.typography.titleLarge)
+                        Text(title, style = MaterialTheme.typography.titleLarge)
                         Text(dayText, style = MaterialTheme.typography.bodySmall, color = c.muted)
                     }
                 },
-                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+                navigationIcon = {
+                    IconButton({ if (chain != null) chain = null else if (shelf != null) shelf = null else onBack() }) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = c.ground),
             )
         },
@@ -182,93 +195,87 @@ fun AddFoodScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Search anything, e.g. A&W Papa Burger") },
+                    placeholder = { Text(if (browsing) "Filter $title" else "Search foods, drinks, restaurants") },
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
                     trailingIcon = { if (query.isNotEmpty()) IconButton({ query = "" }) { Icon(Icons.Rounded.Close, "Clear") } },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { runOnline() }),
+                    keyboardActions = KeyboardActions(onSearch = { if (!browsing) runOnline() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
-            }
-            item {
-                AssistChip(
-                    { showAi = true },
-                    { Text("AI lookup: restaurants & anything") },
-                    leadingIcon = { Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(18.dp), tint = c.accent) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip({ runOnline() }, { Text("Search online") }, leadingIcon = { Icon(Icons.Rounded.Public, null, Modifier.size(18.dp)) }, enabled = query.isNotBlank())
-                    AssistChip({ showBarcode = true }, { Text("Barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
-                    AssistChip({ showCreate = true }, { Text("Create") }, leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) })
-                }
             }
 
-            if (query.isBlank()) {
-                if (recent.isNotEmpty()) {
-                    item { Eyebrow("Recent and your foods", Modifier.padding(top = 8.dp)) }
-                    items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
-                } else {
+            if (browsing) {
+                val s = Shelves.byTitle(shelf!!)
+                if (s?.restaurants == true && chain == null) {
                     item {
                         Text(
-                            "Search the built-in list, or tap Search online for packaged foods from Open Food Facts. For restaurant meals like an A&W burger, use AI lookup. Foods you add show up here next time.",
-                            style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(top = 8.dp),
+                            "Menus from USDA FoodData Central. These are US recipes, so Canadian menus can differ a little. Missing a place? Add its items with Create.",
+                            style = MaterialTheme.typography.bodySmall, color = c.muted,
                         )
                     }
-                }
-            } else {
-                if (hasAiKey && (aiState != null || ai != null)) {
-                    item { Eyebrow("AI answer", Modifier.padding(top = 8.dp)) }
-                    item {
-                        when {
-                            aiState == "loading" -> PlateCard(padding = 14.dp) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                                    Spacer(Modifier.size(10.dp))
-                                    Text("Searching the web for \"$query\"…", style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                    items(chains.filter { filter.isEmpty() || it.first.lowercase().contains(filter) }, key = { it.first }) { (name, count) ->
+                        PlateCard(Modifier.clickable { chain = name; query = "" }, padding = 16.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Storefront, null, tint = c.accent)
+                                Spacer(Modifier.size(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(name, style = MaterialTheme.typography.titleMedium)
+                                    Text("$count items", style = MaterialTheme.typography.bodySmall, color = c.muted)
                                 }
+                                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.muted)
                             }
-                            ai != null -> AiAnswerCard(ai!!, onOpen = { picked = ai!!.toFoodItem() }, onQuickAdd = { quickAdd(ai!!.toFoodItem()) })
-                            else -> Text(aiState ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                } else {
+                    val shown = shelfItems.filter(::matches)
+                    item { Eyebrow("${shown.size} items") }
+                    items(shown, key = { "s" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
+                }
+            } else if (query.isBlank()) {
+                item { Eyebrow("Browse", Modifier.padding(top = 4.dp)) }
+                item {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Shelves.all.forEach { s ->
+                            AssistChip(
+                                { shelf = s.title; chain = null },
+                                { Text(s.title) },
+                                leadingIcon = if (s.restaurants) {
+                                    { Icon(Icons.Rounded.Storefront, null, Modifier.size(18.dp), tint = c.accent) }
+                                } else null,
+                            )
                         }
                     }
                 }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                        AssistChip({ showBarcode = true }, { Text("Barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
+                        AssistChip({ showCreate = true }, { Text("Create") }, leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) })
+                    }
+                }
+                if (recent.isNotEmpty()) {
+                    item { Eyebrow("Recent and your foods", Modifier.padding(top = 8.dp)) }
+                    items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
+                }
+            } else {
                 if (local.isNotEmpty()) {
                     item { Eyebrow("On this phone", Modifier.padding(top = 8.dp)) }
                     items(local, key = { "l" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 }
                 if (online.isNotEmpty()) {
-                    item { Eyebrow("Open Food Facts", Modifier.padding(top = 8.dp)) }
+                    item { Eyebrow("Packaged foods · Open Food Facts", Modifier.padding(top = 8.dp)) }
                     items(online, key = { "o" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
                 }
                 item {
-                    when (val s = onlineState) {
+                    when (val st = onlineState) {
                         "loading" -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                        null -> if (online.isEmpty() && ai == null) TextButton({ runOnline() }) {
-                            Text(if (hasAiKey) "Search the web for \"$query\"" else "Not here? Search Open Food Facts for \"$query\"")
-                        }
-                        "nokey" -> PlateCard(padding = 14.dp) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.AutoAwesome, null, tint = c.accent)
-                                Spacer(Modifier.size(10.dp))
-                                Text("No packaged product matches \"$query\".", style = MaterialTheme.typography.titleSmall)
-                            }
-                            Text(
-                                "Restaurant meals like an A&W Papa Burger aren't in food databases. Turn on AI lookup in Profile → AI lookup and the answer will appear here with a + button.",
-                                style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
-                            )
-                            TextButton({ showCreate = true }) { Text("Or enter it yourself") }
-                        }
-                        else -> Text(s, style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                        null -> if (online.isEmpty()) TextButton({ runOnline() }) { Text("Search packaged foods online for \"$query\"") }
+                        "none" -> Text("No packaged products match \"$query\".", style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                        else -> Text(st, style = MaterialTheme.typography.bodyMedium, color = c.muted)
                     }
                 }
                 item {
-                    TextButton({ showAi = true }) {
-                        Text("Eating out? Ask AI lookup for \"$query\"")
-                    }
+                    TextButton({ showCreate = true }) { Text("Not listed? Add \"$query\" yourself") }
                 }
             }
         }
@@ -285,14 +292,6 @@ fun AddFoodScreen(
         BarcodeDialog(lookupBarcode, onDismiss = { showBarcode = false }) { found ->
             showBarcode = false
             picked = found
-        }
-    }
-    if (showAi) {
-        AiLookupDialog(query, hasAiKey, aiLookup, onDismiss = { showAi = false }) { found ->
-            showAi = false
-            val item = found.toFoodItem()
-            onCreate(item)
-            picked = item
         }
     }
     if (showCreate) {
@@ -479,123 +478,4 @@ private fun CreateFoodDialog(initialName: String, onDismiss: () -> Unit, onCreat
 @Composable
 private fun Small(label: String, v: String, on: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(v, on, label = { Text(label) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = modifier)
-}
-
-@Composable
-private fun AiLookupDialog(
-    initial: String,
-    hasKey: Boolean,
-    lookup: suspend (String) -> Result<AiFood>,
-    onDismiss: () -> Unit,
-    onUse: (AiFood) -> Unit,
-) {
-    val c = Plate.colors
-    val scope = rememberCoroutineScope()
-    val uri = androidx.compose.ui.platform.LocalUriHandler.current
-    var q by remember { mutableStateOf(initial) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var result by remember { mutableStateOf<AiFood?>(null) }
-
-    fun go() {
-        if (q.isBlank() || busy) return
-        busy = true; error = null; result = null
-        scope.launch {
-            lookup(q.trim()).fold(onSuccess = { result = it }, onFailure = { error = it.message ?: "Lookup failed." })
-            busy = false
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text("AI lookup") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
-                if (!hasKey) {
-                    Text(
-                        "Add your Anthropic API key in Profile → AI lookup first. Each lookup searches the web with Claude and costs a few cents on your Anthropic account.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    return@Column
-                }
-                OutlinedTextField(
-                    q, { q = it }, label = { Text("Restaurant and item, e.g. A&W Papa Burger") }, singleLine = true,
-                    enabled = !busy, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { go() }), modifier = Modifier.fillMaxWidth(),
-                )
-                if (busy) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.size(10.dp))
-                        Text("Searching the web… usually 10–30 seconds", style = MaterialTheme.typography.bodySmall, color = c.muted)
-                    }
-                }
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                result?.let { r ->
-                    PlateCard(padding = 14.dp) {
-                        Text(r.name, style = MaterialTheme.typography.titleMedium)
-                        Text(listOf(r.restaurant, r.serving).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.muted)
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Num("kcal", r.kcal); Num("Protein", r.protein, "g"); Num("Carbs", r.carbs, "g"); Num("Fat", r.fat, "g")
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        val (label, color) = when (r.confidence) {
-                            "official" -> "From the restaurant's own nutrition info" to c.good
-                            "third_party" -> "From other nutrition sites, not the restaurant" to c.carbs
-                            else -> "Estimate: no published numbers found" to c.over
-                        }
-                        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
-                        if (r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
-                        r.sources.take(4).forEach { (title, url) ->
-                            Text(
-                                "↗ $title", style = MaterialTheme.typography.bodySmall, color = c.accent, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 4.dp).clickable { runCatching { uri.openUri(url) } },
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            when {
-                !hasKey -> TextButton(onDismiss) { Text("OK") }
-                result != null -> TextButton({ onUse(result!!) }) { Text("Use this") }
-                else -> TextButton(::go, enabled = q.isNotBlank() && !busy) { Text("Look up") }
-            }
-        },
-        dismissButton = { if (hasKey) TextButton(onDismiss, enabled = !busy) { Text("Cancel") } },
-    )
-}
-
-@Composable
-private fun AiAnswerCard(r: AiFood, onOpen: () -> Unit, onQuickAdd: () -> Unit) {
-    val c = Plate.colors
-    val uri = androidx.compose.ui.platform.LocalUriHandler.current
-    PlateCard(Modifier.clickable(onClick = onOpen), padding = 14.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(r.name, style = MaterialTheme.typography.titleMedium)
-                Text(listOf(r.restaurant, r.serving).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = c.muted)
-            }
-            FilledTonalIconButton(onQuickAdd) { Icon(Icons.Rounded.Add, "Add ${r.name}") }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "${r.kcal.roundToInt()} kcal · P ${r.protein.roundToInt()} · C ${r.carbs.roundToInt()} · F ${r.fat.roundToInt()}",
-            style = MaterialTheme.typography.titleSmall.merge(tab),
-        )
-        val (label, color) = when (r.confidence) {
-            "official" -> "Restaurant's own numbers" to c.good
-            "third_party" -> "From nutrition sites, not the restaurant" to c.carbs
-            else -> "Estimate: no published numbers found" to c.over
-        }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = color, modifier = Modifier.padding(top = 4.dp))
-        if (r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
-        r.sources.firstOrNull()?.let { (title, url) ->
-            Text("↗ $title", style = MaterialTheme.typography.bodySmall, color = c.accent, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp).clickable { runCatching { uri.openUri(url) } })
-        }
-    }
 }
