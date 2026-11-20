@@ -3,6 +3,7 @@ package com.mrboora.plate.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Search
@@ -109,6 +112,7 @@ fun AddFoodScreen(
     var picked by remember { mutableStateOf<FoodItem?>(null) }
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
+    var browseExpanded by rememberSaveable { mutableStateOf(false) }
 
     // Browsing: a shelf title ("Drinks", "Restaurants") and, for restaurants, a chain.
     var shelf by rememberSaveable { mutableStateOf<String?>(null) }
@@ -233,9 +237,17 @@ fun AddFoodScreen(
                     items(shown, key = { "s" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
                 }
             } else if (query.isBlank()) {
-                item { Eyebrow("Browse", Modifier.padding(top = 4.dp)) }
                 item {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Eyebrow("Browse", Modifier.weight(1f))
+                        TextButton({ browseExpanded = !browseExpanded }) {
+                            Text(if (browseExpanded) "Show less" else "Show all")
+                            Icon(if (browseExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, Modifier.size(18.dp))
+                        }
+                    }
+                }
+                item {
+                    val chips: @Composable () -> Unit = {
                         Shelves.all.forEach { s ->
                             AssistChip(
                                 { shelf = s.title; chain = null },
@@ -245,12 +257,17 @@ fun AddFoodScreen(
                                 } else null,
                             )
                         }
-                    }
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                         AssistChip({ showBarcode = true }, { Text("Barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
                         AssistChip({ showCreate = true }, { Text("Create") }, leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) })
+                    }
+                    if (browseExpanded) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { chips() }
+                    } else {
+                        // One line that scrolls sideways; runs edge to edge so it's clear there is more.
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) { chips() }
                     }
                 }
                 if (recent.isNotEmpty()) {
