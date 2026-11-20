@@ -105,6 +105,8 @@ data class FoodItem(
     val servingLabel: String = "",
     val source: Source = Source.BUILT_IN,
     val perItem: Boolean = false,
+    /** Macros the source doesn't publish: any of 'p', 'c', 'f'. Shown as "–" rather than 0. */
+    val unknown: String = "",
 ) {
     enum class Source { BUILT_IN, SAVED, CUSTOM, ONLINE }
 

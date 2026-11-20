@@ -104,6 +104,11 @@ class RestaurantFoods(private val context: Context) {
                 servingLabel = if (grams != null) "$label, ${grams.toInt()} g" else label,
                 source = FoodItem.Source.BUILT_IN,
                 perItem = true,
+                unknown = buildString {
+                    if (cols[3].isBlank()) append('p')
+                    if (cols[4].isBlank()) append('c')
+                    if (cols[5].isBlank()) append('f')
+                },
             )
         }
     }

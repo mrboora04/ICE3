@@ -230,7 +230,8 @@ private fun MealsCard(items: List<FoodEntry>, onAdd: () -> Unit, onDelete: (Food
                     val time = java.time.Instant.ofEpochMilli(e.createdAt).atZone(java.time.ZoneId.systemDefault())
                         .format(DateTimeFormatter.ofPattern("h:mm a"))
                     Text(
-                        "$time · $brand${e.amountText} · P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
+                        "$time · $brand${e.amountText} · " + if (e.protein == 0f && e.carbs == 0f && e.fat == 0f && e.kcal > 20f) "macros not published"
+                        else "P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
                         style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }

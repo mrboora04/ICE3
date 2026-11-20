@@ -144,4 +144,12 @@ class NutritionTest {
         val coffee = foods.first { it.brand == "Tim Hortons" && it.name.startsWith("Original Blend Coffee (Medium") }
         assertEquals(coffee.kcal100 * 2, coffee.kcalFor(2f), 0.01f) // per item: two coffees, double calories
     }
+
+    @Test fun missingMacrosAreMarkedUnknown() {
+        val aw = RestaurantFoods.parseCanadianLine("A&W,Test Burger,500,27,,30,,1 burger,https://web.aw.ca/x")!!
+        assertEquals("c", aw.unknown)
+        val harveys = RestaurantFoods.parseCanadianLine("Harvey's,Test,410,,,,,1 burger,https://www.harveys.ca/x")!!
+        assertEquals("pcf", harveys.unknown)
+        assertEquals(410f, harveys.kcalFor(1f), 0.01f)
+    }
 }

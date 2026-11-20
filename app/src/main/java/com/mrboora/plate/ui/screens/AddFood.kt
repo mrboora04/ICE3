@@ -434,9 +434,15 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
             val gg = g ?: 0f
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Num("kcal", food.kcalFor(gg))
-                Num("Protein", food.proteinFor(gg), "g")
-                Num("Carbs", food.carbsFor(gg), "g")
-                Num("Fat", food.fatFor(gg), "g")
+                Num("Protein", food.proteinFor(gg), "g", 'p' in food.unknown)
+                Num("Carbs", food.carbsFor(gg), "g", 'c' in food.unknown)
+                Num("Fat", food.fatFor(gg), "g", 'f' in food.unknown)
+            }
+            if (food.unknown.isNotEmpty()) {
+                Text(
+                    "– = not published by the restaurant; counted as 0 in your totals.",
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),
+                )
             }
             Spacer(Modifier.height(20.dp))
             Button({ g?.let(onConfirm) }, enabled = g != null, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Add") }
@@ -445,10 +451,10 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
 }
 
 @Composable
-private fun Num(label: String, v: Float, unit: String = "") {
+private fun Num(label: String, v: Float, unit: String = "", unknown: Boolean = false) {
     Column {
         Eyebrow(label)
-        Text("${v.roundToInt()}$unit", style = MaterialTheme.typography.titleLarge.merge(tab))
+        Text(if (unknown) "–" else "${v.roundToInt()}$unit", style = MaterialTheme.typography.titleLarge.merge(tab))
     }
 }
 
