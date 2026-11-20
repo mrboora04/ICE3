@@ -114,6 +114,36 @@ fun AddFoodScreen(
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
     var browseExpanded by rememberSaveable { mutableStateOf(false) }
+    var scanMsg by remember { mutableStateOf<String?>(null) } // "loading" while looking up a scanned code
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    fun lookupScanned(code: String) {
+        scanMsg = "loading"
+        scope.launch {
+            lookupBarcode(code).fold(
+                onSuccess = { found ->
+                    if (found != null) { scanMsg = null; picked = found }
+                    else scanMsg = "Barcode $code isn't in Open Food Facts yet. Tap Create to add it yourself."
+                },
+                onFailure = { scanMsg = "Couldn't look up barcode $code. Check your connection." },
+            )
+        }
+    }
+
+    /** Opens Google's camera scanner (no camera permission needed); falls back to typing the number. */
+    fun scan() {
+        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(
+                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_EAN_13,
+                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_EAN_8,
+                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_UPC_A,
+                com.google.mlkit.vision.barcode.common.Barcode.FORMAT_UPC_E,
+            )
+            .build()
+        com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context, options).startScan()
+            .addOnSuccessListener { barcode -> barcode.rawValue?.let(::lookupScanned) }
+            .addOnFailureListener { showBarcode = true }
+    }
 
     // Browsing: a shelf title ("Drinks", "Restaurants") and, for restaurants, a chain.
     var shelf by rememberSaveable { mutableStateOf<String?>(null) }
@@ -210,6 +240,26 @@ fun AddFoodScreen(
                 )
             }
 
+            scanMsg?.let { msg ->
+                item {
+                    if (msg == "loading") {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.size(10.dp))
+                            Text("Looking up barcode…", style = MaterialTheme.typography.bodyMedium, color = c.muted)
+                        }
+                    } else {
+                        PlateCard(padding = 14.dp) {
+                            Text(msg, style = MaterialTheme.typography.bodyMedium)
+                            Row {
+                                TextButton({ scanMsg = null; showCreate = true }) { Text("Create") }
+                                TextButton({ scanMsg = null; showBarcode = true }) { Text("Type the number") }
+                                TextButton({ scanMsg = null }) { Text("Dismiss") }
+                            }
+                        }
+                    }
+                }
+            }
             if (browsing) {
                 val s = Shelves.byTitle(shelf!!)
                 if (s?.restaurants == true && chain == null) {
@@ -261,7 +311,7 @@ fun AddFoodScreen(
                                 } else null,
                             )
                         }
-                        AssistChip({ showBarcode = true }, { Text("Barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
+                        AssistChip({ scan() }, { Text("Scan barcode") }, leadingIcon = { Icon(Icons.Rounded.QrCode2, null, Modifier.size(18.dp)) })
                         AssistChip({ showCreate = true }, { Text("Create") }, leadingIcon = { Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)) })
                     }
                     if (browseExpanded) {
