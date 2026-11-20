@@ -47,4 +47,4 @@ Calorie targets are estimates, not medical advice.
 ./gradlew testDebugUnitTest   # tests, and renders docs/screenshots/*.png
 ```
 
-**Releasing an update:** bump `versionCode`/`versionName` in `app/build.gradle.kts`, build with Plate's release key (configured in `local.properties`, never committed; updates only install over an existing Plate signed with the same key), copy the APK to `release/Plate.apk`, and update `release/latest.json` (version and two or three short `notes`). Push to `main`.
+**Releasing an update:** bump `versionCode` and `versionName` in `app/build.gradle.kts`, write two or three lines in `release/next-notes.md` (each starting with `- `), and push to `main`. GitHub Actions then tests, builds and signs Plate with the release key (kept only in the repo's encrypted secrets), checks the signature against `release/signing-cert-sha256.txt`, and publishes `release/Plate.apk` and `release/latest.json`. Installed copies then show the Update badge. Pushes that don't raise the version only run the tests.
