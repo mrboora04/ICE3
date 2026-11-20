@@ -1,10 +1,10 @@
 {
-  "versionCode": 16,
-  "versionName": "1.15",
+  "versionCode": 17,
+  "versionName": "1.16",
   "notes": [
-    "Plate now tells you when a new version is out and updates in one tap",
-    "Amaya added as an estimated menu, marked with ≈",
-    "A&W items now show carbs"
+    "Recent restaurant foods now use the latest menu numbers (fixes 0 g carbs on A&W items)",
+    "An Update badge stays on Today until you update",
+    "Share Plate with a friend from your Profile"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

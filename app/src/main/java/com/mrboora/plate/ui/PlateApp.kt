@@ -92,6 +92,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val week by vm.week.collectAsStateWithLifecycle()
     val recent by vm.recentFoods.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
+    val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
 
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -161,8 +162,10 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                         }
                     },
                     onWater = vm::addWater,
+                    updateVersion = update?.versionName,
+                    onUpdateTap = vm::showUpdate,
                     banner = {
-                        update?.let { info ->
+                        update?.takeIf { !updateCardHidden }?.let { info ->
                             com.mrboora.plate.ui.components.UpdateCard(info, onLater = vm::dismissUpdate, modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     },

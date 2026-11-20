@@ -66,6 +66,12 @@ class RestaurantFoods(private val context: Context) {
 
     fun names(): List<String> = load().map { "${it.first.brand} ${it.first.name}" }
 
+    @Volatile private var byKey: Map<String, FoodItem>? = null
+
+    /** The current menu entry for a saved food's key, so recents pick up corrected numbers. */
+    fun find(key: String): FoodItem? =
+        (byKey ?: load().associate { it.first.key to it.first }.also { byKey = it })[key]
+
     fun menu(chain: String): List<FoodItem> = load().map { it.first }.filter { it.brand == chain }
 
     fun search(query: String, limit: Int = 30): List<FoodItem> {

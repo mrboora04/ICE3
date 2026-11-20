@@ -87,6 +87,7 @@ fun ProfileScreen(
 ) {
     val c = Plate.colors
     var confirmReset by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val bmi = Nutrition.bmi(currentKg, profile.heightCm)
     val weeks = Nutrition.weeksToGoal(profile, currentKg)
 
@@ -186,6 +187,7 @@ fun ProfileScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Edit profile and goals")
                 }
+                OutlinedButton({ shareApp(context) }, Modifier.fillMaxWidth()) { Text("Share Plate with a friend") }
                 OutlinedButton({ confirmReset = true }, Modifier.fillMaxWidth()) { Text("Erase all data") }
                 Text(
                     "Built-in foods include information from Health Canada's Canadian Nutrient File, licensed under the Open Government Licence – Canada. Restaurant menus from USDA FoodData Central (public domain). Online food data from Open Food Facts, available under the Open Database License.",
@@ -293,4 +295,16 @@ private fun Line(label: String, value: String) {
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = Plate.colors.muted)
         Text(value, style = MaterialTheme.typography.bodyMedium.merge(tab))
     }
+}
+
+/** The download page for Plate. */
+const val SITE_URL = "https://mrboora04.github.io/ICE3/"
+
+/** Opens Android's share sheet with a short message and the download page. */
+private fun shareApp(context: android.content.Context) {
+    val text = "I’m tracking food with Plate, a free calorie tracker made for Canada (Tim Hortons, A&W and more built in). Get it here: $SITE_URL"
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+        .setType("text/plain")
+        .putExtra(android.content.Intent.EXTRA_TEXT, text)
+    context.startActivity(android.content.Intent.createChooser(send, "Share Plate"))
 }

@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -51,7 +52,11 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { _update.value = com.mrboora.plate.data.AppUpdates.check(getApplication()) }
     }
 
-    fun dismissUpdate() { _update.value = null }
+    /** "Later" hides the card; the update badge on Today stays until the app is updated. */
+    private val _updateCardHidden = MutableStateFlow(false)
+    val updateCardHidden: StateFlow<Boolean> = _updateCardHidden
+    fun dismissUpdate() { _updateCardHidden.value = true }
+    fun showUpdate() { _updateCardHidden.value = false }
 
     @Volatile private var vocab: Set<String>? = null
 
@@ -96,8 +101,19 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val recentFoods: StateFlow<List<FoodItem>> = dao.recentFoods().map { list -> list.map { it.toItem() } }
+    val recentFoods: StateFlow<List<FoodItem>> = dao.recentFoods().map { list -> list.map(::current) }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * A saved food as it should be shown now. Restaurant items use today's menu numbers (so a
+     * correction, like A&W carbs, reaches foods logged before it); foods people made stay as entered.
+     */
+    private fun current(saved: SavedFood): FoodItem {
+        val item = saved.toItem()
+        if (saved.custom) return item
+        return restaurants.find(saved.key)?.copy(source = FoodItem.Source.SAVED) ?: item
+    }
 
     /** The latest logged weight, falling back to the profile's weight. */
     val currentWeight: StateFlow<Float?> = combine(profileState, weights) { s, w ->
@@ -160,7 +176,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun searchLocal(query: String): List<FoodItem> {
         val q = query.trim()
         if (q.isEmpty()) return emptyList()
-        val saved = dao.searchSaved(q).map { it.toItem() }
+        val saved = withContext(Dispatchers.Default) { dao.searchSaved(q).map(::current) }
         val keys = saved.map { it.key }.toMutableSet()
         val everyday = FoodCatalog.search(q).filter { keys.add(it.key) }
         val (chains, canada) = withContext(Dispatchers.Default) { restaurants.search(q) to canadian.search(q) }

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Remove
@@ -82,6 +83,9 @@ fun TodayScreen(
     onDelete: (FoodEntry) -> Unit,
     onWater: (Int) -> Unit,
     banner: @Composable () -> Unit = {},
+    /** Version name of an available update; shows a badge in the header that reopens the update card. */
+    updateVersion: String? = null,
+    onUpdateTap: () -> Unit = {},
 ) {
     val c = Plate.colors
     val eaten = entries.sumOf { it.kcal.toDouble() }.toFloat()
@@ -96,6 +100,19 @@ fun TodayScreen(
                     Text(dayLabel(day), style = MaterialTheme.typography.titleMedium, color = c.ink)
                 }
                 IconButton({ onShiftDay(1) }, enabled = !isToday) { Icon(Icons.Rounded.ChevronRight, "Next day") }
+                if (updateVersion != null) {
+                    Spacer(Modifier.weight(1f))
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = onUpdateTap,
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(containerColor = c.accent, contentColor = c.onAccent),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) {
+                        Icon(Icons.Rounded.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Update $updateVersion", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
         }
         item {
