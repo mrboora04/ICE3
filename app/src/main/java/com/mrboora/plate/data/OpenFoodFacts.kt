@@ -22,11 +22,34 @@ object OpenFoodFacts {
      */
     suspend fun search(query: String): List<FoodItem> = withContext(Dispatchers.IO) {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
+        val raw = searchRaw(q)
+        relevant(raw, query)
+    }
+
+    private val STOP = setOf("the", "and", "with", "of", "from", "at", "in", "a", "an")
+
+    private fun norm(s: String) = s.lowercase().replace(Regex("[^a-z0-9 ]"), "")
+
+    /**
+     * The search services match loosely ("papa burger" returns root beer and "Papas" chips).
+     * Keep only products whose name or brand contains every word the user typed.
+     */
+    fun relevant(items: List<FoodItem>, query: String): List<FoodItem> {
+        val terms = norm(query.replace('&', ' ')).split(' ').filter { it.length > 1 && it !in STOP }
+        if (terms.isEmpty()) return items
+        return items.filter { item ->
+            val words = norm("${item.name} ${item.brand}".replace('&', ' ')).split(' ').toSet()
+            val compact = norm("${item.name} ${item.brand}").replace(" ", "")
+            terms.all { t -> words.any { it.startsWith(t) } || (t.length >= 4 && compact.contains(t)) }
+        }
+    }
+
+    private suspend fun searchRaw(q: String): List<FoodItem> {
         val primary = runCatching {
             val json = get("$SEARCH/search?q=$q&page_size=30&fields=$FIELDS")
             parseList(json.optJSONArray("hits"))
         }
-        primary.getOrNull()?.takeIf { it.isNotEmpty() } ?: run {
+        return primary.getOrNull()?.takeIf { it.isNotEmpty() } ?: run {
             val fallback = runCatching {
                 val json = get("$WORLD/cgi/search.pl?search_terms=$q&search_simple=1&action=process&json=1&page_size=25&fields=$FIELDS")
                 parseList(json.optJSONArray("products"))

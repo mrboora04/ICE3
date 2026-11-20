@@ -11,14 +11,14 @@ Plate is an original calorie and macro tracker built with Kotlin and Jetpack Com
 
 ## Install on your phone
 
-1. On the phone, open this repo on GitHub and download [`release/Plate-1.4.apk`](release/Plate-1.4.apk).
+1. On the phone, open this repo on GitHub and download [`release/Plate-1.5.apk`](release/Plate-1.5.apk).
 2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
 3. Tap **Install**. Requires Android 8.0 or newer.
 
 ## Features
 
 - **Daily target**: uses the Mifflin-St Jeor resting energy formula × activity level, then adjusts for your goal (lose, maintain or gain 0.25–1 kg a week). Protein, carbs and fat targets come from the same calculation.
-- **Food diary**: breakfast, lunch, dinner and snacks. Browse past days, and undo removals.
+- **Food diary**: one list of the day's meals with the time each was logged. Browse past days, and undo removals.
 - **Food search**: about 6,000 foods from Health Canada's Canadian Nutrient File (2026) plus 60 everyday staples (including Indian dishes), all offline and free, plus online search and barcode-number lookup through [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
 - **AI lookup**: type any restaurant item ("A&W Papa Burger") and Claude searches the web for its nutrition, preferring the restaurant's own published numbers. It shows the sources and whether the figures are official, from other sites, or an estimate. Needs your own Anthropic API key (Profile → AI lookup); each lookup is billed to your Anthropic account.
 - **Manual restaurant entries**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.

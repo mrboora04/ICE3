@@ -16,7 +16,19 @@ enum class Activity(val label: String, val detail: String, val factor: Float) {
 
 enum class Goal(val label: String) { LOSE("Lose"), MAINTAIN("Maintain"), GAIN("Gain") }
 
-enum class Meal(val label: String) { BREAKFAST("Breakfast"), LUNCH("Lunch"), DINNER("Dinner"), SNACK("Snacks") }
+enum class Meal(val label: String) {
+    BREAKFAST("Breakfast"), LUNCH("Lunch"), DINNER("Dinner"), SNACK("Snacks");
+
+    companion object {
+        /** The diary shows one list per day; entries are still tagged by time of day for later use. */
+        fun forNow(hour: Int = java.time.LocalTime.now().hour): Meal = when (hour) {
+            in 4..10 -> BREAKFAST
+            in 11..15 -> LUNCH
+            in 17..21 -> DINNER
+            else -> SNACK
+        }
+    }
+}
 
 @Entity(tableName = "profile")
 data class Profile(

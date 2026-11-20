@@ -145,7 +145,14 @@ fun AddFoodScreen(
         onlineState = "loading"
         scope.launch {
             searchOnline(query).fold(
-                onSuccess = { online = it; onlineState = if (it.isEmpty()) "No online results for \"$query\"." else null },
+                onSuccess = {
+                    online = it
+                    onlineState = when {
+                        it.isNotEmpty() -> null
+                        hasAiKey -> "No packaged products match \"$query\"."
+                        else -> "nokey"
+                    }
+                },
                 onFailure = { onlineState = "Couldn't reach Open Food Facts. Check your connection." },
             )
         }
@@ -156,7 +163,7 @@ fun AddFoodScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Add to ${meal.label}", style = MaterialTheme.typography.titleLarge)
+                        Text("Add food", style = MaterialTheme.typography.titleLarge)
                         Text(dayText, style = MaterialTheme.typography.bodySmall, color = c.muted)
                     }
                 },
@@ -242,6 +249,18 @@ fun AddFoodScreen(
                         "loading" -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         null -> if (online.isEmpty() && ai == null) TextButton({ runOnline() }) {
                             Text(if (hasAiKey) "Search the web for \"$query\"" else "Not here? Search Open Food Facts for \"$query\"")
+                        }
+                        "nokey" -> PlateCard(padding = 14.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.AutoAwesome, null, tint = c.accent)
+                                Spacer(Modifier.size(10.dp))
+                                Text("No packaged product matches \"$query\".", style = MaterialTheme.typography.titleSmall)
+                            }
+                            Text(
+                                "Restaurant meals like an A&W Papa Burger aren't in food databases. Turn on AI lookup in Profile → AI lookup and the answer will appear here with a + button.",
+                                style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
+                            )
+                            TextButton({ showCreate = true }) { Text("Or enter it yourself") }
                         }
                         else -> Text(s, style = MaterialTheme.typography.bodyMedium, color = c.muted)
                     }

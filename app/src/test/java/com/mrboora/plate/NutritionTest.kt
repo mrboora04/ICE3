@@ -127,4 +127,17 @@ class NutritionTest {
         assertEquals(33f, quoted.servingG, 0.01f)
         assertTrue(CanadianFoods.rank(foods, "poutine", 5).isNotEmpty())
     }
+
+    @Test fun onlineResultsMustMatchEveryWord() {
+        fun f(name: String, brand: String) = FoodItem(name, brand, 100f, 0f, 0f, 0f)
+        // The results from the "papa burger" screenshot: none is a Papa Burger.
+        val junk = listOf(f("Rootbeer", "AnW"), f("Papa", "Agro roff"), f("Papas", "McCain"), f("Uovo Cioccolato Fondente", "Papa"))
+        assertTrue(OpenFoodFacts.relevant(junk, "papa burger").isEmpty())
+        assertTrue(OpenFoodFacts.relevant(junk, "A&W papa burger").isEmpty())
+        val good = listOf(f("Root beer", "A&W"), f("Big Mac", "McDonald's"), f("Cheddar slices", "Kraft"))
+        assertEquals(listOf("Root beer"), OpenFoodFacts.relevant(good, "a&w root beer").map { it.name })
+        assertEquals(listOf("Big Mac"), OpenFoodFacts.relevant(good, "big mac").map { it.name })
+        assertEquals(listOf("Big Mac"), OpenFoodFacts.relevant(good, "mcdonalds big mac").map { it.name })
+        assertEquals(listOf("Cheddar slices"), OpenFoodFacts.relevant(good, "cheddar slice").map { it.name })
+    }
 }

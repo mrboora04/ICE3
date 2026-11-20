@@ -104,10 +104,8 @@ fun TodayScreen(
         }
         item { Hero(eaten, targets, entries, Modifier.padding(horizontal = 16.dp)) }
         item { WaterCard(waterMl, profile.waterGoalMl, onWater, Modifier.padding(horizontal = 16.dp)) }
-        Meal.entries.forEach { meal ->
-            item(key = meal.name) {
-                MealCard(meal, entries.filter { it.meal == meal }, { onAdd(meal) }, onDelete, Modifier.padding(horizontal = 16.dp))
-            }
+        item(key = "meals") {
+            MealsCard(entries, { onAdd(Meal.forNow()) }, onDelete, Modifier.padding(horizontal = 16.dp))
         }
         item { Spacer(Modifier.height(12.dp)) }
     }
@@ -210,18 +208,18 @@ private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modi
 }
 
 @Composable
-private fun MealCard(meal: Meal, items: List<FoodEntry>, onAdd: () -> Unit, onDelete: (FoodEntry) -> Unit, modifier: Modifier) {
+private fun MealsCard(items: List<FoodEntry>, onAdd: () -> Unit, onDelete: (FoodEntry) -> Unit, modifier: Modifier) {
     val c = Plate.colors
     PlateCard(modifier.animateContentSize(), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(meal.label, style = MaterialTheme.typography.titleLarge)
+                Text("Meals", style = MaterialTheme.typography.titleLarge)
                 Text(
                     if (items.isEmpty()) "Nothing yet" else "%,d kcal".format(items.sumOf { it.kcal.toDouble() }.roundToInt()),
                     style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted,
                 )
             }
-            FilledTonalIconButton(onAdd) { Icon(Icons.Rounded.Add, "Add food to ${meal.label}") }
+            FilledTonalIconButton(onAdd) { Icon(Icons.Rounded.Add, "Add food") }
         }
         items.forEach { e ->
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
@@ -229,8 +227,10 @@ private fun MealCard(meal: Meal, items: List<FoodEntry>, onAdd: () -> Unit, onDe
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
                     Text(e.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val brand = if (e.brand.isNotBlank()) "${e.brand} · " else ""
+                    val time = java.time.Instant.ofEpochMilli(e.createdAt).atZone(java.time.ZoneId.systemDefault())
+                        .format(DateTimeFormatter.ofPattern("h:mm a"))
                     Text(
-                        "$brand${e.amountText} · P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
+                        "$time · $brand${e.amountText} · P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
                         style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
