@@ -13,8 +13,8 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.10"
+        versionCode = 12
+        versionName = "1.11"
     }
 
     buildTypes {
@@ -61,6 +61,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.play.services.code.scanner)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     testImplementation(libs.org.json)
     testImplementation(libs.robolectric)

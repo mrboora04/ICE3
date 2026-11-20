@@ -2,6 +2,9 @@ package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.CanadianFoods
+import com.mrboora.plate.data.FoodRequest
+import com.mrboora.plate.data.MenuUpdates
+import com.mrboora.plate.data.Spelling
 import com.mrboora.plate.data.RestaurantFoods
 import com.mrboora.plate.data.Shelves
 import com.mrboora.plate.data.FoodCatalog
@@ -151,5 +154,24 @@ class NutritionTest {
         val harveys = RestaurantFoods.parseCanadianLine("Harvey's,Test,410,,,,,1 burger,https://www.harveys.ca/x")!!
         assertEquals("pcf", harveys.unknown)
         assertEquals(410f, harveys.kcalFor(1f), 0.01f)
+    }
+
+    @Test fun didYouMeanFixesTypos() {
+        val vocab = listOf("Osmow's Chicken on the Rock", "Harvey's Angus Burger", "Tim Hortons Double Double", "Poutine")
+            .flatMap(Spelling::words).toSet()
+        assertEquals("osmows", Spelling.suggest("osmaos", vocab))
+        assertEquals("tim hortons", Spelling.suggest("tim hortnos", vocab))
+        assertEquals("harveys burger", Spelling.suggest("harvys burgr", vocab))
+        assertEquals(null, Spelling.suggest("poutine", vocab))      // already right
+        assertEquals(null, Spelling.suggest("zzzzqqq", vocab))      // nothing close: no wild guesses
+    }
+
+    @Test fun requestIsFulfilledWhenItemArrives() {
+        val req = FoodRequest(1, "Osmow's", "Chicken on the Rock", 0, false)
+        val before = listOf(FoodItem("Big Mac", "McDonald's", 580f, 27f, 46f, 32f))
+        val after = before + FoodItem("Chicken on the Rock", "Osmow's", 900f, 50f, 80f, 40f)
+        assertTrue(MenuUpdates.fulfilled(listOf(req), before).isEmpty())
+        assertEquals(listOf(1L), MenuUpdates.fulfilled(listOf(req), after).map { it.id })
+        assertTrue(MenuUpdates.fulfilled(listOf(req.copy(done = true)), after).isEmpty())
     }
 }

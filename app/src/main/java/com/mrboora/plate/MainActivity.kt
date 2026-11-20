@@ -11,6 +11,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.mrboora.plate.data.MenuUpdates.schedule(this)
         setContent { PlateTheme { PlateApp() } }
     }
 }

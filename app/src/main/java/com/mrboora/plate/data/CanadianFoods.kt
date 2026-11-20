@@ -16,6 +16,8 @@ class CanadianFoods(private val context: Context) {
         }.also { entries = it }
     }
 
+    fun names(): List<String> = load().map { it.first.name }
+
     fun search(query: String, limit: Int = 40): List<FoodItem> = rank(load().map { it.first }, query, limit)
 
     /** All foods in the given food groups, alphabetically. */

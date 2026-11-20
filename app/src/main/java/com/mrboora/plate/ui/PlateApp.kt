@@ -93,6 +93,31 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val recent by vm.recentFoods.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val notifyPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { }
+
+    /** Saves the request (so we can notify when it's added) and opens a pre-filled email. */
+    fun sendRequest(restaurant: String, item: String) {
+        vm.saveRequest(restaurant, item)
+        if (android.os.Build.VERSION.SDK_INT >= 33) notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        val what = listOf(restaurant, item).filter { it.isNotBlank() }.joinToString(" – ")
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+        val email = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:"))
+            .putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(com.mrboora.plate.data.Requests.EMAIL))
+            .putExtra(android.content.Intent.EXTRA_SUBJECT, "Plate food request: $what")
+            .putExtra(
+                android.content.Intent.EXTRA_TEXT,
+                "Please add this to Plate:\n\nRestaurant: ${restaurant.ifBlank { "-" }}\nFood/item: ${item.ifBlank { "-" }}\n\nPlate $version",
+            )
+        try {
+            context.startActivity(email)
+        } catch (e: android.content.ActivityNotFoundException) {
+            scope.launch { snackbar.showSnackbar("No email app found. Request saved; email ${com.mrboora.plate.data.Requests.EMAIL}.") }
+        }
+    }
+
     val showBar = Tab.entries.any { it.route == route }
     Scaffold(
         containerColor = Plate.colors.ground,
@@ -160,6 +185,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     restaurantChains = vm::restaurantChains,
                     restaurantMenu = vm::restaurantMenu,
                     shelfFoods = vm::shelfFoods,
+                    didYouMean = vm::didYouMean,
+                    onRequest = { restaurant, item -> sendRequest(restaurant, item) },
                     onCreate = { vm.createFood(it) },
                     onForget = { vm.forgetFood(it) },
                     onAdd = { food, g -> vm.addEntry(meal, food, g) },

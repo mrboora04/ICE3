@@ -98,7 +98,7 @@ class ScreenshotTest {
     @Test fun addFood() = shot("add_food") {
         AddFoodScreen(
             Meal.LUNCH, "Today", FoodCatalog.foods.filter { it.name in setOf("Roti / chapati", "Dal (lentil curry)", "Paneer", "Basmati rice, cooked") },
-            { emptyList() }, { Result.success(emptyList()) }, { Result.success(null) }, { emptyList() }, { emptyList() }, { emptyList() }, {}, {}, { _, _ -> }, {},
+            { emptyList() }, { Result.success(emptyList()) }, { Result.success(null) }, { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _ -> }, {}, {}, { _, _ -> }, {},
         )
     }
 

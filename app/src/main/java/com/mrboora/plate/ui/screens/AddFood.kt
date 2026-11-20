@@ -99,6 +99,8 @@ fun AddFoodScreen(
     restaurantChains: suspend () -> List<Chain>,
     restaurantMenu: suspend (String) -> List<FoodItem>,
     shelfFoods: suspend (Set<String>) -> List<FoodItem>,
+    didYouMean: suspend (String) -> String?,
+    onRequest: (restaurant: String, item: String) -> Unit,
     onCreate: (FoodItem) -> Unit,
     onForget: (FoodItem) -> Unit,
     onAdd: (FoodItem, Float) -> Unit,
@@ -114,6 +116,8 @@ fun AddFoodScreen(
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
     var browseExpanded by rememberSaveable { mutableStateOf(false) }
+    var suggestion by remember { mutableStateOf<String?>(null) }
+    var showRequest by remember { mutableStateOf(false) }
     var scanMsg by remember { mutableStateOf<String?>(null) } // "loading" while looking up a scanned code
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -172,6 +176,7 @@ fun AddFoodScreen(
         local = searchLocal(query)
         online = emptyList()
         onlineState = null
+        suggestion = if (query.trim().length >= 3 && local.size < 3) didYouMean(query) else null
     }
 
     /** Logs the usual serving straight away: one item, or the food's serving size in grams. */
@@ -329,6 +334,14 @@ fun AddFoodScreen(
                     items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 }
             } else {
+                suggestion?.let { s ->
+                    item {
+                        PlateCard(Modifier.clickable { query = s }, padding = 14.dp) {
+                            Text("Did you mean", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                            Text("\u201c$s\u201d?", style = MaterialTheme.typography.titleMedium, color = c.accent)
+                        }
+                    }
+                }
                 if (local.isNotEmpty()) {
                     item { Eyebrow("On this phone", Modifier.padding(top = 8.dp)) }
                     items(local, key = { "l" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
@@ -346,7 +359,17 @@ fun AddFoodScreen(
                     }
                 }
                 item {
-                    TextButton({ showCreate = true }) { Text("Not listed? Add \"$query\" yourself") }
+                    PlateCard(padding = 14.dp) {
+                        Text("Can't find what you're looking for?", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Request it and we'll add it to Plate. You'll get a notification when it's in.",
+                            style = MaterialTheme.typography.bodySmall, color = c.muted,
+                        )
+                        Row {
+                            TextButton({ showRequest = true }) { Text("Request it") }
+                            TextButton({ showCreate = true }) { Text("Add it myself") }
+                        }
+                    }
                 }
             }
         }
@@ -363,6 +386,12 @@ fun AddFoodScreen(
         BarcodeDialog(lookupBarcode, onDismiss = { showBarcode = false }) { found ->
             showBarcode = false
             picked = found
+        }
+    }
+    if (showRequest) {
+        RequestDialog(query, onDismiss = { showRequest = false }) { restaurant, item ->
+            showRequest = false
+            onRequest(restaurant, item)
         }
     }
     if (showCreate) {
@@ -555,4 +584,25 @@ private fun CreateFoodDialog(initialName: String, onDismiss: () -> Unit, onCreat
 @Composable
 private fun Small(label: String, v: String, on: (String) -> Unit, modifier: Modifier) {
     OutlinedTextField(v, on, label = { Text(label) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = modifier)
+}
+
+@Composable
+private fun RequestDialog(initial: String, onDismiss: () -> Unit, onSend: (String, String) -> Unit) {
+    var restaurant by remember { mutableStateOf("") }
+    var item by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Request a food") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("This opens your email app with the request filled in. Tap Send there.", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(restaurant, { restaurant = it }, label = { Text("Restaurant (if any), e.g. Osmow's") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(item, { item = it }, label = { Text("Food or menu item") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton({ onSend(restaurant, item) }, enabled = restaurant.isNotBlank() || item.isNotBlank()) { Text("Send request") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }

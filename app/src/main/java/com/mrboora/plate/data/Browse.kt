@@ -46,7 +46,10 @@ class RestaurantFoods(private val context: Context) {
 
     private fun load(): List<Pair<FoodItem, Boolean>> = foods ?: synchronized(this) {
         foods ?: run {
-            val canada = read("canada_restaurants.csv", ::parseCanadianLine)
+            val downloaded = MenuUpdates.localFile(context)
+            val canada = (if (downloaded.exists()) runCatching {
+                downloaded.bufferedReader().useLines { l -> l.mapNotNull(::parseCanadianLine).toList() }
+            }.getOrNull()?.takeIf { it.size >= 1000 } else null) ?: read("canada_restaurants.csv", ::parseCanadianLine)
             val canadianChains = canada.map { it.brand }.toSet()
             val us = read("restaurants.csv", ::parseLine).filter { it.brand !in canadianChains }
             canada.map { it to true } + us.map { it to false }
@@ -57,6 +60,8 @@ class RestaurantFoods(private val context: Context) {
     fun chains(): List<Chain> = load().groupBy { it.first.brand }
         .map { (name, items) -> Chain(name, items.size, items.first().second) }
         .sortedWith(compareBy({ !it.canadian }, { -it.items }, { it.name }))
+
+    fun names(): List<String> = load().map { "${it.first.brand} ${it.first.name}" }
 
     fun menu(chain: String): List<FoodItem> = load().map { it.first }.filter { it.brand == chain }
 

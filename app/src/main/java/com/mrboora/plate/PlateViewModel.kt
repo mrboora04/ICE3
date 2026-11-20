@@ -43,6 +43,19 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val canadian = CanadianFoods(app)
     private val restaurants = RestaurantFoods(app)
 
+    @Volatile private var vocab: Set<String>? = null
+
+    /** A corrected query for typos ("osmaos" -> "osmows"), or null if the words are already known. */
+    suspend fun didYouMean(query: String): String? = withContext(Dispatchers.Default) {
+        val v = vocab ?: (restaurants.names() + canadian.names() + FoodCatalog.foods.map { it.name })
+            .flatMap(com.mrboora.plate.data.Spelling::words).toSet().also { vocab = it }
+        com.mrboora.plate.data.Spelling.suggest(query, v)
+    }
+
+    fun saveRequest(restaurant: String, item: String) {
+        com.mrboora.plate.data.Requests.add(getApplication(), restaurant, item)
+    }
+
     suspend fun restaurantChains(): List<com.mrboora.plate.data.Chain> = withContext(Dispatchers.Default) { restaurants.chains() }
 
     suspend fun restaurantMenu(chain: String): List<FoodItem> = withContext(Dispatchers.Default) { restaurants.menu(chain) }
