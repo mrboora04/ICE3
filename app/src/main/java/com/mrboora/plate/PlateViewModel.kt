@@ -43,7 +43,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val canadian = CanadianFoods(app)
     private val restaurants = RestaurantFoods(app)
 
-    suspend fun restaurantChains(): List<Pair<String, Int>> = withContext(Dispatchers.Default) { restaurants.chains() }
+    suspend fun restaurantChains(): List<com.mrboora.plate.data.Chain> = withContext(Dispatchers.Default) { restaurants.chains() }
 
     suspend fun restaurantMenu(chain: String): List<FoodItem> = withContext(Dispatchers.Default) { restaurants.menu(chain) }
 

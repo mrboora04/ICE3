@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mrboora.plate.data.Shelf
 import com.mrboora.plate.data.Shelves
+import com.mrboora.plate.data.Chain
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.Meal
 import com.mrboora.plate.ui.components.Eyebrow
@@ -95,7 +96,7 @@ fun AddFoodScreen(
     searchLocal: suspend (String) -> List<FoodItem>,
     searchOnline: suspend (String) -> Result<List<FoodItem>>,
     lookupBarcode: suspend (String) -> Result<FoodItem?>,
-    restaurantChains: suspend () -> List<Pair<String, Int>>,
+    restaurantChains: suspend () -> List<Chain>,
     restaurantMenu: suspend (String) -> List<FoodItem>,
     shelfFoods: suspend (Set<String>) -> List<FoodItem>,
     onCreate: (FoodItem) -> Unit,
@@ -117,7 +118,7 @@ fun AddFoodScreen(
     // Browsing: a shelf title ("Drinks", "Restaurants") and, for restaurants, a chain.
     var shelf by rememberSaveable { mutableStateOf<String?>(null) }
     var chain by rememberSaveable { mutableStateOf<String?>(null) }
-    var chains by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var chains by remember { mutableStateOf<List<Chain>>(emptyList()) }
     var shelfItems by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     val browsing = shelf != null
 
@@ -214,18 +215,21 @@ fun AddFoodScreen(
                 if (s?.restaurants == true && chain == null) {
                     item {
                         Text(
-                            "Menus from USDA FoodData Central. These are US recipes, so Canadian menus can differ a little. Missing a place? Add its items with Create.",
+                            "Canadian menus come from each chain's official nutrition information. Chains marked US menu use USDA data for US recipes, so Canadian items can differ. Missing a place? Add its items with Create.",
                             style = MaterialTheme.typography.bodySmall, color = c.muted,
                         )
                     }
-                    items(chains.filter { filter.isEmpty() || it.first.lowercase().contains(filter) }, key = { it.first }) { (name, count) ->
-                        PlateCard(Modifier.clickable { chain = name; query = "" }, padding = 16.dp) {
+                    items(chains.filter { filter.isEmpty() || it.name.lowercase().contains(filter) }, key = { it.name }) { ch ->
+                        PlateCard(Modifier.clickable { chain = ch.name; query = "" }, padding = 16.dp) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.Storefront, null, tint = c.accent)
                                 Spacer(Modifier.size(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(name, style = MaterialTheme.typography.titleMedium)
-                                    Text("$count items", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                                    Text(ch.name, style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        if (ch.canadian) "${ch.items} items · Canadian menu" else "${ch.items} items · US menu",
+                                        style = MaterialTheme.typography.bodySmall, color = if (ch.canadian) c.good else c.muted,
+                                    )
                                 }
                                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.muted)
                             }
@@ -329,9 +333,9 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
                 Text(food.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val parts = buildList {
                     if (food.brand.isNotBlank()) add(food.brand)
-                    add(if (food.perItem) "${food.kcal100.roundToInt()} kcal each" else "${food.kcal100.roundToInt()} kcal / 100 g")
+                    add(if (food.perItem) "${food.kcal100.roundToInt()} kcal" else "${food.kcal100.roundToInt()} kcal / 100 g")
                     if (food.source == FoodItem.Source.CUSTOM) add("your food")
-                    if (food.servingLabel.isNotBlank() && !food.perItem) add("${food.servingLabel} = ${food.servingG.roundToInt()} g")
+                    if (food.servingLabel.isNotBlank()) add(if (food.perItem) food.servingLabel else "${food.servingLabel} = ${food.servingG.roundToInt()} g")
                 }
                 Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

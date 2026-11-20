@@ -134,4 +134,14 @@ class NutritionTest {
             assertTrue("${s.title} has $n foods", n >= 20)
         }
     }
+
+    @Test fun canadianRestaurantMenusParse() {
+        val foods = java.io.File("src/main/assets/canada_restaurants.csv").readLines().mapNotNull { RestaurantFoods.parseCanadianLine(it) }
+        assertTrue(foods.size > 1000)
+        assertTrue(foods.all { it.perItem })
+        val chains = foods.map { it.brand }.toSet()
+        for (c in listOf("Tim Hortons", "Popeyes", "McDonald's")) assertTrue("missing $c", c in chains)
+        val coffee = foods.first { it.brand == "Tim Hortons" && it.name.startsWith("Original Blend Coffee (Medium") }
+        assertEquals(coffee.kcal100 * 2, coffee.kcalFor(2f), 0.01f) // per item: two coffees, double calories
+    }
 }
