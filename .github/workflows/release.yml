@@ -66,8 +66,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.PLATE_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.PLATE_KEY_PASSWORD }}
         run: |
-          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "::error::Signing secrets are missing. Add PLATE_KEYSTORE_BASE64, PLATE_STORE_PASSWORD, PLATE_KEY_ALIAS and PLATE_KEY_PASSWORD in Settings > Secrets and variables > Actions."
+          # Plate's key uses one password for the store and the key, so PLATE_KEY_PASSWORD is optional.
+          KEY_PASSWORD="${KEY_PASSWORD:-$STORE_PASSWORD}"
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Signing secrets are missing. Add PLATE_KEYSTORE_BASE64, PLATE_STORE_PASSWORD and PLATE_KEY_ALIAS in Settings > Secrets and variables > Actions."
             exit 1
           fi
           printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plate.keystore"
