@@ -98,22 +98,30 @@ class RestaurantFoods(private val context: Context) {
             if (cols.size < 8) return null
             val grams = cols[6].toFloatOrNull()
             val label = cols[7].ifBlank { "1 item" }
+            val kcal = cols[2].toFloatOrNull() ?: return null
+            val p = cols[3].toFloatOrNull()
+            val f = cols[5].toFloatOrNull()
+            // A&W publishes calories, protein and fat but not carbs. Energy is about 4 kcal/g protein,
+            // 4 kcal/g carbs and 9 kcal/g fat, so the carbs can be worked out from the rest.
+            val carbs = cols[4].toFloatOrNull()
+                ?: if (p != null && f != null) maxOf(0f, (kcal - 4f * p - 9f * f) / 4f) else null
             return FoodItem(
                 name = cols[1],
                 brand = cols[0],
-                kcal100 = cols[2].toFloatOrNull() ?: return null,
-                protein100 = cols[3].toFloatOrNull() ?: 0f,
-                carbs100 = cols[4].toFloatOrNull() ?: 0f,
-                fat100 = cols[5].toFloatOrNull() ?: 0f,
+                kcal100 = kcal,
+                protein100 = p ?: 0f,
+                carbs100 = carbs ?: 0f,
+                fat100 = f ?: 0f,
                 servingG = 1f,
                 servingLabel = if (grams != null) "$label, ${grams.toInt()} g" else label,
                 source = FoodItem.Source.BUILT_IN,
                 perItem = true,
                 unknown = buildString {
-                    if (cols[3].isBlank()) append('p')
-                    if (cols[4].isBlank()) append('c')
-                    if (cols[5].isBlank()) append('f')
+                    if (p == null) append('p')
+                    if (carbs == null) append('c')
+                    if (f == null) append('f')
                 },
+                estimated = if (cols[4].isBlank() && carbs != null) "c" else "",
             )
         }
     }

@@ -463,9 +463,15 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
             val gg = g ?: 0f
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Num("kcal", food.kcalFor(gg))
-                Num("Protein", food.proteinFor(gg), "g", 'p' in food.unknown)
-                Num("Carbs", food.carbsFor(gg), "g", 'c' in food.unknown)
-                Num("Fat", food.fatFor(gg), "g", 'f' in food.unknown)
+                Num("Protein", food.proteinFor(gg), "g", 'p' in food.unknown, 'p' in food.estimated)
+                Num("Carbs", food.carbsFor(gg), "g", 'c' in food.unknown, 'c' in food.estimated)
+                Num("Fat", food.fatFor(gg), "g", 'f' in food.unknown, 'f' in food.estimated)
+            }
+            if (food.estimated.isNotEmpty()) {
+                Text(
+                    "≈ = not published by the restaurant; worked out from its calories, protein and fat.",
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),
+                )
             }
             if (food.unknown.isNotEmpty()) {
                 Text(
@@ -480,10 +486,10 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
 }
 
 @Composable
-private fun Num(label: String, v: Float, unit: String = "", unknown: Boolean = false) {
+private fun Num(label: String, v: Float, unit: String = "", unknown: Boolean = false, estimated: Boolean = false) {
     Column {
         Eyebrow(label)
-        Text(if (unknown) "–" else "${v.roundToInt()}$unit", style = MaterialTheme.typography.titleLarge.merge(tab))
+        Text(if (unknown) "–" else "${if (estimated) "≈" else ""}${v.roundToInt()}$unit", style = MaterialTheme.typography.titleLarge.merge(tab))
     }
 }
 

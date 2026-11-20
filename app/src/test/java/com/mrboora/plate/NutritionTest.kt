@@ -149,8 +149,10 @@ class NutritionTest {
     }
 
     @Test fun missingMacrosAreMarkedUnknown() {
-        val aw = RestaurantFoods.parseCanadianLine("A&W,Test Burger,500,27,,30,,1 burger,https://web.aw.ca/x")!!
-        assertEquals("c", aw.unknown)
+        val aw = RestaurantFoods.parseCanadianLine("A&W,Chubby Chicken Cruncher,630,26,,29,,1 sandwich,https://web.aw.ca/x")!!
+        assertEquals("", aw.unknown)
+        assertEquals("c", aw.estimated)
+        assertEquals(66.25f, aw.carbsFor(1f), 0.01f) // (630 - 26*4 - 29*9) / 4
         val harveys = RestaurantFoods.parseCanadianLine("Harvey's,Test,410,,,,,1 burger,https://www.harveys.ca/x")!!
         assertEquals("pcf", harveys.unknown)
         assertEquals(410f, harveys.kcalFor(1f), 0.01f)

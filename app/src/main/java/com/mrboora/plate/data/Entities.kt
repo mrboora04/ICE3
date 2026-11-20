@@ -107,6 +107,8 @@ data class FoodItem(
     val perItem: Boolean = false,
     /** Macros the source doesn't publish: any of 'p', 'c', 'f'. Shown as "–" rather than 0. */
     val unknown: String = "",
+    /** Macros worked out from the others rather than published: any of 'p', 'c', 'f'. Shown with "≈". */
+    val estimated: String = "",
 ) {
     enum class Source { BUILT_IN, SAVED, CUSTOM, ONLINE }
 
