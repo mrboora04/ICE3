@@ -1,68 +1,47 @@
 # Plate: calorie tracker for Android
 
-Plate is an original calorie and macro tracker built with Kotlin and Jetpack Compose. All data stays on the phone and no account is needed.
+Track calories and macros. No account, everything stays on your phone.
 
-[![Download latest](https://img.shields.io/badge/Download_latest-Plate-brightgreen?logo=android)](https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk)
+<p align="center">
+  <a href="https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"><img src="https://img.shields.io/badge/Download_Plate_for_Android-brightgreen?logo=android&style=for-the-badge" width="360" alt="Download Plate for Android"></a>
+</p>
 
 <p>
   <img src="docs/screenshots/today.png" width="24%" alt="Today screen">
-  <img src="docs/screenshots/profile.png" width="24%" alt="Profile screen">
+  <img src="docs/screenshots/add_food.png" width="24%" alt="Add food screen">
   <img src="docs/screenshots/progress.png" width="24%" alt="Progress screen">
-  <img src="docs/screenshots/profile_dark.png" width="24%" alt="Profile in dark mode">
+  <img src="docs/screenshots/profile.png" width="24%" alt="Profile screen">
 </p>
 
-## Install on your phone
+## What you can do
 
-1. On the phone, open this repo on GitHub and download [`release/Plate.apk`](release/Plate.apk).
-2. Open the file. If Android asks, allow your browser or file manager to **install unknown apps**.
-3. Tap **Install**. Requires Android 8.0 or newer.
+- Daily calorie and macro target, set to your goal
+- Log meals in a food diary
+- Search 6,000+ Canadian foods, or scan a barcode
+- Browse 14 Canadian restaurant menus (2,100+ items) — can't find one? Request it and we'll add it
+- Track water and weight, with a progress chart
+- Works offline, light and dark themes
 
-## Features
+## Install
 
-- **Daily target**: uses the Mifflin-St Jeor resting energy formula × activity level, then adjusts for your goal (lose, maintain or gain 0.25–1 kg a week). Protein, carbs and fat targets come from the same calculation.
-- **Food diary**: one list of the day's meals with the time each was logged. Browse past days, and undo removals.
-- **Food search**: about 6,000 foods from Health Canada's Canadian Nutrient File (2026) plus 60 everyday staples (including Indian dishes), all offline and free, plus online search and camera barcode scanning through [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
-- **Browse**: Restaurants, with official Canadian menus for Tim Hortons, McDonald's, Dairy Queen, Harvey's, Pizza Pizza, A&W, Burger King, Subway, Wendy's, KFC, Mary Brown's, Popeyes and Starbucks (about 2,000 items; A&W doesn't publish carbs and Harvey's publishes calories only), plus US menus for other chains, plus shelves like Drinks, Fast food, Snacks, Meals & dishes, Fruit and more. Every item has a + to log its usual serving.
-- **Manual restaurant entries**: tap **Create → Per item** and enter one item's numbers from the restaurant's menu, app or nutrition guide (for example an A&W Papa Burger). After that it's one tap from your recents. Open food databases don't cover restaurant menus, so this is the reliable route.
-- **Your foods**: create custom foods per item or per 100 g. Foods you use show up as recents.
-- **Water**: tap drops or use +/−, toward a daily goal.
-- **Progress**: weigh-ins with a trend line against your goal, and a 7-day calorie chart.
-- **Profile**: goal progress ring, BMI, and a breakdown of how the target is calculated.
-- Light and dark themes.
+1. Tap the download button above to get `Plate.apk`.
+2. Open it and allow install from unknown sources. Android 8.0+.
 
-## Design
-
-The visuals follow two plates from the *Next Design Atlas* research:
-
-- **"Clinical, but warm"**: a blush ground with plum ink, slowly morphing peach, pink and lilac shapes, and exact numbers shown as rings.
-- **"A name that responds"** (on the profile): the name's letters thicken in a wave and react when tapped, with a pen-stroke underline that draws itself.
-- **"Calm money"** (on Progress): a thin line chart that draws itself, with tabular digits.
-
-Fonts: Bricolage Grotesque (display) and Instrument Sans (text), both under the SIL Open Font License.
-
-## Build
-
-```bash
-./gradlew assembleRelease        # app/build/outputs/apk/release/app-release.apk
-./gradlew testDebugUnitTest      # unit tests + renders docs/screenshots/*.png
-```
-
-The release build is signed with the debug key so it installs directly. Create your own signing key before publishing to a store.
-
-## Releasing an update
-
-Installed copies check `release/latest.json` when opened and once a day, show what's new, and update in one tap.
-
-1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
-2. Build with Plate's release key (set in `local.properties`, never committed). Updates only install over an existing Plate if they're signed with the same key.
-3. Copy the APK to `release/Plate.apk` (and `release/Plate-<version>.apk`).
-4. Update `release/latest.json`: the new `versionCode`, `versionName` and two or three short `notes`. Push to `main`.
+Plate checks for new versions itself: when one is out, the Today screen shows what's new and an **Update** button.
 
 ## Data and licences
 
-- Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada): Health Canada, *Canadian Nutrient File, 2026* (`app/src/main/assets/cnf_foods.csv`, reduced to energy, protein, carbohydrate, fat and one household measure per food).
-- Canadian restaurant menus (`canada_restaurants.csv`): rows may end in a 10th column `estimate` for restaurants that publish no nutrition info (e.g. Amaya). Those numbers are estimated from the dish and serving size and are labelled “Estimated menu” and “≈” in the app. All other rows were collected from each chain's official Canadian nutrition information in November 2026; each row records its source URL. Most McDonald's figures come from their 2019 nutrition PDF, with 43 newer items read from their current site.
-- Restaurant menu items from USDA [FoodData Central](https://fdc.nal.usda.gov) SR Legacy (public domain); US recipes, so Canadian menus can differ.
-- Online food data from [Open Food Facts](https://world.openfoodfacts.org), under the Open Database License.
+- Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada): Health Canada, *Canadian Nutrient File, 2026*.
+- Restaurant menus come from each chain's official Canadian nutrition info, with sources in `canada_restaurants.csv`. Restaurants that publish none (e.g. Amaya) are marked as estimates and shown with ≈. Plate isn't affiliated with any restaurant.
+- Also uses USDA [FoodData Central](https://fdc.nal.usda.gov) (public domain) and [Open Food Facts](https://world.openfoodfacts.org) (Open Database License).
 
 Calorie targets are estimates, not medical advice.
+
+## For developers
+
+```bash
+./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk
+./gradlew testDebugUnitTest   # tests, and renders docs/screenshots/*.png
+```
+
+**Releasing an update:** bump `versionCode`/`versionName` in `app/build.gradle.kts`, build with Plate's release key (configured in `local.properties`, never committed; updates only install over an existing Plate signed with the same key), copy the APK to `release/Plate.apk`, and update `release/latest.json` (version and two or three short `notes`). Push to `main`.
