@@ -36,6 +36,12 @@ data class PlateColors(
     val water: Color,
     val good: Color,
     val over: Color,
+    /** Day status pastels from Plate's own palette: mint = on target, peach = over, lilac-blue = under. */
+    val dayOn: Color,
+    val dayOver: Color,
+    val dayUnder: Color,
+    /** Text on those pastels. */
+    val onDay: Color,
 )
 
 val LightPlate = PlateColors(
@@ -45,6 +51,7 @@ val LightPlate = PlateColors(
     pink = Color(0xFFF39BB0), lilac = Color(0xFFC98BD8), sky = Color(0xFFD9E6FF),
     skyDeep = Color(0xFFA9B7F2), protein = Color(0xFFD2477A), carbs = Color(0xFFE88A3C),
     fat = Color(0xFF8A6BD6), water = Color(0xFF5C7CE0), good = Color(0xFF2F8A5B), over = Color(0xFFB3261E),
+    dayOn = Color(0xFFB4E3C4), dayOver = Color(0xFFFFCFB3), dayUnder = Color(0xFFCAD3FB), onDay = Color(0xFF3A2230),
 )
 
 val DarkPlate = PlateColors(
@@ -54,6 +61,7 @@ val DarkPlate = PlateColors(
     pink = Color(0xFF9C4864), lilac = Color(0xFF6E4682), sky = Color(0xFF2C3557),
     skyDeep = Color(0xFF4A5794), protein = Color(0xFFFF7AA8), carbs = Color(0xFFFFB067),
     fat = Color(0xFFB9A2FF), water = Color(0xFF8FA8FF), good = Color(0xFF6FD29B), over = Color(0xFFFF8A80),
+    dayOn = Color(0xFF9FD8B4), dayOver = Color(0xFFF7BD9E), dayUnder = Color(0xFFB4C0F2), onDay = Color(0xFF2A1A22),
 )
 
 val LocalPlateColors = staticCompositionLocalOf { LightPlate }

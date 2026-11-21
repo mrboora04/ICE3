@@ -84,9 +84,9 @@ import kotlin.math.roundToInt
 private val tab = TextStyle(fontFeatureSettings = TABULAR)
 
 private fun statusColor(s: DayStatus, c: PlateColors): Color = when (s) {
-    DayStatus.ON_TARGET -> c.good
-    DayStatus.OVER -> c.carbs
-    DayStatus.UNDER -> c.water
+    DayStatus.ON_TARGET -> c.dayOn
+    DayStatus.OVER -> c.dayOver
+    DayStatus.UNDER -> c.dayUnder
     DayStatus.NOT_LOGGED -> c.track
 }
 
@@ -233,7 +233,7 @@ private fun MonthCalendar(byDay: Map<Long, DaySummary>, onOpenDay: (Long) -> Uni
                                     color = when {
                                         future -> c.muted.copy(alpha = 0.5f)
                                         sum == null -> c.muted
-                                        else -> Color(0xFF14110F)
+                                        else -> c.onDay
                                     },
                                     fontWeight = if (date == today) FontWeight.Bold else FontWeight.Medium,
                                 )
@@ -318,7 +318,7 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
             Text(
-                badge, style = MaterialTheme.typography.labelLarge, color = Color(0xFF14110F),
+                badge, style = MaterialTheme.typography.labelLarge, color = c.onDay,
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(color).padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
@@ -358,7 +358,7 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
                 val (name, kcal) = d.foods.first()
                 Text(
                     "Biggest: $name (%,d kcal)".format(kcal.roundToInt()),
-                    style = MaterialTheme.typography.bodySmall.merge(tab), color = c.carbs, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
         }

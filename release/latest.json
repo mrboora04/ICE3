@@ -1,10 +1,10 @@
 {
-  "versionCode": 21,
-  "versionName": "2.0.3",
+  "versionCode": 22,
+  "versionName": "2.0.4",
   "notes": [
-    "New Progress: your streak, a month calendar of on-target days, and a card for every day",
-    "Each day shows what you ate and whether you hit your target, and what tipped you over",
-    "Tap any day to open it"
+    "Progress uses Plate's soft colours: mint for on target, peach for over, lilac for under",
+    "Your streak, month calendar and a card for every day",
+    "Tap + on anything you've logged to add another serving"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }
