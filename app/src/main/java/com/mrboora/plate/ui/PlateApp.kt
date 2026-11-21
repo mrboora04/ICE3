@@ -162,6 +162,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                         }
                     },
                     onWater = vm::addWater,
+                    onAddPortion = vm::addPortion,
+                    onSetAmount = vm::setAmount,
                     updateVersion = update?.versionName,
                     onUpdateTap = vm::showUpdate,
                     banner = {

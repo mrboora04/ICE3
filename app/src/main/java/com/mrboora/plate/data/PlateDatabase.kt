@@ -8,9 +8,9 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [Profile::class, FoodEntry::class, SavedFood::class, WeightEntry::class, Water::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 abstract class PlateDatabase : RoomDatabase() {
     abstract fun dao(): PlateDao

@@ -9,6 +9,7 @@ import com.mrboora.plate.data.Spelling
 import com.mrboora.plate.data.RestaurantFoods
 import com.mrboora.plate.data.Shelves
 import com.mrboora.plate.data.FoodCatalog
+import com.mrboora.plate.data.FoodEntry
 import com.mrboora.plate.data.FoodItem
 import com.mrboora.plate.data.OpenFoodFacts
 import com.mrboora.plate.data.Goal
@@ -198,5 +199,18 @@ class NutritionTest {
         assertTrue(info.notes.isNotEmpty())
         // Downloads only from this repository.
         assertEquals(null, AppUpdates.parse("""{"versionCode":99,"versionName":"9","apk":"https://evil.example/x.apk"}"""))
+    }
+
+    @Test fun addingAPortionScalesTheEntry() {
+        val whisky = FoodEntry(day = 0, meal = com.mrboora.plate.data.Meal.SNACK, name = "Whisky", brand = "", grams = 94f,
+            kcal = 217f, protein = 0f, carbs = 0f, fat = 0f, portion = 94f)
+        val two = whisky.withAmount(whisky.grams + whisky.step)
+        assertEquals(188f, two.grams, 0.01f)
+        assertEquals(434f, two.kcal, 0.01f)
+        assertEquals("2 × 94 g", two.amountText)
+        val burger = FoodEntry(day = 0, meal = com.mrboora.plate.data.Meal.LUNCH, name = "Teen Burger", brand = "A&W", grams = 1f,
+            kcal = 500f, protein = 27f, carbs = 36f, fat = 30f, unit = "item")
+        assertEquals(1f, burger.step, 0f)   // old entries without a portion still step by one item
+        assertEquals(54f, burger.withAmount(2f).protein, 0.01f)
     }
 }

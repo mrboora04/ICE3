@@ -34,6 +34,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -83,6 +87,8 @@ fun TodayScreen(
     onDelete: (FoodEntry) -> Unit,
     onWater: (Int) -> Unit,
     banner: @Composable () -> Unit = {},
+    onAddPortion: (FoodEntry) -> Unit = {},
+    onSetAmount: (FoodEntry, Float) -> Unit = { _, _ -> },
     /** Version name of an available update; shows a badge in the header that reopens the update card. */
     updateVersion: String? = null,
     onUpdateTap: () -> Unit = {},
@@ -124,7 +130,7 @@ fun TodayScreen(
         item { Hero(eaten, targets, entries, Modifier.padding(horizontal = 16.dp)) }
         item { WaterCard(waterMl, profile.waterGoalMl, onWater, Modifier.padding(horizontal = 16.dp)) }
         item(key = "meals") {
-            MealsCard(entries, { onAdd(Meal.forNow()) }, onDelete, Modifier.padding(horizontal = 16.dp))
+            MealsCard(entries, { onAdd(Meal.forNow()) }, onDelete, onAddPortion, onSetAmount, Modifier.padding(horizontal = 16.dp))
         }
         item { Spacer(Modifier.height(12.dp)) }
     }
@@ -227,8 +233,17 @@ private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modi
 }
 
 @Composable
-private fun MealsCard(items: List<FoodEntry>, onAdd: () -> Unit, onDelete: (FoodEntry) -> Unit, modifier: Modifier) {
+private fun MealsCard(
+    items: List<FoodEntry>,
+    onAdd: () -> Unit,
+    onDelete: (FoodEntry) -> Unit,
+    onAddPortion: (FoodEntry) -> Unit,
+    onSetAmount: (FoodEntry, Float) -> Unit,
+    modifier: Modifier,
+) {
     val c = Plate.colors
+    var editing by remember { mutableStateOf<FoodEntry?>(null) }
+    editing?.let { e -> AmountDialog(e, onDismiss = { editing = null }) { onSetAmount(e, it); editing = null } }
     PlateCard(modifier.animateContentSize(), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
@@ -243,20 +258,58 @@ private fun MealsCard(items: List<FoodEntry>, onAdd: () -> Unit, onDelete: (Food
         items.forEach { e ->
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                Column(Modifier.weight(1f).clickable { editing = e }.padding(start = 4.dp)) {
                     Text(e.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val brand = if (e.brand.isNotBlank()) "${e.brand} · " else ""
                     val time = java.time.Instant.ofEpochMilli(e.createdAt).atZone(java.time.ZoneId.systemDefault())
                         .format(DateTimeFormatter.ofPattern("h:mm a"))
                     Text(
-                        "$time · $brand${e.amountText} · " + if (e.protein == 0f && e.carbs == 0f && e.fat == 0f && e.kcal > 20f) "macros not published"
+                        "$time · $brand${e.amountText} · " + if (e.protein == 0f && e.carbs == 0f && e.fat == 0f && e.kcal > 20f) "calories only"
                         else "P ${e.protein.roundToInt()} · C ${e.carbs.roundToInt()} · F ${e.fat.roundToInt()}",
                         style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text("${e.kcal.roundToInt()}", style = MaterialTheme.typography.titleMedium.merge(tab))
+                Text("${e.kcal.roundToInt()}", style = MaterialTheme.typography.titleMedium.merge(tab), modifier = Modifier.padding(end = 4.dp))
+                FilledTonalIconButton({ onAddPortion(e) }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Rounded.Add, "Add another ${e.name}", modifier = Modifier.size(20.dp))
+                }
                 IconButton({ onDelete(e) }) { Icon(Icons.Rounded.Close, "Remove ${e.name}", tint = c.muted) }
             }
         }
     }
+}
+
+/** Exact amount for a logged food, with − and + one portion. */
+@Composable
+private fun AmountDialog(entry: FoodEntry, onDismiss: () -> Unit, onSave: (Float) -> Unit) {
+    val unit = if (entry.unit == "item") "×" else "g / ml"
+    var text by remember { mutableStateOf(entry.grams.clean()) }
+    val amount = text.toNumber()?.takeIf { it > 0f && it <= 10_000f }
+    fun bump(by: Float) { text = maxOf(entry.step, (amount ?: entry.grams) + by).clean() }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(entry.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton({ bump(-entry.step) }) { Icon(Icons.Rounded.Remove, "Less") }
+                    androidx.compose.material3.OutlinedTextField(
+                        text, { text = it }, singleLine = true, label = { Text(unit) }, isError = amount == null,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    )
+                    FilledTonalIconButton({ bump(entry.step) }) { Icon(Icons.Rounded.Add, "More") }
+                }
+                val preview = amount?.let { entry.withAmount(it) }
+                if (preview != null) {
+                    Text(
+                        "${preview.kcal.roundToInt()} kcal",
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton({ amount?.let(onSave) }, enabled = amount != null) { Text("Save") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }

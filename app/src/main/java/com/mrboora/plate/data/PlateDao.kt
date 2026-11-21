@@ -24,6 +24,9 @@ interface PlateDao {
     @Delete
     suspend fun deleteEntry(entry: FoodEntry)
 
+    @androidx.room.Update
+    suspend fun updateEntry(entry: FoodEntry)
+
     @Query("SELECT day, SUM(kcal) AS kcal FROM food_entry WHERE day BETWEEN :from AND :to GROUP BY day")
     fun dailyTotals(from: Long, to: Long): Flow<List<DayTotal>>
 

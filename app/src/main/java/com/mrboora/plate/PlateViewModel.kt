@@ -49,6 +49,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     val update: StateFlow<com.mrboora.plate.data.UpdateInfo?> = _update
 
     init {
+        com.mrboora.plate.data.AppUpdates.cleanUpInstalled(getApplication())
         viewModelScope.launch { _update.value = com.mrboora.plate.data.AppUpdates.check(getApplication()) }
     }
 
@@ -141,6 +142,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
             FoodEntry(
                 day = _day.value, meal = meal, name = food.name, brand = food.brand, grams = grams,
                 unit = if (food.perItem) "item" else "g",
+                portion = grams,
                 kcal = food.kcalFor(grams), protein = food.proteinFor(grams),
                 carbs = food.carbsFor(grams), fat = food.fatFor(grams),
             )
@@ -149,6 +151,14 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteEntry(entry: FoodEntry) = viewModelScope.launch { dao.deleteEntry(entry) }
+
+    /** One more of the same portion (another glass, another slice) on the same row. */
+    fun addPortion(entry: FoodEntry) = viewModelScope.launch { dao.updateEntry(entry.withAmount(entry.grams + entry.step)) }
+
+    /** Sets an exact amount; calories and macros scale with it. */
+    fun setAmount(entry: FoodEntry, amount: Float) = viewModelScope.launch {
+        if (amount > 0f) dao.updateEntry(entry.withAmount(amount))
+    }
 
     fun restoreEntry(entry: FoodEntry) = viewModelScope.launch { dao.addEntry(entry.copy(id = 0)) }
 

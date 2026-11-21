@@ -1,10 +1,10 @@
 {
-  "versionCode": 19,
-  "versionName": "2.0.1",
+  "versionCode": 20,
+  "versionName": "2.0.2",
   "notes": [
-    "Installs over your current Plate and keeps your diary, no uninstall needed",
-    "Signed with Plate's new security key, so Play Protect recognises it",
-    "Plate no longer asks for permission to install apps"
+    "Tap + on anything you've logged to add another serving in one tap; tap it to set an exact amount",
+    "Updates now download in the background: tap Update, then Install from the notification",
+    "Installs over your current Plate and keeps your diary"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

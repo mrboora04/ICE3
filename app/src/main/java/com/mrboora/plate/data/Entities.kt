@@ -60,8 +60,24 @@ data class FoodEntry(
     val fat: Float,
     val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(defaultValue = "g") val unit: String = "g",
+    /** The amount first logged: one tap on + adds this much again. 0 for entries made before 2.0.2. */
+    @ColumnInfo(defaultValue = "0") val portion: Float = 0f,
 ) {
-    val amountText: String get() = if (unit == "item") "${trimNum(grams)} ×" else "${grams.toInt()} g"
+    /** How much one tap on + adds. */
+    val step: Float get() = if (portion > 0f) portion else if (unit == "item") 1f else grams
+
+    val amountText: String get() {
+        if (unit == "item") return "${trimNum(grams)} ×"
+        val times = if (portion > 0f) grams / portion else 1f
+        return if (portion > 0f && times > 1.01f && kotlin.math.abs(times - kotlin.math.round(times)) < 0.01f)
+            "${kotlin.math.round(times).toInt()} × ${portion.toInt()} g" else "${grams.toInt()} g"
+    }
+
+    /** The same food at another amount, with calories and macros scaled to match. */
+    fun withAmount(amount: Float): FoodEntry {
+        val f = if (grams > 0f) amount / grams else 1f
+        return copy(grams = amount, kcal = kcal * f, protein = protein * f, carbs = carbs * f, fat = fat * f)
+    }
 }
 
 private fun trimNum(v: Float) = "%.2f".format(java.util.Locale.US, v).trimEnd('0').trimEnd('.')
