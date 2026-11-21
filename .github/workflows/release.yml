@@ -84,11 +84,37 @@ jobs:
         if: steps.v.outputs.release == 'true'
         run: ./gradlew --no-daemon assembleRelease
 
+      - name: Sign with key rotation (installs over pre-2.0 versions)
+        if: steps.v.outputs.release == 'true'
+        env:
+          OLD_KEYSTORE_B64: ${{ secrets.PLATE_OLD_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.PLATE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PLATE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PLATE_KEY_PASSWORD }}
+        run: |
+          # Plate moved from its original key to its release key in 2.0.1. Signing with both keys
+          # and release/plate.lineage lets Android 9+ accept the new key as the old key's successor,
+          # and Android 8 keep seeing the old key, so every older install can update in place.
+          if [ -z "$OLD_KEYSTORE_B64" ]; then
+            echo "::error::PLATE_OLD_KEYSTORE_BASE64 is missing, so this build couldn't install over older versions of Plate."
+            exit 1
+          fi
+          KEY_PASSWORD="${KEY_PASSWORD:-$STORE_PASSWORD}"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          printf '%s' "$OLD_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/old.keystore"
+          "$apksigner" sign \
+            --ks "$RUNNER_TEMP/old.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android \
+            --next-signer --ks "$RUNNER_TEMP/plate.keystore" --ks-pass env:STORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD \
+            --lineage release/plate.lineage --rotation-min-sdk-version 28 \
+            --out "$RUNNER_TEMP/rotated.apk" app/build/outputs/apk/release/app-release.apk
+          mv "$RUNNER_TEMP/rotated.apk" app/build/outputs/apk/release/app-release.apk
+          rm -f "$RUNNER_TEMP/old.keystore"
+
       - name: Check it's signed with Plate's key
         if: steps.v.outputs.release == 'true'
         run: |
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
-          actual=$("$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk | grep -oP 'SHA-256 digest: \K[0-9a-f]+' | head -1)
+          actual=$("$apksigner" verify --print-certs --min-sdk-version 28 app/build/outputs/apk/release/app-release.apk | grep -oP 'SHA-256 digest: \K[0-9a-f]+' | head -1)
           expected=$(tr -d ' \n' < release/signing-cert-sha256.txt)
           echo "Signed with $actual"
           if [ "$actual" != "$expected" ]; then
@@ -109,4 +135,4 @@ jobs:
 
       - name: Remove the key from the runner
         if: always()
-        run: rm -f "$RUNNER_TEMP/plate.keystore" local.properties
+        run: rm -f "$RUNNER_TEMP/plate.keystore" "$RUNNER_TEMP/old.keystore" local.properties

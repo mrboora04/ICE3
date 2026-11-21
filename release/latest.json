@@ -1,10 +1,10 @@
 {
-  "versionCode": 18,
-  "versionName": "2.0",
+  "versionCode": 19,
+  "versionName": "2.0.1",
   "notes": [
-    "Important: 2.0 is signed with Plate's new security key. Uninstall your current Plate first, then download 2.0 from mrboora04.github.io/ICE3",
-    "Plate no longer asks for permission to install apps",
-    "Recent restaurant foods use the latest menu numbers, an Update badge on Today, and Share Plate"
+    "Installs over your current Plate and keeps your diary, no uninstall needed",
+    "Signed with Plate's new security key, so Play Protect recognises it",
+    "Plate no longer asks for permission to install apps"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

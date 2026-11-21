@@ -26,7 +26,6 @@ Track calories and macros. No account, everything stays on your phone.
 
 1. Tap the download button above to get `Plate.apk`.
 2. Open it and allow install from unknown sources. Android 8.0+.
-3. Had a Plate older than 2.0? Uninstall it first: 2.0 uses a new signing key.
 
 Plate checks for new versions itself: when one is out, the Today screen shows what's new and an **Update** button.
 
