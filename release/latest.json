@@ -1,10 +1,10 @@
 {
-  "versionCode": 20,
-  "versionName": "2.0.2",
+  "versionCode": 21,
+  "versionName": "2.0.3",
   "notes": [
-    "Tap + on anything you've logged to add another serving in one tap; tap it to set an exact amount",
-    "Updates now download in the background: tap Update, then Install from the notification",
-    "Installs over your current Plate and keeps your diary"
+    "New Progress: your streak, a month calendar of on-target days, and a card for every day",
+    "Each day shows what you ate and whether you hit your target, and what tipped you over",
+    "Tap any day to open it"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

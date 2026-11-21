@@ -126,6 +126,18 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         Nutrition.targets(if (w != null) p.copy(weightKg = w) else p)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** The last 120 days, one summary per logged day, newest first. */
+    val history: StateFlow<List<com.mrboora.plate.data.DaySummary>> = combine(
+        dao.entriesBetween(today() - 120, today()),
+        dao.waterBetween(today() - 120, today()),
+        weights,
+        targets,
+    ) { e, w, kg, t -> com.mrboora.plate.data.History.summarise(e, w, kg, t?.kcal ?: 0) }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun showDay(day: Long) { _day.value = day.coerceAtMost(today()) }
+
     fun shiftDay(by: Long) {
         _day.value = (_day.value + by).coerceAtMost(today())
     }

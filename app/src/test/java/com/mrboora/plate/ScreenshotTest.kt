@@ -91,8 +91,29 @@ class ScreenshotTest {
     }
 
     @Test fun progress() = shot("progress") {
-        val week = (0..6).map { DayTotal(today - 6 + it, listOf(1720f, 1905f, 1580f, 0f, 2210f, 1650f, 1240f)[it]) }
-        ProgressScreen(profile, targets, weights, week, pad, {}, {})
+        // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
+        val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
+        val sample = kcals.mapIndexed { i, k -> entries.map { it.copy(day = today - i) }.let { list ->
+            val f = if (k == 0f) 0f else k / list.sumOf { it.kcal.toDouble() }.toFloat()
+            list.map { it.copy(kcal = it.kcal * f, protein = it.protein * f, carbs = it.carbs * f, fat = it.fat * f) }.filter { k > 0f }
+        } }.flatten()
+        val history = com.mrboora.plate.data.History.summarise(
+            sample, listOf(com.mrboora.plate.data.Water(today, 1750)), weights, targets.kcal,
+        )
+        ProgressScreen(profile, targets, weights, history, pad, {}, {})
+    }
+
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressTall() = shot("progress_tall") {
+        // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
+        val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
+        val sample = kcals.mapIndexed { i, k -> entries.map { it.copy(day = today - i) }.let { list ->
+            val f = if (k == 0f) 0f else k / list.sumOf { it.kcal.toDouble() }.toFloat()
+            list.map { it.copy(kcal = it.kcal * f, protein = it.protein * f, carbs = it.carbs * f, fat = it.fat * f) }.filter { k > 0f }
+        } }.flatten()
+        val history = com.mrboora.plate.data.History.summarise(
+            sample, listOf(com.mrboora.plate.data.Water(today, 1750)), weights, targets.kcal,
+        )
+        ProgressScreen(profile, targets, weights, history, pad, {}, {})
     }
 
     @Test fun addFood() = shot("add_food") {

@@ -1,25 +1,34 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -35,21 +44,29 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mrboora.plate.data.DayTotal
+import com.mrboora.plate.data.DayStatus
+import com.mrboora.plate.data.DaySummary
+import com.mrboora.plate.data.History
 import com.mrboora.plate.data.Profile
 import com.mrboora.plate.data.Targets
 import com.mrboora.plate.data.WeightEntry
@@ -57,75 +74,80 @@ import com.mrboora.plate.ui.components.Eyebrow
 import com.mrboora.plate.ui.components.PlateCard
 import com.mrboora.plate.ui.components.TABULAR
 import com.mrboora.plate.ui.theme.Plate
+import com.mrboora.plate.ui.theme.PlateColors
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val tab = TextStyle(fontFeatureSettings = TABULAR)
 
+private fun statusColor(s: DayStatus, c: PlateColors): Color = when (s) {
+    DayStatus.ON_TARGET -> c.good
+    DayStatus.OVER -> c.carbs
+    DayStatus.UNDER -> c.water
+    DayStatus.NOT_LOGGED -> c.track
+}
+
 @Composable
 fun ProgressScreen(
     profile: Profile,
     targets: Targets,
     weights: List<WeightEntry>,
-    week: List<DayTotal>,
+    history: List<DaySummary>,
     contentPadding: PaddingValues,
     onLog: (Float) -> Unit,
     onDelete: (WeightEntry) -> Unit,
+    onOpenDay: (Long) -> Unit = {},
 ) {
     val c = Plate.colors
     var logging by remember { mutableStateOf(false) }
+    var weightOpen by rememberSaveable { mutableStateOf(false) }
+    var shown by rememberSaveable { mutableStateOf(14) }
+    val byDay = remember(history) { history.associateBy { it.day } }
+    val streak = remember(history) { History.streak(history) }
     val current = weights.lastOrNull()?.kg ?: profile.weightKg
     val start = weights.firstOrNull()?.kg ?: profile.weightKg
-    val change = current - start
 
     LazyColumn(contentPadding = contentPadding, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Eyebrow("Progress")
-                Text("Calm numbers", style = MaterialTheme.typography.displayMedium)
-            }
-        }
-        item {
-            PlateCard(Modifier.padding(horizontal = 16.dp)) {
-                Eyebrow("Weight now")
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(current.clean(), style = MaterialTheme.typography.displayLarge.merge(tab))
-                    Text(" kg", style = MaterialTheme.typography.headlineSmall, color = c.muted, modifier = Modifier.padding(bottom = 6.dp))
-                }
-                val sign = if (change > 0) "+" else if (change < 0) "−" else "±"
                 Text(
-                    "$sign${abs(change).clean()} kg since you started · goal ${profile.goalWeightKg.clean()} kg",
-                    style = MaterialTheme.typography.bodyMedium.merge(tab), color = c.muted,
+                    if (streak > 0) "$streak day${if (streak == 1) "" else "s"} on target" else "Every day counts",
+                    style = MaterialTheme.typography.displayMedium,
                 )
-                Spacer(Modifier.height(14.dp))
-                WeightChart(weights, profile.goalWeightKg, Modifier.fillMaxWidth().height(150.dp))
-                Spacer(Modifier.height(14.dp))
-                Button({ logging = true }, Modifier.fillMaxWidth()) { Text("Log today's weight") }
+                Text(
+                    if (streak > 0) "Your current run. Days you didn’t log don’t break it."
+                    else "Log a day within your target to start a streak.",
+                    style = MaterialTheme.typography.bodyMedium, color = c.muted,
+                )
             }
         }
+        item { MonthCalendar(byDay, onOpenDay, Modifier.padding(horizontal = 16.dp)) }
         item {
-            PlateCard(Modifier.padding(horizontal = 16.dp)) {
-                Eyebrow("Last 7 days")
-                val logged = week.filter { it.kcal > 0f }
-                val avg = if (logged.isEmpty()) 0 else (logged.sumOf { it.kcal.toDouble() } / logged.size).roundToInt()
-                Text("%,d kcal average".format(avg), style = MaterialTheme.typography.headlineSmall.merge(tab))
-                Text("Target %,d kcal · days with food logged only".format(targets.kcal), style = MaterialTheme.typography.bodySmall, color = c.muted)
-                Spacer(Modifier.height(14.dp))
-                WeekBars(week, targets.kcal)
-            }
+            WeightCard(
+                current, start, profile.goalWeightKg, weights, weightOpen,
+                onToggle = { weightOpen = !weightOpen }, onLog = { logging = true }, onDelete = onDelete,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
-        if (weights.isNotEmpty()) {
-            item { Eyebrow("Weigh-ins", Modifier.padding(horizontal = 20.dp)) }
-            items(weights.reversed(), key = { it.day }) { w ->
-                Column(Modifier.padding(horizontal = 20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(LocalDate.ofEpochDay(w.day).format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy")), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Text("${w.kg.clean()} kg", style = MaterialTheme.typography.titleMedium.merge(tab))
-                        IconButton({ onDelete(w) }) { Icon(Icons.Rounded.Close, "Delete weigh-in", tint = c.muted) }
-                    }
-                    HorizontalDivider(color = c.line)
+        if (history.isEmpty()) {
+            item {
+                Text(
+                    "Your days will show up here as you log food: what you ate, and whether you hit your target.",
+                    style = MaterialTheme.typography.bodyMedium, color = c.muted, modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
+        } else {
+            item { Eyebrow("Your days", Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) }
+            items(history.take(shown), key = { it.day }) { d ->
+                DayCard(d, targets.kcal, { onOpenDay(d.day) }, Modifier.padding(horizontal = 16.dp))
+            }
+            if (history.size > shown) {
+                item {
+                    TextButton({ shown += 14 }, Modifier.padding(horizontal = 12.dp)) { Text("Show earlier days") }
                 }
             }
         }
@@ -147,6 +169,199 @@ fun ProgressScreen(
             confirmButton = { TextButton({ kg?.let(onLog); logging = false }, enabled = kg != null) { Text("Save") } },
             dismissButton = { TextButton({ logging = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** This month as dots: green on target, orange over, blue under, grey not logged. */
+@Composable
+private fun MonthCalendar(byDay: Map<Long, DaySummary>, onOpenDay: (Long) -> Unit, modifier: Modifier) {
+    val c = Plate.colors
+    val today = LocalDate.now()
+    var month by rememberSaveable { mutableStateOf(YearMonth.from(today).toString()) }
+    val ym = YearMonth.parse(month)
+    val first = ym.atDay(1)
+    val lead = first.dayOfWeek.value % 7 // Sunday first
+    val days = ym.lengthOfMonth()
+    val inMonth = (1..days).mapNotNull { byDay[ym.atDay(it).toEpochDay()] }
+    val onTarget = inMonth.count { it.status == DayStatus.ON_TARGET }
+
+    PlateCard(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(ym.format(DateTimeFormatter.ofPattern("MMMM yyyy")), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    if (inMonth.isEmpty()) "Nothing logged yet" else "$onTarget of ${inMonth.size} logged days on target",
+                    style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted,
+                )
+            }
+            IconButton({ month = ym.minusMonths(1).toString() }) { Icon(Icons.Rounded.ChevronLeft, "Previous month") }
+            IconButton({ month = ym.plusMonths(1).toString() }, enabled = ym < YearMonth.from(today)) {
+                Icon(Icons.Rounded.ChevronRight, "Next month")
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row {
+            listOf("S", "M", "T", "W", "T", "F", "S").forEach {
+                Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = c.muted)
+            }
+        }
+        val cells = lead + days
+        for (row in 0 until (cells + 6) / 7) {
+            Row(Modifier.padding(top = 6.dp)) {
+                for (col in 0 until 7) {
+                    val n = row * 7 + col - lead + 1
+                    Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
+                        if (n in 1..days) {
+                            val date = ym.atDay(n)
+                            val sum = byDay[date.toEpochDay()]
+                            val status = sum?.status ?: DayStatus.NOT_LOGGED
+                            val future = date.isAfter(today)
+                            val label = when (status) {
+                                DayStatus.ON_TARGET -> "on target"; DayStatus.OVER -> "over"
+                                DayStatus.UNDER -> "under"; DayStatus.NOT_LOGGED -> "not logged"
+                            }
+                            Box(
+                                Modifier.size(34.dp).clip(CircleShape)
+                                    .background(if (future) Color.Transparent else statusColor(status, c).copy(alpha = if (sum == null) 0.35f else 1f))
+                                    .let { if (date == today) it.border(2.dp, c.ink, CircleShape) else it }
+                                    .let { if (!future) it.clickable { onOpenDay(date.toEpochDay()) } else it }
+                                    .semantics { contentDescription = "${date.format(DateTimeFormatter.ofPattern("MMMM d"))}, $label" },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    "$n", style = MaterialTheme.typography.labelMedium.merge(tab),
+                                    color = when {
+                                        future -> c.muted.copy(alpha = 0.5f)
+                                        sum == null -> c.muted
+                                        else -> Color(0xFF14110F)
+                                    },
+                                    fontWeight = if (date == today) FontWeight.Bold else FontWeight.Medium,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            listOf(DayStatus.ON_TARGET to "On target", DayStatus.OVER to "Over", DayStatus.UNDER to "Under").forEach { (s, l) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(statusColor(s, c)))
+                    Text(" $l", style = MaterialTheme.typography.labelSmall, color = c.muted)
+                }
+            }
+        }
+    }
+}
+
+/** Weight now and the change, with the trend line and weigh-ins one tap away. */
+@Composable
+private fun WeightCard(
+    current: Float, start: Float, goal: Float, weights: List<WeightEntry>, open: Boolean,
+    onToggle: () -> Unit, onLog: () -> Unit, onDelete: (WeightEntry) -> Unit, modifier: Modifier,
+) {
+    val c = Plate.colors
+    val change = current - start
+    PlateCard(modifier.animateContentSize()) {
+        Row(Modifier.clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Eyebrow("Weight")
+                Text("${current.clean()} kg", style = MaterialTheme.typography.headlineMedium.merge(tab))
+                val sign = if (change > 0) "+" else if (change < 0) "−" else "±"
+                Text("$sign${abs(change).clean()} kg since you started · goal ${goal.clean()} kg", style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
+            }
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                if (open) "Hide weight trend" else "Show weight trend",
+                tint = c.muted,
+                modifier = Modifier.padding(start = 8.dp).let { if (open) it.then(Modifier) else it },
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        WeightChart(weights, goal, Modifier.fillMaxWidth().height(if (open) 150.dp else 56.dp))
+        Spacer(Modifier.height(10.dp))
+        Button(onLog, Modifier.fillMaxWidth()) { Text("Log today’s weight") }
+        if (open && weights.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            weights.reversed().take(30).forEach { w ->
+                HorizontalDivider(color = c.line)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(LocalDate.ofEpochDay(w.day).format(DateTimeFormatter.ofPattern("EEE, MMM d")), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                    Text("${w.kg.clean()} kg", style = MaterialTheme.typography.titleSmall.merge(tab))
+                    IconButton({ onDelete(w) }) { Icon(Icons.Rounded.Close, "Delete weigh-in", tint = c.muted) }
+                }
+            }
+        }
+    }
+}
+
+/** One day: eaten vs target, hit or missed, what was eaten, and the rest of the day's numbers. */
+@Composable
+private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Modifier) {
+    val c = Plate.colors
+    val color = statusColor(d.status, c)
+    val diff = (d.kcal - target).roundToInt()
+    val badge = when (d.status) {
+        DayStatus.ON_TARGET -> "✓ On target"
+        DayStatus.OVER -> "▲ Over by %,d".format(diff)
+        DayStatus.UNDER -> "▼ Under by %,d".format(-diff)
+        DayStatus.NOT_LOGGED -> "Not logged"
+    }
+    val date = LocalDate.ofEpochDay(d.day)
+    val title = when (d.day) {
+        LocalDate.now().toEpochDay() -> "Today"
+        LocalDate.now().toEpochDay() - 1 -> "Yesterday"
+        else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+    }
+    PlateCard(modifier.clickable(onClick = onOpen), padding = 16.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+            Text(
+                badge, style = MaterialTheme.typography.labelLarge, color = Color(0xFF14110F),
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(color).padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text("%,d".format(d.kcal.roundToInt()), style = MaterialTheme.typography.headlineMedium.merge(tab))
+            Text(" / %,d kcal".format(target), style = MaterialTheme.typography.bodyMedium.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
+            Spacer(Modifier.weight(1f))
+            if (d.status == DayStatus.ON_TARGET && diff < 0) {
+                Text("%,d left".format(-diff), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        // Bar: filled to eaten / target, capped at 125% with the target marked.
+        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(c.track)) {
+            Box(Modifier.fillMaxWidth((d.kcal / (target * 1.25f)).coerceIn(0f, 1f)).height(10.dp).clip(CircleShape).background(color))
+            Box(Modifier.fillMaxWidth(0.8f).height(10.dp)) {
+                Box(Modifier.align(Alignment.CenterEnd).width(2.dp).height(10.dp).background(c.ink.copy(alpha = 0.6f)))
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        val bits = buildList {
+            add("P ${d.protein.roundToInt()} g · C ${d.carbs.roundToInt()} g · F ${d.fat.roundToInt()} g")
+            if (d.waterMl > 0) add("💧 %,d ml".format(d.waterMl))
+            d.weightKg?.let { add("⚖ ${it.clean()} kg") }
+        }
+        Text(bits.joinToString("   "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
+        if (d.foods.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            val names = d.foods.take(4).joinToString(" · ") { it.first }
+            val more = d.foods.size - 4
+            Text(
+                if (more > 0) "$names  +$more more" else names,
+                style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            if (d.status == DayStatus.OVER) {
+                val (name, kcal) = d.foods.first()
+                Text(
+                    "Biggest: $name (%,d kcal)".format(kcal.roundToInt()),
+                    style = MaterialTheme.typography.bodySmall.merge(tab), color = c.carbs, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -181,39 +396,5 @@ private fun WeightChart(weights: List<WeightEntry>, goal: Float, modifier: Modif
         measure.getSegment(0f, measure.length * draw.value, partial, true)
         drawPath(partial, c.good, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
         if (draw.value >= 1f) drawCircle(c.good, 5.dp.toPx(), pt(weights.last()))
-    }
-}
-
-/** Seven bars, one per day; the dashed line is the target. */
-@Composable
-private fun WeekBars(week: List<DayTotal>, target: Int) {
-    val c = Plate.colors
-    val max = maxOf(target.toFloat() * 1.25f, week.maxOfOrNull { it.kcal } ?: 0f, 1f)
-    Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        week.forEach { d ->
-            val anim = remember { Animatable(0f) }
-            LaunchedEffect(d.kcal) { anim.animateTo(d.kcal / max, tween(900, easing = FastOutSlowInEasing)) }
-            Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                    Canvas(Modifier.fillMaxWidth().fillMaxHeight()) {
-                        val ty = size.height * (1f - target / max)
-                        drawLine(c.muted.copy(alpha = 0.45f), Offset(0f, ty), Offset(size.width, ty), 1.5f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)))
-                    }
-                    val color = when {
-                        d.kcal <= 0f -> c.track
-                        d.kcal > target * 1.05f -> c.carbs
-                        else -> c.accent
-                    }
-                    Box(
-                        Modifier.fillMaxWidth(0.72f).fillMaxHeight(anim.value.coerceIn(0.02f, 1f))
-                            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                            .background(color),
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(LocalDate.ofEpochDay(d.day).format(DateTimeFormatter.ofPattern("EEEEE")), style = MaterialTheme.typography.labelSmall, color = c.muted)
-            }
-        }
     }
 }

@@ -48,6 +48,12 @@ interface PlateDao {
     @Query("DELETE FROM saved_food WHERE `key` = :key")
     suspend fun deleteFood(key: String)
 
+    @Query("SELECT * FROM food_entry WHERE day BETWEEN :from AND :to ORDER BY day, createdAt")
+    fun entriesBetween(from: Long, to: Long): Flow<List<FoodEntry>>
+
+    @Query("SELECT * FROM water WHERE day BETWEEN :from AND :to")
+    fun waterBetween(from: Long, to: Long): Flow<List<Water>>
+
     @Query("SELECT * FROM weight ORDER BY day")
     fun weights(): Flow<List<WeightEntry>>
 

@@ -3,6 +3,8 @@ package com.mrboora.plate
 import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.AppUpdates
 import com.mrboora.plate.data.CanadianFoods
+import com.mrboora.plate.data.DayStatus
+import com.mrboora.plate.data.History
 import com.mrboora.plate.data.FoodRequest
 import com.mrboora.plate.data.MenuUpdates
 import com.mrboora.plate.data.Spelling
@@ -212,5 +214,17 @@ class NutritionTest {
             kcal = 500f, protein = 27f, carbs = 36f, fat = 30f, unit = "item")
         assertEquals(1f, burger.step, 0f)   // old entries without a portion still step by one item
         assertEquals(54f, burger.withAmount(2f).protein, 0.01f)
+    }
+
+    @Test fun dayStatusAndStreak() {
+        assertEquals(DayStatus.ON_TARGET, History.status(1900f, 2000))
+        assertEquals(DayStatus.ON_TARGET, History.status(2100f, 2000))   // up to 5% over
+        assertEquals(DayStatus.OVER, History.status(2200f, 2000))
+        assertEquals(DayStatus.UNDER, History.status(1300f, 2000))      // under 70%
+        assertEquals(DayStatus.NOT_LOGGED, History.status(0f, 2000))
+        fun d(day: Long, s: DayStatus) = com.mrboora.plate.data.DaySummary(day, 0f, 0f, 0f, 0f, 0, null, emptyList(), s)
+        // Newest first: on, (gap), on, over, on  -> streak 2 (the gap doesn't break it, the over day does)
+        assertEquals(2, History.streak(listOf(d(10, DayStatus.ON_TARGET), d(9, DayStatus.NOT_LOGGED), d(8, DayStatus.ON_TARGET), d(7, DayStatus.OVER), d(6, DayStatus.ON_TARGET))))
+        assertEquals(0, History.streak(listOf(d(10, DayStatus.OVER), d(9, DayStatus.ON_TARGET))))
     }
 }

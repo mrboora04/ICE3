@@ -89,7 +89,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val entries by vm.entries.collectAsStateWithLifecycle()
     val water by vm.waterMl.collectAsStateWithLifecycle()
     val weights by vm.weights.collectAsStateWithLifecycle()
-    val week by vm.week.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     val recent by vm.recentFoods.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
     val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
@@ -174,7 +174,16 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                 )
             }
             composable(Tab.PROGRESS.route) {
-                ProgressScreen(profile, targets, weights, week, content, vm::logWeight, vm::deleteWeight)
+                ProgressScreen(
+                    profile, targets, weights, history, content, vm::logWeight, vm::deleteWeight,
+                    onOpenDay = { d ->
+                        vm.showDay(d)
+                        nav.navigate(Tab.TODAY.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
             }
             composable(Tab.PROFILE.route) {
                 ProfileScreen(
