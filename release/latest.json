@@ -1,10 +1,10 @@
 {
-  "versionCode": 22,
-  "versionName": "2.0.4",
+  "versionCode": 23,
+  "versionName": "2.1.0",
   "notes": [
-    "Progress uses Plate's soft colours: mint for on target, peach for over, lilac for under",
-    "Your streak, month calendar and a card for every day",
-    "Tap + on anything you've logged to add another serving"
+    "Portion helper: tap tsp, tbsp, cup, glass or can, or use your hand (fist, palm, thumb) when you have no scale",
+    "Bolder look: big condensed headlines, numbered meals and a ribbon of what's on your plate",
+    "Your streak now shows as one big number on Progress"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

@@ -1,6 +1,7 @@
 package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
+import org.junit.Assert.assertFalse
 import com.mrboora.plate.data.AppUpdates
 import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.DayStatus
@@ -17,6 +18,7 @@ import com.mrboora.plate.data.OpenFoodFacts
 import com.mrboora.plate.data.Goal
 import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.Profile
+import com.mrboora.plate.data.Portions
 import com.mrboora.plate.data.Sex
 import com.mrboora.plate.ui.screens.clean
 import com.mrboora.plate.ui.screens.goalProgress
@@ -227,4 +229,34 @@ class NutritionTest {
         assertEquals(2, History.streak(listOf(d(10, DayStatus.ON_TARGET), d(9, DayStatus.NOT_LOGGED), d(8, DayStatus.ON_TARGET), d(7, DayStatus.OVER), d(6, DayStatus.ON_TARGET))))
         assertEquals(0, History.streak(listOf(d(10, DayStatus.OVER), d(9, DayStatus.ON_TARGET))))
     }
+
+    @Test
+    fun portionHelperUsesTheFoodsOwnMeasureOrATypicalOne() {
+        // Health Canada lists cooked rice as 250 ml = 195 g, so a cup is exactly 195 g.
+        val rice = FoodItem("Rice, white, cooked", kcal100 = 130f, protein100 = 2.7f, carbs100 = 28f, fat100 = 0.3f, servingG = 195f, servingLabel = "250 ml")
+        val cup = Portions.kitchen(rice).first { it.name == "1 cup" }
+        assertEquals(195f, cup.grams, 0.01f)
+        assertTrue(cup.exact)
+        assertEquals(195f, Portions.hand(rice).first { it.name == "Fist" }.grams, 0.01f)
+
+        // No ml listing: a tablespoon of oil uses oil's typical density.
+        val oil = FoodItem("Olive oil", kcal100 = 884f, protein100 = 0f, carbs100 = 0f, fat100 = 100f)
+        val tbsp = Portions.kitchen(oil).first { it.name == "1 tbsp" }
+        assertEquals(14f, tbsp.grams, 0.01f) // 15 ml × 0.92, rounded
+        assertFalse(tbsp.exact)
+
+        // Drinks get glasses and shots, not spoons or hands.
+        val whisky = FoodItem("Whisky", kcal100 = 250f, protein100 = 0f, carbs100 = 0f, fat100 = 0f)
+        assertTrue(Portions.isDrink(whisky))
+        assertEquals("1 shot", Portions.kitchen(whisky).first().name)
+        assertEquals(43f, Portions.kitchen(whisky).first().grams, 0.01f)
+        assertEquals("ml", Portions.kitchen(whisky).first().unit)
+        assertTrue(Portions.hand(whisky).isEmpty())
+        assertFalse(Portions.isDrink(FoodItem("Popcorn, air-popped", kcal100 = 387f, protein100 = 13f, carbs100 = 78f, fat100 = 4.5f)))
+        assertFalse(Portions.isDrink(FoodItem("Watermelon, raw", kcal100 = 30f, protein100 = 0.6f, carbs100 = 7.6f, fat100 = 0.2f, servingG = 160f, servingLabel = "250 ml diced")))
+
+        // Counted foods have no portion helper.
+        assertTrue(Portions.kitchen(FoodItem("Samosa", kcal100 = 250f, protein100 = 5f, carbs100 = 30f, fat100 = 12f, perItem = true)).isEmpty())
+    }
 }
+

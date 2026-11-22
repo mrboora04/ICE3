@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.data.Portions
+import com.mrboora.plate.ui.theme.PosterType
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -212,7 +214,7 @@ fun AddFoodScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(title, style = MaterialTheme.typography.titleLarge)
+                        Text(title.uppercase(), style = PosterType.section, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(dayText, style = MaterialTheme.typography.bodySmall, color = c.muted)
                     }
                 },
@@ -466,6 +468,7 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
                     FilterChip(g == v, { text = v.clean() }, label = { Text("${v.clean()} g") })
                 }
             }
+            PortionHelper(food, g) { text = it.clean() }
             Spacer(Modifier.height(16.dp))
             val gg = g ?: 0f
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -622,5 +625,50 @@ private fun RequestDialog(initial: String, onDismiss: () -> Unit, onSend: (Strin
             TextButton({ onSend(restaurant, item) }, enabled = restaurant.isNotBlank() || item.isNotBlank()) { Text("Send request") }
         },
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
+}
+
+/** Kitchen measures and the hand guide, each already turned into grams for this food. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+internal fun PortionHelper(food: FoodItem, current: Float?, onPick: (Float) -> Unit) {
+    val c = Plate.colors
+    val kitchen = remember(food) { Portions.kitchen(food) }
+    val hand = remember(food) { Portions.hand(food) }
+    if (kitchen.isEmpty()) return
+    val exact = kitchen.first().exact
+    fun grams(p: Portions.Portion) = "${if (p.exact) "" else "≈"}${p.grams.clean()} ${p.unit}"
+
+    Spacer(Modifier.height(14.dp))
+    Eyebrow(if (Portions.isDrink(food)) "Pour" else "Kitchen measures")
+    Spacer(Modifier.height(4.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        kitchen.forEach { p ->
+            FilterChip(current == p.grams, { onPick(p.grams) }, label = { Text("${p.name} · ${grams(p)}") })
+        }
+    }
+    if (hand.isNotEmpty()) {
+        Spacer(Modifier.height(10.dp))
+        Eyebrow("No scale? Use your hand")
+        Spacer(Modifier.height(4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            hand.forEach { p ->
+                FilterChip(
+                    current == p.grams, { onPick(p.grams) },
+                    label = {
+                        Column(Modifier.padding(vertical = 6.dp)) {
+                            Text(p.name, style = MaterialTheme.typography.labelLarge)
+                            Text("${p.means} · ${grams(p)}", style = MaterialTheme.typography.labelSmall, color = c.muted)
+                        }
+                    },
+                )
+            }
+        }
+    }
+    Text(
+        if (Portions.isDrink(food)) "Drinks are counted in ml."
+        else if (exact) "Grams use this food's own Health Canada measure. Cups are 250 ml."
+        else "≈ uses a typical weight for this kind of food. Cups are 250 ml.",
+        style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
     )
 }

@@ -1,5 +1,7 @@
 package com.mrboora.plate
 
+import androidx.compose.foundation.layout.padding
+import com.mrboora.plate.data.FoodItem
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -134,6 +136,24 @@ class ScreenshotTest {
             Meal.LUNCH, "Today", FoodCatalog.foods.filter { it.name in setOf("Roti / chapati", "Dal (lentil curry)", "Paneer", "Basmati rice, cooked") },
             { emptyList() }, { Result.success(emptyList()) }, { Result.success(null) }, { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _ -> }, {}, {}, { _, _ -> }, {},
         )
+    }
+
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun todayTall() = shot("today_tall") {
+        TodayScreen(profile, targets, today, entries, 1250, pad, {}, {}, {}, {}, {})
+    }
+
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun todayTallDark() = shot("today_tall_dark", dark = true) {
+        TodayScreen(profile, targets, today, entries, 1250, pad, {}, {}, {}, {}, {})
+    }
+
+    @Test fun portionHelper() = shot("portion_helper") {
+        val rice = FoodItem("Rice, white, long-grain, cooked", kcal100 = 130f, protein100 = 2.7f, carbs100 = 28f, fat100 = 0.3f, servingG = 195f, servingLabel = "250 ml")
+        androidx.compose.foundation.layout.Column(Modifier.padding(20.dp_)) {
+            androidx.compose.material3.Text(rice.name, style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+            com.mrboora.plate.ui.screens.PortionHelper(rice, 195f) {}
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(12.dp_))
+            com.mrboora.plate.ui.screens.PortionHelper(FoodItem("Whisky", kcal100 = 250f, protein100 = 0f, carbs100 = 0f, fat100 = 0f), null) {}
+        }
     }
 
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }

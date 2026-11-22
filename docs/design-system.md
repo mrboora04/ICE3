@@ -1,0 +1,36 @@
+# Plate design system: poster layer (2.1)
+
+Plate keeps its colours and layout: a blush background, plum text, a pink accent and soft
+pastels. Version 2.1 adds a **poster** layer. It comes from recent CSS Design Awards Websites
+of the Day (October 2026):
+
+- **Henrietta Said** (spicy snacks): huge condensed capitals and a food-label ribbon along the bottom.
+- **Surya Aditya** (top UI score, 10 from one judge): one oversized condensed name.
+- **Casa Momo**: a quiet, warm, minimal look. This is why we add type and keep the colours.
+- Portfolio winners (**Patmos**, **Giordano Betti**): numbered index lists, 01, 02, …
+
+## Tokens
+
+| Token | Value | Use |
+|---|---|---|
+| `Poster` font | Bricolage Grotesque, width 75, optical size 96, ExtraBold (`res/font/bricolage_condensed_800.ttf`) | Same family as the display font, but squeezed |
+| `PosterType.hero` | 64 sp | One per screen: your name on Today, the streak number on Progress (96 sp) |
+| `PosterType.title` | 40 sp | kcal left inside the ring |
+| `PosterType.section` | 26 sp | Card and screen titles: MEALS, ADD FOOD |
+| `PosterType.ticker` / `index` | 15 / 14 sp | Ribbon text, 01-style row numbers |
+
+Rules: poster type is always in capitals, used for at most one big thing per screen, and never
+for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (peach) with
+`onDay` text.
+
+## Components
+
+- **Ticker** (`ui/components/Poster.kt`): a slow sideways ribbon of today's foods and their kcal.
+  It stays still when the phone's animations are off, and screen readers hear the plain list.
+- **IndexLabel**: 01, 02… in the accent colour, in front of each logged food.
+- **PortionHelper** (`ui/screens/AddFood.kt` and `data/Portions.kt`):
+  - Kitchen measures: tsp, tbsp, ¼, ½ and 1 cup. Cups are Canada's 250 ml.
+  - For drinks, these become a shot, wine glass, bottle, glass, can or ½ L bottle, shown in ml.
+  - The hand guide: thumb (1 tbsp), cupped hand (½ cup), fist (1 cup) and palm (a piece, about 100 g).
+  - Grams are exact when Health Canada lists the food by ml (about 2,500 foods). Otherwise they
+    use a typical density and are marked with ≈.

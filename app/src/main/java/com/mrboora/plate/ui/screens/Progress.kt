@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.ui.unit.sp
+import com.mrboora.plate.ui.theme.PosterType
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -114,10 +116,18 @@ fun ProgressScreen(
         item {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Eyebrow("Progress")
-                Text(
-                    if (streak > 0) "$streak day${if (streak == 1) "" else "s"} on target" else "Every day counts",
-                    style = MaterialTheme.typography.displayMedium,
-                )
+                if (streak > 0) {
+                    Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.semantics(mergeDescendants = true) {}) {
+                        Text("$streak", style = PosterType.hero.copy(fontSize = 96.sp, lineHeight = 84.sp), color = c.accent)
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            if (streak == 1) "DAY ON\nTARGET" else "DAYS ON\nTARGET",
+                            style = PosterType.section, modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                } else {
+                    Text("EVERY DAY COUNTS", style = PosterType.title)
+                }
                 Text(
                     if (streak > 0) "Your current run. Days you didn’t log don’t break it."
                     else "Log a day within your target to start a streak.",

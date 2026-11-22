@@ -16,7 +16,7 @@ Track calories and macros. No account, everything stays on your phone.
 ## What you can do
 
 - Daily calorie and macro target, set to your goal
-- Log meals in a food diary
+- Log meals in a food diary, with a portion helper (spoons, cups, glasses, or your hand)
 - Search 6,000+ Canadian foods, or scan a barcode
 - Browse 14 Canadian restaurant menus (2,100+ items) — can't find one? Request it and we'll add it
 - Track water and weight, with a progress chart

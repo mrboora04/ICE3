@@ -55,6 +55,9 @@ import com.mrboora.plate.ui.components.MorphBlob
 import com.mrboora.plate.ui.components.PlateCard
 import com.mrboora.plate.ui.components.ProgressRing
 import com.mrboora.plate.ui.components.TABULAR
+import com.mrboora.plate.ui.components.IndexLabel
+import com.mrboora.plate.ui.components.Ticker
+import com.mrboora.plate.ui.theme.PosterType
 import com.mrboora.plate.ui.theme.Plate
 import java.time.LocalDate
 import java.time.LocalTime
@@ -124,7 +127,7 @@ fun TodayScreen(
         item {
             Column(Modifier.padding(horizontal = 20.dp)) {
                 Text(greeting() + ",", style = MaterialTheme.typography.headlineMedium, color = c.muted)
-                Text(profile.name, style = MaterialTheme.typography.displayMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(profile.name.uppercase(), style = PosterType.hero, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
             }
         }
         item { Hero(eaten, targets, entries, Modifier.padding(horizontal = 16.dp)) }
@@ -150,31 +153,38 @@ private fun Hero(eaten: Float, t: Targets, entries: List<FoodEntry>, modifier: M
     Box(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(c.card)) {
         MorphBlob(listOf(c.peach, c.pink, c.lilac), Modifier.size(190.dp).align(Alignment.TopEnd).offset(95.dp, (-70).dp).alpha(0.8f))
         MorphBlob(listOf(c.sky, c.skyDeep), Modifier.size(90.dp).align(Alignment.CenterEnd).offset(50.dp, (-10).dp).alpha(0.7f), periodMs = 12000, seed = 1.7f, reverse = true)
-        Column(Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProgressRing(
-                    progress = if (t.kcal > 0) eaten / t.kcal else 0f,
-                    modifier = Modifier.size(156.dp),
-                    stroke = 16.dp,
-                    color = if (over) c.over else c.accent,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("%,d".format(abs(left)), style = MaterialTheme.typography.displaySmall.merge(tab))
-                        Text(if (over) "kcal over" else "kcal left", style = MaterialTheme.typography.labelMedium, color = c.muted)
+        Column {
+            Column(Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProgressRing(
+                        progress = if (t.kcal > 0) eaten / t.kcal else 0f,
+                        modifier = Modifier.size(156.dp),
+                        stroke = 16.dp,
+                        color = if (over) c.over else c.accent,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("%,d".format(abs(left)), style = PosterType.title.merge(tab), color = if (over) c.over else c.ink)
+                            Text(if (over) "kcal over" else "kcal left", style = MaterialTheme.typography.labelMedium, color = c.muted)
+                        }
+                    }
+                    Spacer(Modifier.width(18.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Stat("Eaten", "%,d".format(eaten.roundToInt()))
+                        Stat("Goal", "%,d".format(t.kcal))
                     }
                 }
-                Spacer(Modifier.width(18.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Stat("Eaten", "%,d".format(eaten.roundToInt()))
-                    Stat("Goal", "%,d".format(t.kcal))
+                Spacer(Modifier.height(18.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Macro("Protein", entries.sumOf { it.protein.toDouble() }.toFloat(), t.proteinG, c.protein, Modifier.weight(1f))
+                    Macro("Carbs", entries.sumOf { it.carbs.toDouble() }.toFloat(), t.carbsG, c.carbs, Modifier.weight(1f))
+                    Macro("Fat", entries.sumOf { it.fat.toDouble() }.toFloat(), t.fatG, c.fat, Modifier.weight(1f))
                 }
             }
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Macro("Protein", entries.sumOf { it.protein.toDouble() }.toFloat(), t.proteinG, c.protein, Modifier.weight(1f))
-                Macro("Carbs", entries.sumOf { it.carbs.toDouble() }.toFloat(), t.carbsG, c.carbs, Modifier.weight(1f))
-                Macro("Fat", entries.sumOf { it.fat.toDouble() }.toFloat(), t.fatG, c.fat, Modifier.weight(1f))
-            }
+            // Food-label ribbon of what's on today's plate, edge to edge along the bottom of the card.
+            Ticker(
+                if (entries.isEmpty()) listOf("Nothing on your plate yet", "6,000+ Canadian foods", "Scan a barcode", "14 restaurant menus")
+                else entries.map { "${it.name.substringBefore(',').take(24)} ${it.kcal.roundToInt()}" },
+            )
         }
     }
 }
@@ -247,7 +257,7 @@ private fun MealsCard(
     PlateCard(modifier.animateContentSize(), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text("Meals", style = MaterialTheme.typography.titleLarge)
+                Text("MEALS", style = PosterType.section)
                 Text(
                     if (items.isEmpty()) "Nothing yet" else "%,d kcal".format(items.sumOf { it.kcal.toDouble() }.roundToInt()),
                     style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted,
@@ -255,10 +265,11 @@ private fun MealsCard(
             }
             FilledTonalIconButton(onAdd) { Icon(Icons.Rounded.Add, "Add food") }
         }
-        items.forEach { e ->
+        items.forEachIndexed { i, e ->
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f).clickable { editing = e }.padding(start = 4.dp)) {
+                IndexLabel(i + 1, Modifier.padding(start = 4.dp, end = 10.dp).width(20.dp))
+                Column(Modifier.weight(1f).clickable { editing = e }) {
                     Text(e.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val brand = if (e.brand.isNotBlank()) "${e.brand} · " else ""
                     val time = java.time.Instant.ofEpochMilli(e.createdAt).atZone(java.time.ZoneId.systemDefault())
