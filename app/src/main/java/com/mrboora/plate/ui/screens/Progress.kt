@@ -1,5 +1,6 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.ui.components.MenuLine
 import androidx.compose.ui.unit.sp
 import com.mrboora.plate.ui.theme.PosterType
 import androidx.compose.animation.animateContentSize
@@ -280,7 +281,10 @@ private fun WeightCard(
         Row(Modifier.clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Eyebrow("Weight")
-                Text("${current.clean()} kg", style = MaterialTheme.typography.headlineMedium.merge(tab))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(current.clean(), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
+                    Text(" KG", style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
+                }
                 val sign = if (change > 0) "+" else if (change < 0) "−" else "±"
                 Text("$sign${abs(change).clean()} kg since you started · goal ${goal.clean()} kg", style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
             }
@@ -337,8 +341,8 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text("%,d".format(d.kcal.roundToInt()), style = MaterialTheme.typography.headlineMedium.merge(tab))
-            Text(" / %,d kcal".format(target), style = MaterialTheme.typography.bodyMedium.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
+            Text("%,d".format(d.kcal.roundToInt()), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
+            Text(" / %,d KCAL".format(target), style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
             Spacer(Modifier.weight(1f))
             if (d.status == DayStatus.ON_TARGET && diff < 0) {
                 Text("%,d left".format(-diff), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))

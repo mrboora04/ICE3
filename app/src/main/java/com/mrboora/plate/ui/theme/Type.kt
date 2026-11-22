@@ -53,6 +53,8 @@ val PlateTypography = Typography(
 object PosterType {
     val hero = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 64.sp, lineHeight = 58.sp, letterSpacing = (-0.5).sp, lineHeightStyle = tight)
     val title = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, lineHeight = 38.sp, letterSpacing = (-0.2).sp, lineHeightStyle = tight)
+    /** Menu-board numbers: kcal, kg, ml, set like prices. */
+    val number = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, lineHeight = 28.sp, letterSpacing = 0.sp, lineHeightStyle = tight, fontFeatureSettings = "tnum")
     val section = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 26.sp, letterSpacing = 0.2.sp, lineHeightStyle = tight)
     val ticker = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, lineHeight = 18.sp, letterSpacing = 0.8.sp)
     val index = TextStyle(fontFamily = Poster, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp)

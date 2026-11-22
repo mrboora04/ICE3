@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.ui.unit.sp
+import com.mrboora.plate.ui.components.MenuLine
 import com.mrboora.plate.data.Portions
 import com.mrboora.plate.ui.theme.PosterType
 import androidx.compose.foundation.clickable
@@ -416,11 +418,14 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
     PlateCard(Modifier.clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(food.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                val approx = if (food.isEstimate) "≈" else ""
+                // Menu board: the name, dots, and the calories like a price.
+                MenuLine(
+                    food.name, "$approx${food.kcal100.roundToInt()}", unit = if (food.perItem) "KCAL" else "/100 G",
+                    numberStyle = PosterType.number.copy(fontSize = 24.sp, lineHeight = 24.sp), maxLines = 2,
+                )
                 val parts = buildList {
                     if (food.brand.isNotBlank()) add(food.brand)
-                    val approx = if (food.isEstimate) "≈" else ""
-                    add(if (food.perItem) "$approx${food.kcal100.roundToInt()} kcal" else "${food.kcal100.roundToInt()} kcal / 100 g")
                     if (food.isEstimate) add("estimate")
                     if (food.source == FoodItem.Source.CUSTOM) add("your food")
                     if (food.servingLabel.isNotBlank()) add(if (food.perItem) food.servingLabel else "${food.servingLabel} = ${food.servingG.roundToInt()} g")

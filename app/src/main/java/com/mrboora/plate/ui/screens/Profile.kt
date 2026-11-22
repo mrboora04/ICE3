@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.ui.theme.PosterType
+import com.mrboora.plate.ui.components.MenuLine
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -119,7 +121,7 @@ fun ProfileScreen(
                     val progress = goalProgress(profile.goal, startKg, currentKg, profile.goalWeightKg)
                     ProgressRing(progress, Modifier.size(112.dp), stroke = 12.dp) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("${(progress * 100).roundToInt()}%", style = MaterialTheme.typography.headlineSmall.merge(tab))
+                            Text("${(progress * 100).roundToInt()}%", style = PosterType.number)
                             Text("to goal", style = MaterialTheme.typography.labelSmall, color = c.muted)
                         }
                     }
@@ -166,10 +168,10 @@ fun ProfileScreen(
                     (if (adj > 0) "+" else if (adj < 0) "−" else "") + "%,d kcal".format(abs(adj)),
                 )
                 Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("Daily target", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                    Text("%,d kcal".format(targets.kcal), style = MaterialTheme.typography.headlineSmall.merge(tab), color = c.accent)
-                }
+                MenuLine(
+                    "Daily target", "%,d".format(targets.kcal), unit = "KCAL",
+                    nameStyle = MaterialTheme.typography.titleMedium, numberColor = c.accent,
+                )
                 Spacer(Modifier.height(10.dp))
                 Text(
                     "Protein ${targets.proteinG} g · Carbs ${targets.carbsG} g · Fat ${targets.fatG} g",
@@ -288,7 +290,7 @@ private fun Tile(label: String, value: String, sub: String, modifier: Modifier) 
     PlateCard(modifier, padding = 16.dp) {
         Eyebrow(label)
         Spacer(Modifier.height(4.dp))
-        Text(value, style = MaterialTheme.typography.headlineSmall.merge(tab))
+        Text(value.uppercase(), style = PosterType.number)
         Text(sub, style = MaterialTheme.typography.bodySmall, color = Plate.colors.muted)
     }
 }

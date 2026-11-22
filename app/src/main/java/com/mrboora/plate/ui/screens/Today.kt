@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mrboora.plate.data.FoodEntry
 import com.mrboora.plate.data.Meal
 import com.mrboora.plate.data.Profile
@@ -57,6 +58,7 @@ import com.mrboora.plate.ui.components.ProgressRing
 import com.mrboora.plate.ui.components.TABULAR
 import com.mrboora.plate.ui.components.IndexLabel
 import com.mrboora.plate.ui.components.Ticker
+import com.mrboora.plate.ui.components.MenuLine
 import com.mrboora.plate.ui.theme.PosterType
 import com.mrboora.plate.ui.theme.Plate
 import java.time.LocalDate
@@ -196,7 +198,7 @@ private fun Hero(eaten: Float, t: Targets, entries: List<FoodEntry>, modifier: M
 private fun Stat(label: String, value: String) {
     Column {
         Eyebrow(label)
-        Text(value, style = MaterialTheme.typography.headlineSmall.merge(tab))
+        Text(value, style = PosterType.number)
     }
 }
 
@@ -226,7 +228,10 @@ private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modi
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Eyebrow("Water")
-                Text("%,d / %,d ml".format(ml, goal), style = MaterialTheme.typography.titleLarge.merge(tab))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("%,d".format(ml), style = PosterType.number)
+                    Text(" / %,d ML".format(goal), style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 2.dp))
+                }
             }
             FilledTonalIconButton({ onWater(-250) }, enabled = ml > 0) { Icon(Icons.Rounded.Remove, "Remove 250 ml") }
             FilledTonalIconButton({ onWater(250) }) { Icon(Icons.Rounded.Add, "Add 250 ml") }
@@ -262,7 +267,7 @@ private fun MealsCard(
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text("MEALS", style = PosterType.section)
                 Text(
-                    if (items.isEmpty()) "Nothing yet" else "%,d kcal".format(items.sumOf { it.kcal.toDouble() }.roundToInt()),
+                    if (items.isEmpty()) "Nothing yet" else "%,d kcal · tap a food to change the amount".format(items.sumOf { it.kcal.toDouble() }.roundToInt()),
                     style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted,
                 )
             }
@@ -273,7 +278,7 @@ private fun MealsCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IndexLabel(i + 1, Modifier.padding(start = 4.dp, end = 10.dp).width(20.dp))
                 Column(Modifier.weight(1f).clickable { editing = e }) {
-                    Text(e.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    MenuLine(e.name, "${e.kcal.roundToInt()}", numberStyle = PosterType.number.copy(fontSize = 24.sp, lineHeight = 24.sp))
                     val brand = if (e.brand.isNotBlank()) "${e.brand} · " else ""
                     val time = java.time.Instant.ofEpochMilli(e.createdAt).atZone(java.time.ZoneId.systemDefault())
                         .format(DateTimeFormatter.ofPattern("h:mm a"))
@@ -283,7 +288,7 @@ private fun MealsCard(
                         style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text("${e.kcal.roundToInt()}", style = MaterialTheme.typography.titleMedium.merge(tab), modifier = Modifier.padding(end = 4.dp))
+                Spacer(Modifier.width(8.dp))
                 FilledTonalIconButton({ onAddPortion(e) }, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.Rounded.Add, "Add another ${e.name}", modifier = Modifier.size(20.dp))
                 }

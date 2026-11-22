@@ -18,6 +18,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.MaterialTheme
 import com.mrboora.plate.ui.theme.Plate
 import com.mrboora.plate.ui.theme.PosterType
 
@@ -67,4 +74,50 @@ fun Ticker(
 @Composable
 fun IndexLabel(n: Int, modifier: Modifier = Modifier, color: Color = Plate.colors.accent) {
     Text("%02d".format(n), style = PosterType.index, color = color, modifier = modifier)
+}
+
+/**
+ * A menu-board line: name, a dotted leader, then the number set like a price.
+ * "Poha ··········· 260". The dots run behind the text and are covered by [background],
+ * so they fill exactly the gap whatever the lengths.
+ */
+@Composable
+fun MenuLine(
+    name: String,
+    number: String,
+    modifier: Modifier = Modifier,
+    unit: String = "",
+    nameStyle: TextStyle = MaterialTheme.typography.titleSmall,
+    numberStyle: TextStyle = PosterType.number,
+    numberColor: Color = Plate.colors.ink,
+    background: Color = Plate.colors.card,
+    maxLines: Int = 1,
+) {
+    val dots = Plate.colors.muted.copy(alpha = 0.45f)
+    Row(
+        modifier.fillMaxWidth().drawBehind {
+            val y = size.height - 6.dp.toPx()
+            val step = 5.dp.toPx()
+            var x = 0f
+            while (x < size.width) {
+                drawCircle(dots, radius = 1.1.dp.toPx(), center = Offset(x, y))
+                x += step
+            }
+        },
+    ) {
+        // Name, number and unit share one baseline, like type on a printed menu.
+        Text(
+            name, style = nameStyle, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.alignByBaseline().weight(1f).wrapContentWidth(Alignment.Start).background(background).padding(end = 6.dp),
+        )
+        Row(Modifier.alignByBaseline().background(background).padding(start = 6.dp)) {
+            Text(number, style = numberStyle, color = numberColor, maxLines = 1, softWrap = false, modifier = Modifier.alignByBaseline())
+            if (unit.isNotEmpty()) {
+                Text(
+                    " $unit", style = PosterType.index, color = Plate.colors.muted, maxLines = 1, softWrap = false,
+                    modifier = Modifier.alignByBaseline(),
+                )
+            }
+        }
+    }
 }
