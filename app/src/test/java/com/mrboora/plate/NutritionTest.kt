@@ -1,6 +1,8 @@
 package com.mrboora.plate
 
 import com.mrboora.plate.data.Activity
+import com.mrboora.plate.data.WeightEntry
+import com.mrboora.plate.data.DaySummary
 import org.junit.Assert.assertFalse
 import com.mrboora.plate.data.AppUpdates
 import com.mrboora.plate.data.CanadianFoods
@@ -270,4 +272,43 @@ class NutritionTest {
         val rules = java.io.File(dir, "data_extraction_rules.xml").readText()
         assertEquals(2, Regex("""path="selfies/"""").findAll(rules).count())
     }
+
+    @Test
+    fun forecastReasonsFromIntakeAndBurn() {
+        val p = Profile(name = "A", sex = Sex.MALE, age = 30, heightCm = 178f, weightKg = 85f, goalWeightKg = 78f,
+            activity = Activity.LIGHT, goal = Goal.LOSE, paceKgPerWeek = 0.5f)
+        val today = 20_000L
+        val burn = com.mrboora.plate.data.Forecast.burn(p, 85f)
+        // (10·85 + 6.25·178 − 5·30 + 5) × 1.375
+        assertEquals((850f + 1112.5f - 150f + 5f) * 1.375f, burn, 0.5f)
+
+        // Eating 550 below burn ≈ 0.5 kg a week at first.
+        val f = com.mrboora.plate.data.Forecast.run(p, 85f, burn - 550f, today)
+        assertEquals(-0.5f, f.kgPerWeek, 0.01f)
+        assertTrue(f.in4Weeks < 85f && f.in12Weeks < f.in4Weeks)
+        // Slows down as burn drops: 12 weeks is less than 12 × the first week's pace.
+        assertTrue(85f - f.in12Weeks < 12 * 0.5f)
+        assertTrue(f.goalDay != null && f.goalDay!! > today)
+        // Settling point: where burn at that weight equals intake.
+        assertEquals(burn - 550f, com.mrboora.plate.data.Forecast.burn(p, f.settlesKg), 0.5f)
+
+        // Eating above burn never reaches a lower goal.
+        assertEquals(null, com.mrboora.plate.data.Forecast.run(p, 85f, burn + 200f, today).goalDay)
+
+        // Average skips today and unlogged days, needs 3 days.
+        fun d(day: Long, kcal: Float) = DaySummary(day, kcal, 0f, 0f, 0f, 0, null, emptyList(), DayStatus.ON_TARGET)
+        assertEquals(null, com.mrboora.plate.data.Forecast.averageIntake(listOf(d(today - 1, 2000f), d(today - 2, 1800f)), today))
+        val avg = com.mrboora.plate.data.Forecast.averageIntake(
+            listOf(d(today, 500f), d(today - 1, 2000f), d(today - 2, 1800f), d(today - 3, 0f), d(today - 4, 2200f)), today,
+        )!!
+        assertEquals(2000f, avg.first, 0.01f)
+        assertEquals(3, avg.second)
+
+        // Scale trend: −1 kg over 14 days = −0.5 kg/week.
+        val trend = com.mrboora.plate.data.Forecast.scaleTrend(
+            listOf(WeightEntry(today - 14, 86f), WeightEntry(today - 7, 85.5f), WeightEntry(today, 85f)), today,
+        )!!
+        assertEquals(-0.5f, trend, 0.01f)
+    }
 }
+

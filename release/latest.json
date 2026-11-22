@@ -1,10 +1,10 @@
 {
-  "versionCode": 25,
-  "versionName": "2.3.0",
+  "versionCode": 26,
+  "versionName": "2.4.0",
   "notes": [
-    "Menu-board look: every food reads like a menu, name, dots and calories in big numbers",
-    "Cleaner Today: the scrolling strip is gone",
-    "Selfie of the day now sits in a compact card like Meals, camera only"
+    "Weight forecast on Progress: where your weight is heading, worked out step by step from what you eat and burn",
+    "What-if slider: try another daily intake and see your weight in 4 and 12 weeks and your goal date",
+    "Scale check: compares your weigh-ins with your log, and how much to eat to stay at your goal"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

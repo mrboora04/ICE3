@@ -147,6 +147,12 @@ fun ProgressScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }
+        item {
+            ForecastCard(
+                profile, targets, current, history, weights, java.time.LocalDate.now().toEpochDay(),
+                Modifier.padding(horizontal = 16.dp),
+            )
+        }
         if (history.isEmpty()) {
             item {
                 Text(
