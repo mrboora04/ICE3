@@ -1,10 +1,10 @@
 {
-  "versionCode": 24,
-  "versionName": "2.2.0",
+  "versionCode": 25,
+  "versionName": "2.3.0",
   "notes": [
-    "Selfie of the day: one photo a day, blurred until you tap it, only on this phone and never in backups",
-    "Before / after: drag across two selfies to see your change; optional screen lock and daily reminder in Profile",
-    "Updating is one tap: the Update badge and the notification now start the download straight away"
+    "Menu-board look: every food reads like a menu, name, dots and calories in big numbers",
+    "Cleaner Today: the scrolling strip is gone",
+    "Selfie of the day now sits in a compact card like Meals, camera only"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

@@ -20,7 +20,7 @@ Track calories and macros. No account, everything stays on your phone.
 - Search 6,000+ Canadian foods, or scan a barcode
 - Browse 14 Canadian restaurant menus (2,100+ items) — can't find one? Request it and we'll add it
 - Track water and weight, with a progress chart
-- Selfie of the day: blurred until you tap it, before/after compare, optional screen lock. Photos never leave your phone and are left out of backups
+- Selfie of the day (camera only): blurred until you tap it, before/after compare, optional screen lock. Photos never leave your phone and are left out of backups
 - Works offline, light and dark themes
 
 ## Install
