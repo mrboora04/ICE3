@@ -107,6 +107,41 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
     ) { }
 
+    // One-off messages from the app (e.g. "removed the old installer").
+    val notice by vm.notice.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(notice) {
+        notice?.let { snackbar.showSnackbar(it, withDismissAction = true); vm.noticeShown() }
+    }
+
+    // "Clean up old Plate installers": Android lets Plate delete only files you pick, so open the
+    // file picker on Downloads; only files named Plate….apk are deleted.
+    val pickInstallers = androidx.activity.compose.rememberLauncherForActivityResult(
+        object : androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments() {
+            override fun createIntent(context: android.content.Context, input: Array<String>) = super.createIntent(context, input).apply {
+                putExtra(
+                    android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                    android.provider.DocumentsContract.buildRootUri("com.android.providers.downloads.documents", "downloads"),
+                )
+            }
+        },
+    ) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        scope.launch {
+            val (count, bytes, skipped) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.mrboora.plate.data.AppUpdates.deletePicked(context, uris)
+            }
+            val mb = "%.0f MB".format(bytes / 1_048_576.0)
+            snackbar.showSnackbar(
+                when {
+                    count == 0 && skipped > 0 -> "Nothing deleted: only files named Plate….apk can be removed here."
+                    skipped > 0 -> "Deleted $count old installer${if (count == 1) "" else "s"} ($mb). Skipped $skipped other file${if (skipped == 1) "" else "s"}."
+                    else -> "Deleted $count old installer${if (count == 1) "" else "s"}, $mb freed."
+                },
+                withDismissAction = true,
+            )
+        }
+    }
+
     // Opened from the update notification: start the download right away.
     val updateRequested by com.mrboora.plate.MainActivity.updateRequested
     androidx.compose.runtime.LaunchedEffect(updateRequested, update) {
@@ -256,6 +291,10 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     profile, targets, currentKg, weights.firstOrNull()?.kg ?: profile.weightKg, content,
                     onEdit = { nav.navigate("edit") },
                     onReset = vm::resetAll,
+                    onCleanInstallers = {
+                        runCatching { pickInstallers.launch(arrayOf("application/vnd.android.package-archive")) }
+                            .onFailure { scope.launch { snackbar.showSnackbar("No file manager found to pick the files.") } }
+                    },
                     forecast = {
                         com.mrboora.plate.ui.screens.ForecastCard(
                             profile, currentKg, todayMeals, todayWater, todayWorkouts, weights, PlateViewModel.today(),

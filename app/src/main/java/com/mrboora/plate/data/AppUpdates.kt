@@ -151,7 +151,9 @@ object AppUpdates {
             req.setDestinationInExternalFilesDir(context, android.os.Environment.DIRECTORY_DOWNLOADS, name)
         }
         val id = dm(context).enqueue(req)
-        p.edit().putLong(KEY_ID, id).putLong(KEY_VERSION, info.versionCode).apply()
+        // Every installer Plate downloads is remembered, so each one is deleted once it's installed.
+        val all = p.getStringSet(KEY_ALL, emptySet()).orEmpty() + "$id:${info.versionCode}"
+        p.edit().putLong(KEY_ID, id).putLong(KEY_VERSION, info.versionCode).putStringSet(KEY_ALL, all).apply()
     }
 
     /** Where the current update download stands. */
@@ -190,9 +192,68 @@ object AppUpdates {
         p.edit().remove(KEY_ID).remove(KEY_VERSION).apply()
     }
 
-    /** Call when Plate starts: deletes a downloaded update that is now installed. */
-    fun cleanUpInstalled(context: Context) {
-        val v = prefs(context).getLong(KEY_VERSION, 0)
-        if (v in 1..installedVersion(context)) clearDownload(context)
+    private const val KEY_ALL = "download_all"
+
+    /**
+     * Call when Plate starts (and from the daily check): deletes every installer Plate downloaded
+     * for a version that's now installed, or older. Returns the bytes freed (0 if nothing to do).
+     */
+    fun cleanUpInstalled(context: Context): Long {
+        val p = prefs(context)
+        val installed = installedVersion(context)
+        var freed = 0L
+        val keep = mutableSetOf<String>()
+        p.getStringSet(KEY_ALL, emptySet()).orEmpty().forEach { entry ->
+            val id = entry.substringBefore(':').toLongOrNull() ?: return@forEach
+            val version = entry.substringAfter(':').toLongOrNull() ?: 0L
+            if (version in 1..installed) {
+                freed += runCatching {
+                    dm(context).query(android.app.DownloadManager.Query().setFilterById(id))?.use { c ->
+                        if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)) else 0L
+                    } ?: 0L
+                }.getOrDefault(0L)
+                runCatching { dm(context).remove(id) }
+            } else keep += entry
+        }
+        val v = p.getLong(KEY_VERSION, 0)
+        val edit = p.edit().putStringSet(KEY_ALL, keep)
+        if (v in 1..installed) {
+            // The single "current download" from before 2.8 isn't in the list above.
+            val id = p.getLong(KEY_ID, -1)
+            if (id >= 0 && keep.none { it.startsWith("$id:") }) {
+                freed += runCatching {
+                    dm(context).query(android.app.DownloadManager.Query().setFilterById(id))?.use { c ->
+                        if (c.moveToFirst()) c.getLong(c.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)) else 0L
+                    } ?: 0L
+                }.getOrDefault(0L)
+                runCatching { dm(context).remove(id) }
+            }
+            edit.remove(KEY_ID).remove(KEY_VERSION)
+        }
+        edit.apply()
+        return freed
+    }
+
+    /** Only files called Plate….apk are ever deleted by "Clean up old installers". */
+    fun isPlateInstaller(name: String): Boolean = Regex("""^plate.*\.apk$""", RegexOption.IGNORE_CASE).matches(name.trim())
+
+    /**
+     * Deletes the files the user picked in "Clean up old installers", but only ones named
+     * Plate….apk. Returns (files deleted, bytes freed, files skipped).
+     */
+    fun deletePicked(context: Context, uris: List<Uri>): Triple<Int, Long, Int> {
+        var count = 0
+        var bytes = 0L
+        var skipped = 0
+        uris.forEach { uri ->
+            val (name, size) = runCatching {
+                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) (c.getString(0) ?: "") to (if (c.isNull(1)) 0L else c.getLong(1)) else "" to 0L } ?: ("" to 0L)
+            }.getOrDefault("" to 0L)
+            if (!isPlateInstaller(name)) { skipped++; return@forEach }
+            val ok = runCatching { android.provider.DocumentsContract.deleteDocument(context.contentResolver, uri) }.getOrDefault(false)
+            if (ok) { count++; bytes += size } else skipped++
+        }
+        return Triple(count, bytes, skipped)
     }
 }

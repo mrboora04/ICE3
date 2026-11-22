@@ -90,6 +90,8 @@ fun ProfileScreen(
     extra: @Composable () -> Unit = {},
     /** Today's forecast card, under the goal ring. */
     forecast: @Composable () -> Unit = {},
+    /** Opens the file picker to delete old Plate….apk installers from Downloads. */
+    onCleanInstallers: (() -> Unit)? = null,
 ) {
     val c = Plate.colors
     var confirmReset by remember { mutableStateOf(false) }
@@ -198,6 +200,9 @@ fun ProfileScreen(
                     Text("Edit profile and goals")
                 }
                 OutlinedButton({ shareApp(context) }, Modifier.fillMaxWidth()) { Text("Share Plate with a friend") }
+                if (onCleanInstallers != null) {
+                    OutlinedButton(onCleanInstallers, Modifier.fillMaxWidth()) { Text("Clean up old Plate installers") }
+                }
                 OutlinedButton({ confirmReset = true }, Modifier.fillMaxWidth()) { Text("Erase all data") }
                 Text(
                     "Built-in foods include information from Health Canada's Canadian Nutrient File, licensed under the Open Government Licence – Canada. Restaurant menus from USDA FoodData Central (public domain). Online food data from Open Food Facts, available under the Open Database License.",

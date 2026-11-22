@@ -48,8 +48,15 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     private val _update = MutableStateFlow<com.mrboora.plate.data.UpdateInfo?>(null)
     val update: StateFlow<com.mrboora.plate.data.UpdateInfo?> = _update
 
+    /** One-off messages for the snackbar (declared before init, which uses it), e.g. after cleaning up installers. */
+    private val _notice = MutableStateFlow<String?>(null)
+    val notice: StateFlow<String?> = _notice
+    fun showNotice(text: String) { _notice.value = text }
+    fun noticeShown() { _notice.value = null }
+
     init {
-        com.mrboora.plate.data.AppUpdates.cleanUpInstalled(getApplication())
+        val freed = com.mrboora.plate.data.AppUpdates.cleanUpInstalled(getApplication())
+        if (freed > 0) _notice.value = "Updated. Removed the old installer (%.0f MB freed)".format(freed / 1_048_576.0)
         viewModelScope.launch { _update.value = com.mrboora.plate.data.AppUpdates.check(getApplication()) }
     }
 

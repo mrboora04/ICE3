@@ -1,10 +1,10 @@
 {
-  "versionCode": 29,
-  "versionName": "2.7.0",
+  "versionCode": 30,
+  "versionName": "2.8.0",
   "notes": [
-    "Type what went in, in your own words: \"1 banana with 30g berries, a spoon of peanut butter and 400ml milk\", and Plate builds it",
-    "Understands g, ml, cups, glasses, spoons and scoops (small or big), and shows each conversion in plain English",
-    "No more odd \"Did you mean\" for descriptions; peanut butter, oats and seeds go in by the spoon"
+    "Updating no longer leaves installer files behind: Plate deletes each one once the new version is in, and tells you how much space it freed",
+    "New on Profile: Clean up old Plate installers. Pick the old Plate files in Downloads and they're deleted in one go",
+    "Only files named Plate….apk can ever be deleted, nothing else"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

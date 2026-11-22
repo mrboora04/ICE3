@@ -357,4 +357,15 @@ class NutritionTest {
         val chain = FoodRequest(2, "Osmow's", "mango shake", 0, false)
         assertEquals(listOf(shake), MenuUpdates.fulfilled(listOf(shake, chain), emptyList()))
     }
+
+    @Test
+    fun onlyPlateInstallersAreDeleted() {
+        assertTrue(AppUpdates.isPlateInstaller("Plate-2.6.0.apk"))
+        assertTrue(AppUpdates.isPlateInstaller("Plate.apk"))
+        assertTrue(AppUpdates.isPlateInstaller("Plate-2.7.0-1.apk"))
+        assertFalse(AppUpdates.isPlateInstaller("WhatsApp.apk"))
+        assertFalse(AppUpdates.isPlateInstaller("Plate-2.6.0.apk.pdf"))
+        assertFalse(AppUpdates.isPlateInstaller("my plate photo.jpg"))
+    }
 }
+
