@@ -17,6 +17,7 @@ Track calories and macros. No account, everything stays on your phone.
 
 - Daily calorie and macro target, set to your goal
 - Log meals in a food diary, with a portion helper (spoons, cups, glasses, or your hand)
+- Shake builder: pick fruit and grams, a base (milk, yogurt, oat drink, water) and see the math; saved as one glass
 - Search 6,000+ Canadian foods, or scan a barcode
 - Browse 14 Canadian restaurant menus (2,100+ items) — can't find one? Request it and we'll add it
 - Track water and weight, with a progress chart; a step-by-step weight forecast on Profile from today's real meals, water and logged workouts

@@ -305,6 +305,9 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     onForget = { vm.forgetFood(it) },
                     onAdd = { food, g -> vm.addEntry(meal, food, g) },
                     onBack = { nav.popBackStack() },
+                    mixIngredients = vm::mixIngredients,
+                    searchIngredients = vm::searchIngredients,
+                    onSaveMix = { vm.saveMix(meal, it) },
                 )
             }
             composable("edit") {

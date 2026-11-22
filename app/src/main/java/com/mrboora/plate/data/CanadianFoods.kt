@@ -20,6 +20,9 @@ class CanadianFoods(private val context: Context) {
 
     fun search(query: String, limit: Int = 40): List<FoodItem> = rank(load().map { it.first }, query, limit)
 
+    /** The food with exactly this Health Canada name. */
+    fun byName(name: String): FoodItem? = load().firstOrNull { it.first.name == name }?.first
+
     /** All foods in the given food groups, alphabetically. */
     fun inGroups(groups: Set<String>): List<FoodItem> =
         load().filter { it.second in groups }.map { it.first }.sortedBy { it.name }

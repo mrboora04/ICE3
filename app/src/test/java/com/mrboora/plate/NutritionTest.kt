@@ -324,5 +324,38 @@ class NutritionTest {
         val f = com.mrboora.plate.data.Forecast.today(p, 85f, eaten = 1800f, workoutKcal = 374f, today = 20_000L)
         assertEquals(1800f - (life + 374f), f.balance, 0.5f)
     }
+
+    @Test
+    fun shakeBuilderIsPlainArithmetic() {
+        val banana = FoodItem("Banana, raw", kcal100 = 89f, protein100 = 1.1f, carbs100 = 22.8f, fat100 = 0.3f, servingG = 118f, servingLabel = "1 medium (18cm to 20cm long)")
+        val berries = com.mrboora.plate.data.Mix.mixedBerries(listOf(
+            FoodItem("Blueberry, raw", kcal100 = 57f, protein100 = 0.7f, carbs100 = 14.5f, fat100 = 0.3f),
+            FoodItem("Raspberry, raw", kcal100 = 53f, protein100 = 1.2f, carbs100 = 11.9f, fat100 = 0.7f),
+            FoodItem("Strawberry, raw", kcal100 = 32f, protein100 = 0.7f, carbs100 = 7.7f, fat100 = 0.3f),
+        ))!!
+        assertEquals((57f + 53f + 32f) / 3f, berries.kcal100, 0.01f)
+        val milk = FoodItem("Milk, fluid, whole, pasteurized, homogenized, 3.25% M.F.", kcal100 = 59f, protein100 = 3.3f, carbs100 = 4.5f, fat100 = 3.1f, servingG = 257.8f, servingLabel = "250 ml")
+        // Request #4: 3 bananas, 30 g mixed berries, a glass of milk.
+        val threeBananas = com.mrboora.plate.data.Mix.quickAmounts(banana)[2]
+        assertEquals("3 medium", threeBananas.first)
+        assertEquals(354f, threeBananas.second, 0.01f)
+        val milkG = com.mrboora.plate.data.Mix.mlToGrams(milk, 250f)
+        assertEquals(257.8f, milkG, 0.1f)
+        val parts = listOf(
+            com.mrboora.plate.data.Mix.Part(banana, 354f), com.mrboora.plate.data.Mix.Part(berries, 30f),
+            com.mrboora.plate.data.Mix.Part(milk, milkG),
+        )
+        val expected = 354f * 89f / 100f + 30f * berries.kcal100 / 100f + milkG * 59f / 100f
+        val glass = com.mrboora.plate.data.Mix.build("Banana & mixed berry shake", parts, 1)
+        assertEquals(expected, glass.kcal100, 0.01f)
+        assertTrue(glass.perItem && glass.isEstimate && glass.brand == "Homemade")
+        assertEquals(expected / 2f, com.mrboora.plate.data.Mix.build("x", parts, 2).kcal100, 0.01f)
+        assertEquals("Banana & mixed berry shake", com.mrboora.plate.data.Mix.shakeName(listOf("Banana", "Mixed berries")))
+
+        // Requests: a homemade shake is done as soon as the builder exists; a restaurant shake isn't.
+        val shake = FoodRequest(1, "", "3 banana 30g 4 blend berry shake", 0, false)
+        val chain = FoodRequest(2, "Osmow's", "mango shake", 0, false)
+        assertEquals(listOf(shake), MenuUpdates.fulfilled(listOf(shake, chain), emptyList()))
+    }
 }
 

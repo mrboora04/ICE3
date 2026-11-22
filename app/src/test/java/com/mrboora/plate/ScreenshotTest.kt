@@ -224,6 +224,16 @@ class ScreenshotTest {
         )
     }
 
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun shakeBuilder() = shot("shake_builder") {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS
+        val foods = names.mapNotNull { n -> cnf.byName(n)?.let { n to it } }.toMap().toMutableMap()
+        foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
+        foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, {}, preview = foods)
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 

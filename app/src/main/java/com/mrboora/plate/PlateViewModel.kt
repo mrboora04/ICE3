@@ -191,6 +191,29 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         dao.saveFood(food.toSaved(custom = true))
     }
 
+    // ---- Make-it-yourself (shake builder) ----
+
+    /** The builder's ingredients by exact Health Canada name, with mixed berries and water worked out. */
+    suspend fun mixIngredients(): Map<String, FoodItem> = withContext(Dispatchers.Default) {
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES)
+            .map { it.second }.toSet() + com.mrboora.plate.data.Mix.BERRY_PARTS
+        val found = names.mapNotNull { n -> canadian.byName(n)?.let { n to it } }.toMap().toMutableMap()
+        com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { found[it] })
+            ?.let { found[com.mrboora.plate.data.Mix.MIXED_BERRIES] = it }
+        found[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
+        found
+    }
+
+    /** Any Health Canada food as an ingredient (per 100 g, so restaurant items are left out). */
+    suspend fun searchIngredients(query: String): List<FoodItem> =
+        withContext(Dispatchers.Default) { canadian.search(query.trim(), 12) }
+
+    /** Saves the mix as one of your foods and logs one glass of it. */
+    fun saveMix(meal: Meal, food: FoodItem) = viewModelScope.launch {
+        dao.saveFood(food.toSaved(custom = true))
+        addEntry(meal, food, 1f)
+    }
+
     fun forgetFood(food: FoodItem) = viewModelScope.launch { dao.deleteFood(food.key) }
 
     private suspend fun rememberFood(food: FoodItem) {
@@ -275,7 +298,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun FoodItem.toSaved(custom: Boolean) = SavedFood(
         key, name.trim(), brand.trim(), kcal100, protein100, carbs100, fat100, servingG, custom,
-        System.currentTimeMillis(), perItem,
+        System.currentTimeMillis(), perItem, estimated,
     )
 
     companion object {

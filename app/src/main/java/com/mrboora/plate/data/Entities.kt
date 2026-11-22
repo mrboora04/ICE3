@@ -96,6 +96,8 @@ data class SavedFood(
     val custom: Boolean,
     val lastUsed: Long,
     @ColumnInfo(defaultValue = "0") val perItem: Boolean = false,
+    /** Same as [FoodItem.estimated]: "k" for homemade mixes, shown with ≈. */
+    @ColumnInfo(defaultValue = "") val estimated: String = "",
 )
 
 @Entity(tableName = "weight")
@@ -155,4 +157,5 @@ fun SavedFood.toItem() = FoodItem(
     name, brand, kcal100, protein100, carbs100, fat100, servingG,
     source = if (custom) FoodItem.Source.CUSTOM else FoodItem.Source.SAVED,
     perItem = perItem,
+    estimated = estimated,
 )

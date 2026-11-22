@@ -65,7 +65,9 @@ object MenuUpdates {
     fun fulfilled(requests: List<FoodRequest>, rows: List<FoodItem>): List<FoodRequest> {
         val haystacks = rows.map { Spelling.words("${it.brand} ${it.name}").toSet() }
         return requests.filter { r ->
-            !r.done && r.terms.isNotEmpty() && haystacks.any { words -> r.terms.all { t -> words.any { it.startsWith(t) } } }
+            // Homemade shakes are made in the shake builder, never added as menu rows.
+            !r.done && (Mix.isShake(r.item) && r.restaurant.isBlank() ||
+                r.terms.isNotEmpty() && haystacks.any { words -> r.terms.all { t -> words.any { it.startsWith(t) } } })
         }
     }
 
@@ -90,7 +92,11 @@ object MenuUpdates {
         val open = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val title = if (found.size == 1) "${found[0].label} has been added" else "${found.size} foods you asked for have been added"
+        val title = when {
+            found.size == 1 && Mix.isShake(found[0].label) -> "Build your ${found[0].label} in Plate's shake builder"
+            found.size == 1 -> "${found[0].label} has been added"
+            else -> "${found.size} foods you asked for have been added"
+        }
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)

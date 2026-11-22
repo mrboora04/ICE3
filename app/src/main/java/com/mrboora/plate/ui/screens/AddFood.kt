@@ -1,5 +1,6 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.ui.unit.sp
 import com.mrboora.plate.ui.components.MenuLine
 import com.mrboora.plate.data.Portions
@@ -109,10 +110,22 @@ fun AddFoodScreen(
     onForget: (FoodItem) -> Unit,
     onAdd: (FoodItem, Float) -> Unit,
     onBack: () -> Unit,
+    mixIngredients: suspend () -> Map<String, FoodItem> = { emptyMap() },
+    searchIngredients: suspend (String) -> List<FoodItem> = { emptyList() },
+    /** A homemade shake was built: save it and log one glass. */
+    onSaveMix: (FoodItem) -> Unit = {},
 ) {
     val c = Plate.colors
     val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf("") }
+    var showShake by rememberSaveable { mutableStateOf(false) }
+    if (showShake) {
+        ShakeBuilder(mixIngredients, searchIngredients, onDismiss = { showShake = false }, onSave = { food ->
+            showShake = false
+            onSaveMix(food)
+            onBack()
+        })
+    }
     var local by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     var online by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     var onlineState by remember { mutableStateOf<String?>(null) } // null idle, "loading", or a message
@@ -316,6 +329,7 @@ fun AddFoodScreen(
                 }
                 item {
                     val chips: @Composable () -> Unit = {
+                        AssistChip({ showShake = true }, { Text("Shake builder") }, leadingIcon = { Icon(Icons.Rounded.LocalDrink, null, Modifier.size(18.dp), tint = c.accent) })
                         Shelves.all.forEach { s ->
                             AssistChip(
                                 { shelf = s.title; chain = null },
@@ -336,6 +350,17 @@ fun AddFoodScreen(
                             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) { chips() }
+                    }
+                    // Typed "shake" or "smoothie": homemade ones are built, not looked up.
+                    if (com.mrboora.plate.data.Mix.isShake(query)) {
+                        PlateCard(Modifier.padding(top = 12.dp).clickable { showShake = true }, padding = 14.dp) {
+                            Text("Homemade shake?", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Build it from your fruit, grams and base (milk, yogurt, oat drink or water). Plate does the math.",
+                                style = MaterialTheme.typography.bodySmall, color = c.muted,
+                            )
+                            Button({ showShake = true }, Modifier.padding(top = 8.dp)) { Text("Open shake builder") }
+                        }
                     }
                 }
                 if (recent.isNotEmpty()) {
@@ -398,7 +423,7 @@ fun AddFoodScreen(
         }
     }
     if (showRequest) {
-        RequestDialog(query, onDismiss = { showRequest = false }) { restaurant, item ->
+        RequestDialog(query, onDismiss = { showRequest = false }, onBuildShake = { showRequest = false; showShake = true }) { restaurant, item ->
             showRequest = false
             onRequest(restaurant, item)
         }
@@ -613,7 +638,7 @@ private fun Small(label: String, v: String, on: (String) -> Unit, modifier: Modi
 }
 
 @Composable
-private fun RequestDialog(initial: String, onDismiss: () -> Unit, onSend: (String, String) -> Unit) {
+private fun RequestDialog(initial: String, onDismiss: () -> Unit, onBuildShake: () -> Unit, onSend: (String, String) -> Unit) {
     var restaurant by remember { mutableStateOf("") }
     var item by remember { mutableStateOf(initial) }
     AlertDialog(
@@ -624,6 +649,11 @@ private fun RequestDialog(initial: String, onDismiss: () -> Unit, onSend: (Strin
                 Text("This opens your email app with the request filled in. Tap Send there.", style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(restaurant, { restaurant = it }, label = { Text("Restaurant (if any), e.g. Osmow's") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(item, { item = it }, label = { Text("Food or menu item") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                // A homemade shake doesn't need a request: the builder makes it now.
+                if (restaurant.isBlank() && com.mrboora.plate.data.Mix.isShake(item)) {
+                    Text("Homemade shake? You don't need to wait for it:", style = MaterialTheme.typography.bodyMedium)
+                    Button(onBuildShake) { Text("Build it now") }
+                }
             }
         },
         confirmButton = {
