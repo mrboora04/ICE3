@@ -139,7 +139,6 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     }
     val takers = com.mrboora.plate.ui.components.rememberSelfieTakers(
         onCaptured = { vm.saveSelfie(day, done = ::selfieSaved) },
-        onPicked = { uri -> vm.saveSelfie(day, uri, ::selfieSaved) },
         onNoCamera = { scope.launch { snackbar.showSnackbar("No camera app found. Pick a photo instead.") } },
     )
     if (comparing) com.mrboora.plate.ui.components.SelfieCompare(selfieDays, selfieVersion) { comparing = false }

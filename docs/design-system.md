@@ -25,8 +25,10 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 
 ## Components
 
-- **Ticker** (`ui/components/Poster.kt`): a slow sideways ribbon of today's foods and their kcal.
-  It stays still when the phone's animations are off, and screen readers hear the plain list.
+- **Ticker** (`ui/components/Poster.kt`): a slow sideways ribbon. Removed from Today in 2.3 at the
+  user's request (too busy); kept for possible later use.
+- **MenuLine**: name, dotted leader, number in the poster cut, all on one baseline. Calories,
+  weights and targets read like prices on a menu board (2.3).
 - **IndexLabel**: 01, 02… in the accent colour, in front of each logged food.
 - **PortionHelper** (`ui/screens/AddFood.kt` and `data/Portions.kt`):
   - Kitchen measures: tsp, tbsp, ¼, ½ and 1 cup. Cups are Canada's 250 ml.
@@ -37,7 +39,7 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 
 ## Selfie of the day (2.2)
 
-- **SelfieCard** (Today): poster title. Before any photo, it shows Take selfie (front camera) and From photos.
+- **SelfieCard** (Today): built like the Meals card, with a poster title, a line under it and one round camera button. Camera only; there's no gallery option.
   - A photo shows as a frosted cover: a 48 px copy box-blurred three times, so it looks the same on every Android version.
   - Tap it, or use the screen lock if that's on, to see the photo, with Compare, Retake and Delete.
 - **SelfieCompare**: full screen. Drag across to wipe from the before photo to the after photo. Two rows of day chips pick the days.

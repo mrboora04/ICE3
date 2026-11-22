@@ -57,7 +57,6 @@ import com.mrboora.plate.ui.components.PlateCard
 import com.mrboora.plate.ui.components.ProgressRing
 import com.mrboora.plate.ui.components.TABULAR
 import com.mrboora.plate.ui.components.IndexLabel
-import com.mrboora.plate.ui.components.Ticker
 import com.mrboora.plate.ui.components.MenuLine
 import com.mrboora.plate.ui.theme.PosterType
 import com.mrboora.plate.ui.theme.Plate
@@ -185,11 +184,6 @@ private fun Hero(eaten: Float, t: Targets, entries: List<FoodEntry>, modifier: M
                     Macro("Fat", entries.sumOf { it.fat.toDouble() }.toFloat(), t.fatG, c.fat, Modifier.weight(1f))
                 }
             }
-            // Food-label ribbon of what's on today's plate, edge to edge along the bottom of the card.
-            Ticker(
-                if (entries.isEmpty()) listOf("Nothing on your plate yet", "6,000+ Canadian foods", "Scan a barcode", "14 restaurant menus")
-                else entries.map { "${it.name.substringBefore(',').take(24)} ${it.kcal.roundToInt()}" },
-            )
         }
     }
 }

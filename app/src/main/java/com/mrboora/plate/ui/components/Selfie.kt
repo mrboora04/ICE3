@@ -1,5 +1,8 @@
 package com.mrboora.plate.ui.components
 
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.animation.animateContentSize
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -8,7 +11,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,7 +45,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Compare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -132,15 +133,14 @@ private class FrontCamera : ActivityResultContracts.TakePicture() {
         .putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
 }
 
-/** Opens the camera or the photo picker and hands back the result for [day]. */
-class SelfieTakers(val takePhoto: () -> Unit, val pickPhoto: () -> Unit)
+/** Opens the camera; selfies are taken on the day, not picked from the gallery. */
+class SelfieTakers(val takePhoto: () -> Unit)
 
 @Composable
-fun rememberSelfieTakers(onCaptured: () -> Unit, onPicked: (Uri) -> Unit, onNoCamera: () -> Unit): SelfieTakers {
+fun rememberSelfieTakers(onCaptured: () -> Unit, onNoCamera: () -> Unit): SelfieTakers {
     val context = LocalContext.current
     val camera = rememberLauncherForActivityResult(FrontCamera()) { ok -> if (ok) onCaptured() }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(onPicked) }
-    return remember(camera, picker) {
+    return remember(camera) {
         SelfieTakers(
             takePhoto = {
                 try {
@@ -149,7 +149,6 @@ fun rememberSelfieTakers(onCaptured: () -> Unit, onPicked: (Uri) -> Unit, onNoCa
                     onNoCamera()
                 }
             },
-            pickPhoto = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
         )
     }
 }
@@ -165,7 +164,7 @@ private fun shortDay(day: Long): String {
 
 /** A selfie that is blurred until [revealed]; tapping the cover asks to reveal. */
 @Composable
-fun SelfiePicture(day: Long, version: Int, revealed: Boolean, locked: Boolean, onReveal: () -> Unit, modifier: Modifier = Modifier) {
+fun SelfiePicture(day: Long, version: Int, revealed: Boolean, locked: Boolean, onReveal: () -> Unit, modifier: Modifier = Modifier, badge: Boolean = true) {
     val c = Plate.colors
     val context = LocalContext.current
     val cover = produceState<Bitmap?>(null, day, version) {
@@ -173,7 +172,7 @@ fun SelfiePicture(day: Long, version: Int, revealed: Boolean, locked: Boolean, o
     }.value
     val full = if (revealed) rememberSelfie(day, Selfies.MAX_SIDE, version) else null
     Box(
-        modifier.clip(RoundedCornerShape(22.dp)).background(c.track)
+        modifier.clip(RoundedCornerShape(if (badge) 22.dp else 12.dp)).background(c.track)
             .then(if (!revealed) Modifier.clickable(onClickLabel = "Show selfie", onClick = onReveal) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
@@ -184,7 +183,7 @@ fun SelfiePicture(day: Long, version: Int, revealed: Boolean, locked: Boolean, o
                 contentScale = ContentScale.Crop, filterQuality = FilterQuality.Medium, modifier = Modifier.fillMaxSize(),
             )
         }
-        if (!revealed) {
+        if (!revealed && badge) {
             Row(
                 Modifier.clip(CircleShape).background(c.card.copy(alpha = 0.85f)).padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -198,8 +197,9 @@ fun SelfiePicture(day: Long, version: Int, revealed: Boolean, locked: Boolean, o
 }
 
 /**
- * Today's card. Empty: an invitation to take one. Taken: the blurred photo, with
- * hide, replace, compare and delete once it's showing.
+ * Today's card, built like the Meals card: a poster title, a line under it and one round
+ * camera button. With a photo, a small frosted thumbnail; tap it to see the photo full size.
+ * Camera only: a selfie is taken on the day, not picked from the gallery.
  */
 @Composable
 fun SelfieCard(
@@ -229,52 +229,48 @@ fun SelfieCard(
             dismissButton = { TextButton({ confirmDelete = false }) { Text("Keep") } },
         )
     }
-    PlateCard(modifier) {
+    PlateCard(modifier.animateContentSize(), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text("SELFIE OF THE DAY", style = PosterType.section)
                 Text(
-                    if (has) shortDay(day) else if (isToday) "Just for you. It stays on this phone." else "No selfie on ${shortDay(day)}",
+                    if (has) "${shortDay(day)} · only on this phone" else "One photo a day · only on this phone",
                     style = MaterialTheme.typography.bodySmall, color = c.muted,
                 )
             }
-            if (has && revealed) IconButton(onHide) { Icon(Icons.Rounded.VisibilityOff, "Hide selfie") }
+            if (isToday) {
+                FilledTonalIconButton(takers.takePhoto) {
+                    Icon(Icons.Rounded.CameraAlt, if (has) "Retake selfie" else "Take selfie")
+                }
+            }
         }
-        Spacer(Modifier.height(12.dp))
         if (has) {
-            SelfiePicture(day, version, revealed, locked && !revealed, onReveal, Modifier.fillMaxWidth().aspectRatio(4f / 5f))
-            if (revealed) {
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
+            if (!revealed) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = "Show selfie", onClick = onReveal).padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SelfiePicture(day, version, revealed = false, locked = locked, onReveal = onReveal, modifier = Modifier.size(56.dp), badge = false)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (locked) "Unlock to see" else "Tap to see", style = MaterialTheme.typography.titleSmall)
+                        Text("Blurred so no one sees it by accident", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                    }
+                    Icon(if (locked) Icons.Rounded.Lock else Icons.Rounded.Visibility, null, tint = c.muted, modifier = Modifier.padding(end = 8.dp))
+                }
+            } else {
+                SelfiePicture(day, version, revealed = true, locked = false, onReveal = {}, modifier = Modifier.fillMaxWidth().aspectRatio(4f / 5f))
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     if (canCompare) {
-                        Button(onCompare, contentPadding = PaddingValues(horizontal = 16.dp)) {
+                        TextButton(onCompare) {
                             Icon(Icons.Rounded.Compare, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Compare")
                         }
                     }
-                    OutlinedButton(if (isToday) takers.takePhoto else takers.pickPhoto, contentPadding = PaddingValues(horizontal = 16.dp)) {
-                        Text(if (isToday) "Retake" else "Replace")
-                    }
                     Spacer(Modifier.weight(1f))
+                    IconButton(onHide) { Icon(Icons.Rounded.VisibilityOff, "Hide selfie", tint = c.muted) }
                     IconButton({ confirmDelete = true }) { Icon(Icons.Rounded.Delete, "Delete selfie", tint = c.muted) }
-                }
-            }
-        } else {
-            if (isToday) {
-                Text(
-                    "Take one photo a day and watch the change over weeks. It's blurred until you tap it, " +
-                        "never uploaded and not included in backups.",
-                    style = MaterialTheme.typography.bodyMedium, color = c.muted,
-                )
-                Spacer(Modifier.height(12.dp))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isToday) {
-                    Button(takers.takePhoto, Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.CameraAlt, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Take selfie")
-                    }
-                }
-                OutlinedButton(takers.pickPhoto, if (isToday) Modifier.weight(1f) else Modifier) {
-                    Icon(Icons.Rounded.PhotoLibrary, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("From photos")
                 }
             }
         }

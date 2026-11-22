@@ -178,7 +178,7 @@ class ScreenshotTest {
             androidx.compose.foundation.layout.Column(
                 Modifier.padding(top = 32.dp_), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp_),
             ) {
-                val takers = com.mrboora.plate.ui.components.SelfieTakers({}, {})
+                val takers = com.mrboora.plate.ui.components.SelfieTakers({})
                 com.mrboora.plate.ui.components.SelfieCard(
                     today, has = true, version = 0, revealed = false, locked = true, canCompare = true, takers = takers,
                     onReveal = {}, onHide = {}, onCompare = {}, onDelete = {}, modifier = Modifier.padding(horizontal = 16.dp_),
@@ -197,7 +197,7 @@ class ScreenshotTest {
             androidx.compose.foundation.layout.Column(
                 Modifier.padding(top = 32.dp_), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp_),
             ) {
-                val takers = com.mrboora.plate.ui.components.SelfieTakers({}, {})
+                val takers = com.mrboora.plate.ui.components.SelfieTakers({})
                 com.mrboora.plate.ui.components.SelfieCard(
                     today, has = false, version = 0, revealed = false, locked = false, canCompare = false, takers = takers,
                     onReveal = {}, onHide = {}, onCompare = {}, onDelete = {}, modifier = Modifier.padding(horizontal = 16.dp_),
