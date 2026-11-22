@@ -83,7 +83,7 @@ fun UpdateCard(info: UpdateInfo, onLater: () -> Unit, modifier: Modifier = Modif
                 }
             }
             DownloadState.None -> Row {
-                Button({ AppUpdates.startDownload(context, info); state = AppUpdates.state(context) }) { Text("Update") }
+                Button({ state = AppUpdates.oneTap(context, info) }) { Text("Update now") }
                 TextButton(onLater) { Text("Later") }
             }
         }

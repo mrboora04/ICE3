@@ -84,6 +84,8 @@ fun ProfileScreen(
     contentPadding: PaddingValues,
     onEdit: () -> Unit,
     onReset: () -> Unit,
+    /** Extra settings cards (selfie of the day), shown above sharing and reset. */
+    extra: @Composable () -> Unit = {},
 ) {
     val c = Plate.colors
     var confirmReset by remember { mutableStateOf(false) }
@@ -179,6 +181,8 @@ fun ProfileScreen(
                 )
             }
         }
+
+        item { extra() }
 
         item {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

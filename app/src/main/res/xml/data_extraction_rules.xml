@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. Selfies stay on this phone only: not in cloud backups, not copied to a new phone. -->
 <data-extraction-rules>
-    <cloud-backup />
-    <device-transfer />
+    <cloud-backup>
+        <exclude domain="file" path="selfies/" />
+        <exclude domain="sharedpref" path="plate_selfies.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="selfies/" />
+        <exclude domain="sharedpref" path="plate_selfies.xml" />
+    </device-transfer>
 </data-extraction-rules>

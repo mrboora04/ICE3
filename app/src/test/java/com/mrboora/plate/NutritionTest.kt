@@ -258,5 +258,16 @@ class NutritionTest {
         // Counted foods have no portion helper.
         assertTrue(Portions.kitchen(FoodItem("Samosa", kcal100 = 250f, protein100 = 5f, carbs100 = 30f, fat100 = 12f, perItem = true)).isEmpty())
     }
-}
 
+    @Test
+    fun selfiesStayOffBackups() {
+        val dir = java.io.File("src/main/res/xml")
+        listOf("backup_rules.xml", "data_extraction_rules.xml").forEach { name ->
+            val xml = java.io.File(dir, name).readText()
+            assertTrue("$name must exclude selfies", xml.contains("""path="selfies/""""))
+        }
+        // Both cloud backup and phone-to-phone transfer.
+        val rules = java.io.File(dir, "data_extraction_rules.xml").readText()
+        assertEquals(2, Regex("""path="selfies/"""").findAll(rules).count())
+    }
+}

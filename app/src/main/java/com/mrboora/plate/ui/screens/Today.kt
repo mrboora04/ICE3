@@ -95,6 +95,8 @@ fun TodayScreen(
     /** Version name of an available update; shows a badge in the header that reopens the update card. */
     updateVersion: String? = null,
     onUpdateTap: () -> Unit = {},
+    /** Selfie of the day card for this day; empty to leave it out. */
+    selfie: @Composable () -> Unit = {},
 ) {
     val c = Plate.colors
     val eaten = entries.sumOf { it.kcal.toDouble() }.toFloat()
@@ -132,6 +134,7 @@ fun TodayScreen(
         }
         item { Hero(eaten, targets, entries, Modifier.padding(horizontal = 16.dp)) }
         item { WaterCard(waterMl, profile.waterGoalMl, onWater, Modifier.padding(horizontal = 16.dp)) }
+        item(key = "selfie") { selfie() }
         item(key = "meals") {
             MealsCard(entries, { onAdd(Meal.forNow()) }, onDelete, onAddPortion, onSetAmount, Modifier.padding(horizontal = 16.dp))
         }

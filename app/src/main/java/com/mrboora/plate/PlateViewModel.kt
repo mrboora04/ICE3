@@ -212,7 +212,52 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     fun resetAll() = viewModelScope.launch {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             PlateDatabase.get(getApplication()).clearAllTables()
+            com.mrboora.plate.data.Selfies.deleteAll(getApplication())
+            com.mrboora.plate.data.Selfies.setLocked(getApplication(), false)
+            com.mrboora.plate.data.Selfies.setReminder(getApplication(), false)
         }
+        refreshSelfies()
+    }
+
+    // ---- Selfie of the day ----------------------------------------------------------------
+
+    private val _selfieDays = kotlinx.coroutines.flow.MutableStateFlow<List<Long>>(emptyList())
+    /** Days with a selfie, oldest first. */
+    val selfieDays: kotlinx.coroutines.flow.StateFlow<List<Long>> = _selfieDays
+
+    /** Bumped whenever a selfie changes, so pictures on screen reload. */
+    private val _selfieVersion = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val selfieVersion: kotlinx.coroutines.flow.StateFlow<Int> = _selfieVersion
+
+    /** With the lock on: true once the phone's screen lock was confirmed, until Plate leaves the screen. */
+    private val _selfiesUnlocked = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val selfiesUnlocked: kotlinx.coroutines.flow.StateFlow<Boolean> = _selfiesUnlocked
+    fun unlockSelfies() { _selfiesUnlocked.value = true }
+    fun lockSelfies() { _selfiesUnlocked.value = false }
+
+    fun refreshSelfies() = viewModelScope.launch {
+        _selfieDays.value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.mrboora.plate.data.Selfies.days(getApplication())
+        }
+        _selfieVersion.value++
+    }
+
+    /** Saves the camera's photo, or [picked] from the gallery, as [day]'s selfie. */
+    fun saveSelfie(day: Long, picked: android.net.Uri? = null, done: (Boolean) -> Unit = {}) = viewModelScope.launch {
+        val ok = if (picked == null) com.mrboora.plate.data.Selfies.saveCapture(getApplication(), day)
+        else com.mrboora.plate.data.Selfies.save(getApplication(), picked, day)
+        refreshSelfies()
+        done(ok)
+    }
+
+    fun deleteSelfie(day: Long) = viewModelScope.launch {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.mrboora.plate.data.Selfies.delete(getApplication(), day) }
+        refreshSelfies()
+    }
+
+    // Declared after the selfie state above, so it exists when this runs.
+    init {
+        refreshSelfies()
     }
 
     private fun FoodItem.toSaved(custom: Boolean) = SavedFood(

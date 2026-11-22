@@ -71,6 +71,9 @@ class ScreenshotTest {
             PlateTheme(dark = dark) { Box(Modifier.fillMaxSize().background(Plate.colors.ground)) { content() } }
         }
         rule.mainClock.advanceTimeBy(4000)
+        // Let pictures loaded off the main thread arrive, then draw one more frame.
+        Thread.sleep(800)
+        rule.mainClock.advanceTimeBy(100)
         val view = rule.activity.window.decorView
         val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         rule.runOnUiThread { view.draw(android.graphics.Canvas(bmp)) }
@@ -153,6 +156,57 @@ class ScreenshotTest {
             com.mrboora.plate.ui.screens.PortionHelper(rice, 195f) {}
             androidx.compose.foundation.layout.Spacer(Modifier.padding(12.dp_))
             com.mrboora.plate.ui.screens.PortionHelper(FoodItem("Whisky", kcal100 = 250f, protein100 = 0f, carbs100 = 0f, fat100 = 0f), null) {}
+        }
+    }
+
+    /** A stand-in photo: warm gradient with a soft face-like circle. */
+    private fun fakeSelfie(day: Long) {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val bmp = Bitmap.createBitmap(600, 750, Bitmap.Config.ARGB_8888)
+        val cv = android.graphics.Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.shader = android.graphics.LinearGradient(0f, 0f, 600f, 750f, 0xFFF3C6B4.toInt(), 0xFFB7A3D9.toInt(), android.graphics.Shader.TileMode.CLAMP)
+        cv.drawRect(0f, 0f, 600f, 750f, p)
+        p.shader = null; p.color = 0xFF8A5A44.toInt(); cv.drawCircle(300f, 300f, 150f, p)
+        p.color = 0xFF3A2230.toInt(); cv.drawRect(130f, 520f, 470f, 750f, p)
+        com.mrboora.plate.data.Selfies.file(ctx, day).outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+    }
+
+    @Test @Config(qualifiers = "w411dp-h1400dp-xxhdpi") fun selfie() {
+        fakeSelfie(today)
+        shot("selfie") {
+            androidx.compose.foundation.layout.Column(
+                Modifier.padding(top = 32.dp_), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp_),
+            ) {
+                val takers = com.mrboora.plate.ui.components.SelfieTakers({}, {})
+                com.mrboora.plate.ui.components.SelfieCard(
+                    today, has = true, version = 0, revealed = false, locked = true, canCompare = true, takers = takers,
+                    onReveal = {}, onHide = {}, onCompare = {}, onDelete = {}, modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+                com.mrboora.plate.ui.components.SelfieSettings(
+                    count = 12, locked = true, canLock = true, reminder = true, reminderHour = 9,
+                    onLock = {}, onReminder = { _, _ -> }, onDeleteAll = {}, modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+            }
+        }
+    }
+
+    @Test @Config(qualifiers = "w411dp-h1400dp-xxhdpi") fun selfieEmptyAndShown() {
+        fakeSelfie(today - 3)
+        shot("selfie_empty_shown") {
+            androidx.compose.foundation.layout.Column(
+                Modifier.padding(top = 32.dp_), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp_),
+            ) {
+                val takers = com.mrboora.plate.ui.components.SelfieTakers({}, {})
+                com.mrboora.plate.ui.components.SelfieCard(
+                    today, has = false, version = 0, revealed = false, locked = false, canCompare = false, takers = takers,
+                    onReveal = {}, onHide = {}, onCompare = {}, onDelete = {}, modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+                com.mrboora.plate.ui.components.SelfieCard(
+                    today - 3, has = true, version = 0, revealed = true, locked = false, canCompare = true, takers = takers,
+                    onReveal = {}, onHide = {}, onCompare = {}, onDelete = {}, modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+            }
         }
     }
 

@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -94,11 +95,54 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val update by vm.update.collectAsStateWithLifecycle()
     val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
+    val selfieDays by vm.selfieDays.collectAsStateWithLifecycle()
+    val selfieVersion by vm.selfieVersion.collectAsStateWithLifecycle()
+    val selfiesShown by vm.selfiesUnlocked.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val notifyPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
     ) { }
+
+    // Opened from the update notification: start the download right away.
+    val updateRequested by com.mrboora.plate.MainActivity.updateRequested
+    androidx.compose.runtime.LaunchedEffect(updateRequested, update) {
+        val info = update
+        if (updateRequested && info != null) {
+            com.mrboora.plate.MainActivity.updateRequested.value = false
+            vm.showUpdate()
+            com.mrboora.plate.data.AppUpdates.oneTap(context, info)
+        }
+    }
+
+    // ---- Selfie of the day: blurred until asked, behind the screen lock if that's on, hidden again when Plate leaves the screen.
+    var selfieLock by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.mrboora.plate.data.Selfies.locked(context)) }
+    var selfieReminder by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.mrboora.plate.data.Selfies.reminder(context)) }
+    var selfieHour by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(com.mrboora.plate.data.Selfies.reminderHour(context)) }
+    var comparing by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) { vm.lockSelfies(); comparing = false }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val revealSelfies = com.mrboora.plate.ui.components.rememberSelfieUnlock(selfieLock) { vm.unlockSelfies() }
+    var compareAfterUnlock by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(selfiesShown, compareAfterUnlock) {
+        if (selfiesShown && compareAfterUnlock) { compareAfterUnlock = false; comparing = true }
+    }
+    fun selfieSaved(ok: Boolean) {
+        if (ok) vm.unlockSelfies() // you just took it: show it
+        else scope.launch { snackbar.showSnackbar("Couldn't save that photo. Try another one.") }
+    }
+    val takers = com.mrboora.plate.ui.components.rememberSelfieTakers(
+        onCaptured = { vm.saveSelfie(day, done = ::selfieSaved) },
+        onPicked = { uri -> vm.saveSelfie(day, uri, ::selfieSaved) },
+        onNoCamera = { scope.launch { snackbar.showSnackbar("No camera app found. Pick a photo instead.") } },
+    )
+    if (comparing) com.mrboora.plate.ui.components.SelfieCompare(selfieDays, selfieVersion) { comparing = false }
 
     /** Saves the request (so we can notify when it's added) and opens a pre-filled email. */
     fun sendRequest(restaurant: String, item: String) {
@@ -165,7 +209,20 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     onAddPortion = vm::addPortion,
                     onSetAmount = vm::setAmount,
                     updateVersion = update?.versionName,
-                    onUpdateTap = vm::showUpdate,
+                    onUpdateTap = { update?.let { vm.showUpdate(); com.mrboora.plate.data.AppUpdates.oneTap(context, it) } },
+                    selfie = {
+                        val has = day in selfieDays
+                        // Past days only show a card when there's a photo, to keep old diaries tidy.
+                        if (has || day == PlateViewModel.today()) {
+                            com.mrboora.plate.ui.components.SelfieCard(
+                                day = day, has = has, version = selfieVersion, revealed = selfiesShown, locked = selfieLock,
+                                canCompare = selfieDays.size >= 2, takers = takers,
+                                onReveal = revealSelfies, onHide = vm::lockSelfies, onCompare = { comparing = true },
+                                onDelete = { vm.deleteSelfie(day) },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    },
                     banner = {
                         update?.takeIf { !updateCardHidden }?.let { info ->
                             com.mrboora.plate.ui.components.UpdateCard(info, onLater = vm::dismissUpdate, modifier = Modifier.padding(horizontal = 16.dp))
@@ -176,6 +233,13 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
             composable(Tab.PROGRESS.route) {
                 ProgressScreen(
                     profile, targets, weights, history, content, vm::logWeight, vm::deleteWeight,
+                    selfies = {
+                        com.mrboora.plate.ui.components.SelfieProgressCard(
+                            selfieDays,
+                            onCompare = { if (selfiesShown) comparing = true else { compareAfterUnlock = true; revealSelfies() } },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    },
                     onOpenDay = { d ->
                         vm.showDay(d)
                         nav.navigate(Tab.TODAY.route) {
@@ -190,7 +254,28 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     profile, targets, currentKg, weights.firstOrNull()?.kg ?: profile.weightKg, content,
                     onEdit = { nav.navigate("edit") },
                     onReset = vm::resetAll,
-
+                    extra = {
+                        com.mrboora.plate.ui.components.SelfieSettings(
+                            count = selfieDays.size, locked = selfieLock, canLock = com.mrboora.plate.data.Selfies.canLock(context),
+                            reminder = selfieReminder, reminderHour = selfieHour,
+                            onLock = { on ->
+                                com.mrboora.plate.data.Selfies.setLocked(context, on); selfieLock = on
+                                if (on) vm.lockSelfies()
+                            },
+                            onReminder = { on, h ->
+                                if (on && android.os.Build.VERSION.SDK_INT >= 33) notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                com.mrboora.plate.data.Selfies.setReminder(context, on, h); selfieReminder = on; selfieHour = h
+                            },
+                            onDeleteAll = {
+                                vm.lockSelfies()
+                                scope.launch {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.mrboora.plate.data.Selfies.deleteAll(context) }
+                                    vm.refreshSelfies()
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    },
                 )
             }
             composable("add/{meal}") { entry ->

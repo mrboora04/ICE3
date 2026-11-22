@@ -1,2 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<full-backup-content />
+<!-- Android 11 and older. Selfies stay on this phone only. -->
+<full-backup-content>
+    <exclude domain="file" path="selfies/" />
+    <exclude domain="sharedpref" path="plate_selfies.xml" />
+</full-backup-content>

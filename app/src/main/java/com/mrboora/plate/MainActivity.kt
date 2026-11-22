@@ -12,6 +12,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         com.mrboora.plate.data.MenuUpdates.schedule(this)
+        takeUpdateRequest(intent)
         setContent { PlateTheme { PlateApp() } }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        takeUpdateRequest(intent)
+    }
+
+    /** Opened from the update notification: the app starts the download as soon as it knows the version. */
+    private fun takeUpdateRequest(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(com.mrboora.plate.data.AppUpdates.EXTRA_START_UPDATE, false) == true) {
+            updateRequested.value = true
+            intent.removeExtra(com.mrboora.plate.data.AppUpdates.EXTRA_START_UPDATE)
+        }
+    }
+
+    companion object {
+        val updateRequested = androidx.compose.runtime.mutableStateOf(false)
     }
 }

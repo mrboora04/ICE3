@@ -1,10 +1,10 @@
 {
-  "versionCode": 23,
-  "versionName": "2.1.0",
+  "versionCode": 24,
+  "versionName": "2.2.0",
   "notes": [
-    "Portion helper: tap tsp, tbsp, cup, glass or can, or use your hand (fist, palm, thumb) when you have no scale",
-    "Bolder look: big condensed headlines, numbered meals and a ribbon of what's on your plate",
-    "Your streak now shows as one big number on Progress"
+    "Selfie of the day: one photo a day, blurred until you tap it, only on this phone and never in backups",
+    "Before / after: drag across two selfies to see your change; optional screen lock and daily reminder in Profile",
+    "Updating is one tap: the Update badge and the notification now start the download straight away"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

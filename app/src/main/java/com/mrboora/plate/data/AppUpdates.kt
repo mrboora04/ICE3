@@ -67,8 +67,12 @@ object AppUpdates {
         ) return
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "App updates", NotificationManager.IMPORTANCE_DEFAULT))
+        // Tapping the notification (or its Update button) opens Plate and starts the download straight away.
         val open = PendingIntent.getActivity(
-            context, 1, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            context, 1,
+            Intent(context, MainActivity::class.java).putExtra(EXTRA_START_UPDATE, true)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -76,10 +80,27 @@ object AppUpdates {
             .setContentText(info.notes.firstOrNull() ?: "Open Plate to update.")
             .setStyle(NotificationCompat.BigTextStyle().bigText(info.notes.joinToString("\n") { "• $it" }))
             .setContentIntent(open)
+            .addAction(0, "Update", open)
             .setAutoCancel(true)
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(7001, n) }
         prefs.edit().putLong("notified", info.versionCode).apply()
+    }
+
+    /** Extra on the intent that opens Plate from the update notification: start downloading now. */
+    const val EXTRA_START_UPDATE = "com.mrboora.plate.START_UPDATE"
+
+    /**
+     * One tap from anywhere (the header badge, the card, the notification): download the update,
+     * or if it's already downloaded, open it for installing. Returns what happened.
+     */
+    fun oneTap(context: Context, info: UpdateInfo): DownloadState {
+        when (state(context)) {
+            DownloadState.Ready -> if (prefs(context).getLong(KEY_VERSION, 0) == info.versionCode) openDownloads(context) else startDownload(context, info)
+            is DownloadState.Running -> Unit
+            else -> startDownload(context, info)
+        }
+        return state(context)
     }
 
     /** The download page; Plate doesn't install APKs itself (so it needs no install permission). */

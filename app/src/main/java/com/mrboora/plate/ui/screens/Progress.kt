@@ -102,6 +102,8 @@ fun ProgressScreen(
     onLog: (Float) -> Unit,
     onDelete: (WeightEntry) -> Unit,
     onOpenDay: (Long) -> Unit = {},
+    /** Selfie compare card; empty to leave it out. */
+    selfies: @Composable () -> Unit = {},
 ) {
     val c = Plate.colors
     var logging by remember { mutableStateOf(false) }
@@ -136,6 +138,7 @@ fun ProgressScreen(
             }
         }
         item { MonthCalendar(byDay, onOpenDay, Modifier.padding(horizontal = 16.dp)) }
+        item { selfies() }
         item {
             WeightCard(
                 current, start, profile.goalWeightKg, weights, weightOpen,
