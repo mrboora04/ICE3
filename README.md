@@ -20,7 +20,7 @@ Track calories and macros. No account, everything stays on your phone.
 - Shake builder: type what went in ("1 banana, 30 g berries, a spoon of peanut butter, 400 ml milk") or pick it, and see the math; saved as one glass
 - Search 6,000+ Canadian foods, or scan a barcode
 - Browse 14 Canadian restaurant menus (2,100+ items) — can't find one? Request it and we'll add it
-- Track water and weight, with a progress chart; a step-by-step weight forecast on Profile from today's real meals, water and logged workouts
+- Track water by your own bottle, glass or cup (one tap each), and weight, with a progress chart; a step-by-step weight forecast on Profile from today's real meals, water and logged workouts
 - Selfie of the day (camera only): blurred until you tap it, before/after compare, optional screen lock. Photos never leave your phone and are left out of backups
 - Works offline, light and dark themes
 

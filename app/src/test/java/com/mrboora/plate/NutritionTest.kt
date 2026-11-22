@@ -367,5 +367,17 @@ class NutritionTest {
         assertFalse(AppUpdates.isPlateInstaller("Plate-2.6.0.apk.pdf"))
         assertFalse(AppUpdates.isPlateInstaller("my plate photo.jpg"))
     }
+
+    @Test
+    fun waterContainersRoundTrip() {
+        val W = com.mrboora.plate.data.WaterContainers
+        val list = listOf(com.mrboora.plate.data.WaterContainers.Container("Bottle", 500), com.mrboora.plate.data.WaterContainers.Container("Steel | mug:", 350))
+        val back = W.decode(W.encode(list))
+        assertEquals(listOf(500, 350), back.map { it.ml })
+        assertEquals("Steel   mug", back[1].name)
+        assertEquals(listOf("½ Bottle" to 250), W.halves(list).map { it.name to it.ml })
+        assertTrue(W.decode("junk|:12|x:99999").isEmpty())
+        assertEquals(listOf(250, 500), W.defaults.map { it.ml })
+    }
 }
 

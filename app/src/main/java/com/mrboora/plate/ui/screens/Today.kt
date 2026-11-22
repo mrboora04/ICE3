@@ -98,6 +98,9 @@ fun TodayScreen(
     onUpdateTap: () -> Unit = {},
     /** Selfie of the day card for this day; empty to leave it out. */
     selfie: @Composable () -> Unit = {},
+    /** The bottles, glasses and cups this person drinks from. */
+    waterContainers: List<com.mrboora.plate.data.WaterContainers.Container> = com.mrboora.plate.data.WaterContainers.defaults,
+    onSaveContainers: (List<com.mrboora.plate.data.WaterContainers.Container>) -> Unit = {},
 ) {
     val c = Plate.colors
     val eaten = entries.sumOf { it.kcal.toDouble() }.toFloat()
@@ -134,7 +137,7 @@ fun TodayScreen(
             }
         }
         item { Hero(eaten, targets, entries, Modifier.padding(horizontal = 16.dp)) }
-        item { WaterCard(waterMl, profile.waterGoalMl, onWater, Modifier.padding(horizontal = 16.dp)) }
+        item { WaterCard(waterMl, profile.waterGoalMl, onWater, waterContainers, onSaveContainers, Modifier.padding(horizontal = 16.dp)) }
         item(key = "selfie") { selfie() }
         item(key = "meals") {
             MealsCard(entries, { onAdd(Meal.forNow()) }, onDelete, onAddPortion, onSetAmount, Modifier.padding(horizontal = 16.dp))
@@ -213,11 +216,24 @@ private fun Macro(label: String, g: Float, goal: Int, color: Color, modifier: Mo
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modifier) {
+private fun WaterCard(
+    ml: Int,
+    goal: Int,
+    onWater: (Int) -> Unit,
+    containers: List<com.mrboora.plate.data.WaterContainers.Container>,
+    onSaveContainers: (List<com.mrboora.plate.data.WaterContainers.Container>) -> Unit,
+    modifier: Modifier,
+) {
     val c = Plate.colors
     val cups = (goal / 250).coerceIn(1, 16)
     val filled = ml / 250
+    // − takes off exactly what was last added (a whole bottle, a glass…).
+    var last by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(containers.firstOrNull()?.ml ?: 250) }
+    var editing by remember { mutableStateOf(false) }
+    if (editing) ContainersDialog(containers, onDismiss = { editing = false }) { onSaveContainers(it); editing = false }
+    fun add(amount: Int) { last = amount; onWater(amount) }
     PlateCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -227,8 +243,7 @@ private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modi
                     Text(" / %,d ML".format(goal), style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 2.dp))
                 }
             }
-            FilledTonalIconButton({ onWater(-250) }, enabled = ml > 0) { Icon(Icons.Rounded.Remove, "Remove 250 ml") }
-            FilledTonalIconButton({ onWater(250) }) { Icon(Icons.Rounded.Add, "Add 250 ml") }
+            TextButton({ onWater(-minOf(last, ml)) }, enabled = ml > 0) { Text("−%,d ml".format(minOf(last, ml).coerceAtLeast(0))) }
         }
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -241,7 +256,73 @@ private fun WaterCard(ml: Int, goal: Int, onWater: (Int) -> Unit, modifier: Modi
                 )
             }
         }
+        Spacer(Modifier.height(10.dp))
+        // One tap per container: your bottle, your glass…
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            containers.forEach { k ->
+                androidx.compose.material3.FilledTonalButton({ add(k.ml) }, contentPadding = PaddingValues(horizontal = 14.dp)) {
+                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp))
+                    Text("${k.name} ${k.ml} ml")
+                }
+            }
+            com.mrboora.plate.data.WaterContainers.halves(containers).forEach { k ->
+                androidx.compose.material3.OutlinedButton({ add(k.ml) }, contentPadding = PaddingValues(horizontal = 12.dp)) { Text(k.name) }
+            }
+            TextButton({ editing = true }) { Text("Edit") }
+        }
     }
+}
+
+/** Set the bottles, glasses and cups you drink from (up to four). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ContainersDialog(
+    current: List<com.mrboora.plate.data.WaterContainers.Container>,
+    onDismiss: () -> Unit,
+    onSave: (List<com.mrboora.plate.data.WaterContainers.Container>) -> Unit,
+) {
+    val W = com.mrboora.plate.data.WaterContainers
+    val list = remember { androidx.compose.runtime.mutableStateListOf(*current.toTypedArray()) }
+    var name by remember { mutableStateOf("") }
+    var size by remember { mutableStateOf("") }
+    val sizeMl = size.toIntOrNull()?.takeIf { it in 20..3000 }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("What do you drink from?") },
+        text = {
+            Column {
+                Text("Each one becomes a button on Today. One tap adds its amount.", style = MaterialTheme.typography.bodySmall)
+                list.forEach { k ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${k.name} · ${k.ml} ml", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        IconButton({ list.remove(k) }, enabled = list.size > 1) { Icon(Icons.Rounded.Close, "Remove ${k.name}") }
+                    }
+                }
+                if (list.size < W.MAX) {
+                    Spacer(Modifier.height(6.dp))
+                    Eyebrow("Add one")
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        W.presets.forEach { p ->
+                            androidx.compose.material3.AssistChip({ name = p.name; size = "${p.ml}" }, { Text("${p.name} ${p.ml}") })
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.OutlinedTextField(name, { name = it.take(14) }, label = { Text("Name") }, singleLine = true, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.OutlinedTextField(
+                            size, { size = it.filter(Char::isDigit).take(4) }, label = { Text("ml") }, singleLine = true, modifier = Modifier.width(80.dp),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                        )
+                    }
+                    TextButton(
+                        { list += com.mrboora.plate.data.WaterContainers.Container(name.trim(), sizeMl!!); name = ""; size = "" },
+                        enabled = name.isNotBlank() && sizeMl != null,
+                    ) { Text("Add") }
+                }
+            }
+        },
+        confirmButton = { TextButton({ onSave(list.toList()) }, enabled = list.isNotEmpty()) { Text("Save") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

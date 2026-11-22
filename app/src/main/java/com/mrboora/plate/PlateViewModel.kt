@@ -236,6 +236,13 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         dao.saveFood(food.toSaved(custom = existing?.custom == true || food.source == FoodItem.Source.CUSTOM))
     }
 
+    private val _waterContainers = MutableStateFlow(com.mrboora.plate.data.WaterContainers.load(app))
+    val waterContainers: StateFlow<List<com.mrboora.plate.data.WaterContainers.Container>> = _waterContainers
+    fun saveWaterContainers(list: List<com.mrboora.plate.data.WaterContainers.Container>) {
+        com.mrboora.plate.data.WaterContainers.save(getApplication(), list)
+        _waterContainers.value = com.mrboora.plate.data.WaterContainers.load(getApplication())
+    }
+
     fun addWater(deltaMl: Int) = viewModelScope.launch {
         val d = _day.value
         val now = dao.waterNow(d)?.ml ?: 0

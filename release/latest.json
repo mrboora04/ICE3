@@ -1,10 +1,10 @@
 {
-  "versionCode": 30,
-  "versionName": "2.8.0",
+  "versionCode": 31,
+  "versionName": "2.9.0",
   "notes": [
-    "Updating no longer leaves installer files behind: Plate deletes each one once the new version is in, and tells you how much space it freed",
-    "New on Profile: Clean up old Plate installers. Pick the old Plate files in Downloads and they're deleted in one go",
-    "Only files named Plate….apk can ever be deleted, nothing else"
+    "Water your way: one tap adds a whole bottle (500 ml) or a glass (250 ml), plus ½ bottle",
+    "Edit sets what you drink from: cup, glass, can, any bottle size, up to four",
+    "The minus button takes off exactly what you last added"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

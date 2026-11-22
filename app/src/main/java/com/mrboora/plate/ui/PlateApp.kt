@@ -95,6 +95,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val update by vm.update.collectAsStateWithLifecycle()
     val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
+    val waterContainers by vm.waterContainers.collectAsStateWithLifecycle()
     val todayMeals by vm.todayEntries.collectAsStateWithLifecycle()
     val todayWater by vm.todayWaterMl.collectAsStateWithLifecycle()
     val todayWorkouts by vm.todayWorkouts.collectAsStateWithLifecycle()
@@ -247,6 +248,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     onSetAmount = vm::setAmount,
                     updateVersion = update?.versionName,
                     onUpdateTap = { update?.let { vm.showUpdate(); com.mrboora.plate.data.AppUpdates.oneTap(context, it) } },
+                    waterContainers = waterContainers,
+                    onSaveContainers = vm::saveWaterContainers,
                     selfie = {
                         val has = day in selfieDays
                         // Past days only show a card when there's a photo, to keep old diaries tidy.
