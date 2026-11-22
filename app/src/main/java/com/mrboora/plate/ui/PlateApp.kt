@@ -95,6 +95,9 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val update by vm.update.collectAsStateWithLifecycle()
     val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
+    val todayMeals by vm.todayEntries.collectAsStateWithLifecycle()
+    val todayWater by vm.todayWaterMl.collectAsStateWithLifecycle()
+    val todayWorkouts by vm.todayWorkouts.collectAsStateWithLifecycle()
     val selfieDays by vm.selfieDays.collectAsStateWithLifecycle()
     val selfieVersion by vm.selfieVersion.collectAsStateWithLifecycle()
     val selfiesShown by vm.selfiesUnlocked.collectAsStateWithLifecycle()
@@ -253,6 +256,13 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     profile, targets, currentKg, weights.firstOrNull()?.kg ?: profile.weightKg, content,
                     onEdit = { nav.navigate("edit") },
                     onReset = vm::resetAll,
+                    forecast = {
+                        com.mrboora.plate.ui.screens.ForecastCard(
+                            profile, currentKg, todayMeals, todayWater, todayWorkouts, weights, PlateViewModel.today(),
+                            onAddWorkout = vm::addWorkout, onDeleteWorkout = vm::deleteWorkout,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    },
                     extra = {
                         com.mrboora.plate.ui.components.SelfieSettings(
                             count = selfieDays.size, locked = selfieLock, canLock = com.mrboora.plate.data.Selfies.canLock(context),

@@ -210,6 +210,20 @@ class ScreenshotTest {
         }
     }
 
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun profileForecast() = shot("profile_forecast") {
+        ProfileScreen(
+            profile, targets, current, weights.first().kg, pad, {}, {},
+            forecast = {
+                com.mrboora.plate.ui.screens.ForecastCard(
+                    profile, current, entries, 1250,
+                    listOf(com.mrboora.plate.data.Workout(1, today, "Brisk walk", 40, 220)), weights, today,
+                    onAddWorkout = { _, _, _ -> }, onDeleteWorkout = {},
+                    modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+            },
+        )
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 

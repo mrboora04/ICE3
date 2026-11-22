@@ -310,5 +310,19 @@ class NutritionTest {
         )!!
         assertEquals(-0.5f, trend, 0.01f)
     }
+
+    @Test
+    fun todayForecastUsesRealIntakeAndLoggedWorkouts() {
+        val p = Profile(name = "A", sex = Sex.MALE, age = 30, heightCm = 178f, weightKg = 85f, goalWeightKg = 78f,
+            activity = Activity.VERY, goal = Goal.LOSE, paceKgPerWeek = 0.5f)
+        val life = com.mrboora.plate.data.Forecast.dailyLife(p, 85f)
+        // Activity level is ignored: resting × 1.2 only, workouts come from the log.
+        assertEquals((850f + 1112.5f - 150f + 5f) * 1.2f, life, 0.5f)
+        val run = com.mrboora.plate.data.Workouts.kinds.first { it.name == "Run" }
+        // (9.8 − 1) × 85 kg × 0.5 h
+        assertEquals(374, com.mrboora.plate.data.Workouts.kcal(run, 30, 85f))
+        val f = com.mrboora.plate.data.Forecast.today(p, 85f, eaten = 1800f, workoutKcal = 374f, today = 20_000L)
+        assertEquals(1800f - (life + 374f), f.balance, 0.5f)
+    }
 }
 

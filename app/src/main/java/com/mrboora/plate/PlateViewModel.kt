@@ -91,6 +91,19 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     val waterMl: StateFlow<Int> = _day.flatMapLatest { d -> dao.water(d).map { it?.ml ?: 0 } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    // Today's real numbers for the forecast on Profile, whatever day the diary is showing.
+    val todayEntries: StateFlow<List<FoodEntry>> = dao.entries(today())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val todayWaterMl: StateFlow<Int> = dao.water(today()).map { it?.ml ?: 0 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    val todayWorkouts: StateFlow<List<com.mrboora.plate.data.Workout>> = dao.workouts(today())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun addWorkout(kind: String, minutes: Int, kcal: Int) = viewModelScope.launch {
+        dao.addWorkout(com.mrboora.plate.data.Workout(day = today(), kind = kind, minutes = minutes, kcal = kcal))
+    }
+    fun deleteWorkout(w: com.mrboora.plate.data.Workout) = viewModelScope.launch { dao.deleteWorkout(w) }
+
     val weights: StateFlow<List<WeightEntry>> = dao.weights()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

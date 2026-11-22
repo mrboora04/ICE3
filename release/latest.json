@@ -1,10 +1,10 @@
 {
-  "versionCode": 26,
-  "versionName": "2.4.0",
+  "versionCode": 27,
+  "versionName": "2.5.0",
   "notes": [
-    "Weight forecast on Progress: where your weight is heading, worked out step by step from what you eat and burn",
-    "What-if slider: try another daily intake and see your weight in 4 and 12 weeks and your goal date",
-    "Scale check: compares your weigh-ins with your log, and how much to eat to stay at your goal"
+    "Forecast moved to Profile and now uses today's real meals and water, not averages",
+    "Log workouts (walk, run, gym, cycling and more, or your watch's calories); they're added to what you burn",
+    "Shows how much to eat to stay at your goal, counting today's workouts"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

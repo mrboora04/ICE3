@@ -88,6 +88,8 @@ fun ProfileScreen(
     onReset: () -> Unit,
     /** Extra settings cards (selfie of the day), shown above sharing and reset. */
     extra: @Composable () -> Unit = {},
+    /** Today's forecast card, under the goal ring. */
+    forecast: @Composable () -> Unit = {},
 ) {
     val c = Plate.colors
     var confirmReset by remember { mutableStateOf(false) }
@@ -142,6 +144,8 @@ fun ProfileScreen(
                 }
             }
         }
+
+        item { forecast() }
 
         item {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

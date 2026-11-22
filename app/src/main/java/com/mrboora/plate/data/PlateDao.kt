@@ -66,6 +66,15 @@ interface PlateDao {
     @Query("SELECT * FROM water WHERE day = :day")
     fun water(day: Long): Flow<Water?>
 
+    @Query("SELECT * FROM workout WHERE day = :day ORDER BY id")
+    fun workouts(day: Long): Flow<List<Workout>>
+
+    @Insert
+    suspend fun addWorkout(workout: Workout)
+
+    @Delete
+    suspend fun deleteWorkout(workout: Workout)
+
     @Query("SELECT * FROM water WHERE day = :day")
     suspend fun waterNow(day: Long): Water?
 

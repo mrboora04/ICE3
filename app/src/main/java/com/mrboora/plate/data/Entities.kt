@@ -101,6 +101,16 @@ data class SavedFood(
 @Entity(tableName = "weight")
 data class WeightEntry(@PrimaryKey val day: Long, val kg: Float)
 
+/** A workout on [day]: what, how long, and the extra kcal it burned (on top of resting). */
+@Entity(tableName = "workout")
+data class Workout(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val day: Long,
+    val kind: String,
+    val minutes: Int,
+    val kcal: Int,
+)
+
 @Entity(tableName = "water")
 data class Water(@PrimaryKey val day: Long, val ml: Int)
 

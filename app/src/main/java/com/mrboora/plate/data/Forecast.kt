@@ -53,15 +53,26 @@ object Forecast {
         return (intake / p.activity.factor - 6.25f * p.heightCm + 5f * p.age - s) / 10f
     }
 
-    fun run(p: Profile, currentKg: Float, intake: Float, today: Long): Result {
-        val burnNow = burn(p, currentKg)
+    /** Everyday movement without exercise: resting energy × 1.2. Workouts are added on top from the log. */
+    const val DAILY_LIFE = 1.2f
+    fun dailyLife(p: Profile, kg: Float): Float = Nutrition.bmr(p.sex, kg, p.heightCm, p.age) * DAILY_LIFE
+
+    /**
+     * "If every day were like today": today's real intake against resting × 1.2 plus today's
+     * logged workouts. No activity-level guess.
+     */
+    fun today(p: Profile, currentKg: Float, eaten: Float, workoutKcal: Float, today: Long): Result =
+        run(p, currentKg, eaten, today) { w -> dailyLife(p, w) + workoutKcal }
+
+    fun run(p: Profile, currentKg: Float, intake: Float, today: Long, burnOf: (Float) -> Float = { burn(p, it) }): Result {
+        val burnNow = burnOf(currentKg)
         val balance = intake - burnNow
         var w = currentKg
         val curve = mutableListOf(w)
         var goalDay: Long? = null
         val losing = p.goalWeightKg < currentKg
         for (d in 1..MAX_DAYS) {
-            w += (intake - burn(p, w)) / KCAL_PER_KG
+            w += (intake - burnOf(w)) / KCAL_PER_KG
             if (goalDay == null && p.goal != Goal.MAINTAIN && abs(p.goalWeightKg - currentKg) >= 0.1f &&
                 (if (losing) w <= p.goalWeightKg else w >= p.goalWeightKg)
             ) goalDay = today + d
