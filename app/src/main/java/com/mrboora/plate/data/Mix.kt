@@ -125,6 +125,11 @@ object Mix {
     fun quickAmounts(food: FoodItem): List<Pair<String, Float>> {
         val label = food.servingLabel
         val byMl = Regex("""\bml\b""", RegexOption.IGNORE_CASE).containsMatchIn(label)
+        // Rich foods (peanut butter, oats, seeds, honey) go in by the spoon, not the cup.
+        if (food.kcal100 >= 300f && !food.perItem) {
+            val d = Portions.density(food).first
+            return listOf("1 tsp" to 5f * d, "1 tbsp" to 15f * d, "2 tbsp" to 30f * d)
+        }
         return if (!byMl && label.isNotBlank() && food.servingG > 0f) {
             val unit = label.substringBefore('(').trim().removePrefix("1 ").ifBlank { "piece" }
             (1..3).map { n -> "$n $unit" to food.servingG * n }

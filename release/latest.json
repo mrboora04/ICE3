@@ -1,10 +1,10 @@
 {
-  "versionCode": 28,
-  "versionName": "2.6.0",
+  "versionCode": 29,
+  "versionName": "2.7.0",
   "notes": [
-    "Shake builder: pick your fruit and grams, a base (milk, yogurt, oat drink or water), and Plate does the math",
-    "Every step shown: grams × Health Canada numbers per 100 g, the whole batch, then one glass",
-    "Saved in your foods, so your shake is one tap next time; homemade shake requests open the builder"
+    "Type what went in, in your own words: \"1 banana with 30g berries, a spoon of peanut butter and 400ml milk\", and Plate builds it",
+    "Understands g, ml, cups, glasses, spoons and scoops (small or big), and shows each conversion in plain English",
+    "No more odd \"Did you mean\" for descriptions; peanut butter, oats and seeds go in by the spoon"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

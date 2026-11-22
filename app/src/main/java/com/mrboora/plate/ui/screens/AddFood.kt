@@ -114,17 +114,28 @@ fun AddFoodScreen(
     searchIngredients: suspend (String) -> List<FoodItem> = { emptyList() },
     /** A homemade shake was built: save it and log one glass. */
     onSaveMix: (FoodItem) -> Unit = {},
+    parseMix: suspend (String) -> com.mrboora.plate.data.MixParser.Draft? = { null },
 ) {
     val c = Plate.colors
     val scope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf("") }
     var showShake by rememberSaveable { mutableStateOf(false) }
+    // Typed a description like "1 banana with 30 g berries and 400 ml milk": read it into a mix.
+    val isMix = com.mrboora.plate.data.MixParser.looksLikeMix(query)
+    val mixDraft = androidx.compose.runtime.produceState<com.mrboora.plate.data.MixParser.Draft?>(null, query) {
+        value = if (isMix) parseMix(query)?.takeIf { it.items.size >= 2 } else null
+    }.value
+    var useDraft by remember { mutableStateOf(false) }
     if (showShake) {
-        ShakeBuilder(mixIngredients, searchIngredients, onDismiss = { showShake = false }, onSave = { food ->
-            showShake = false
-            onSaveMix(food)
-            onBack()
-        })
+        ShakeBuilder(
+            mixIngredients, searchIngredients, onDismiss = { showShake = false; useDraft = false },
+            onSave = { food ->
+                showShake = false
+                onSaveMix(food)
+                onBack()
+            },
+            draft = if (useDraft) mixDraft else null,
+        )
     }
     var local by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     var online by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
@@ -193,7 +204,8 @@ fun AddFoodScreen(
         local = searchLocal(query)
         online = emptyList()
         onlineState = null
-        suggestion = if (query.trim().length >= 3 && local.size < 3) didYouMean(query) else null
+        // A description of a homemade mix isn't a typo: don't "correct" it.
+        suggestion = if (query.trim().length >= 3 && local.size < 3 && !com.mrboora.plate.data.MixParser.looksLikeMix(query)) didYouMean(query) else null
     }
 
     /** Logs the usual serving straight away: one item, or the food's serving size in grams. */
@@ -351,23 +363,40 @@ fun AddFoodScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) { chips() }
                     }
-                    // Typed "shake" or "smoothie": homemade ones are built, not looked up.
-                    if (com.mrboora.plate.data.Mix.isShake(query)) {
-                        PlateCard(Modifier.padding(top = 12.dp).clickable { showShake = true }, padding = 14.dp) {
-                            Text("Homemade shake?", style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                "Build it from your fruit, grams and base (milk, yogurt, oat drink or water). Plate does the math.",
-                                style = MaterialTheme.typography.bodySmall, color = c.muted,
-                            )
-                            Button({ showShake = true }, Modifier.padding(top = 8.dp)) { Text("Open shake builder") }
-                        }
-                    }
                 }
                 if (recent.isNotEmpty()) {
                     item { Eyebrow("Recent and your foods", Modifier.padding(top = 8.dp)) }
                     items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 }
             } else {
+                item {
+                    // Typed what's in it: show how it was read and open the builder filled in.
+                if (mixDraft != null) {
+                    PlateCard(Modifier.padding(top = 12.dp).clickable { useDraft = true; showShake = true }, padding = 14.dp) {
+                        Text("Sounds homemade. I read:", style = MaterialTheme.typography.titleSmall)
+                        mixDraft.items.forEach { i ->
+                            Text(
+                                "• ${i.label}, ${if (i.isBase && i.ml != null) "${i.ml.roundToInt()} ml" else "${i.grams.roundToInt()} g"}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        if (mixDraft.unknown.isNotEmpty()) {
+                            Text("Not found: ${mixDraft.unknown.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = c.over)
+                        }
+                        val kcal = mixDraft.items.sumOf { it.food.kcalFor(it.grams).toDouble() }.roundToInt()
+                        Button({ useDraft = true; showShake = true }, Modifier.padding(top = 8.dp)) { Text("Build it · ≈ %,d kcal".format(kcal)) }
+                    }
+                } else if (com.mrboora.plate.data.Mix.isShake(query)) {
+                    PlateCard(Modifier.padding(top = 12.dp).clickable { showShake = true }, padding = 14.dp) {
+                        Text("Homemade shake?", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Build it from your fruit, grams and base (milk, yogurt, oat drink or water). Plate does the math.",
+                            style = MaterialTheme.typography.bodySmall, color = c.muted,
+                        )
+                        Button({ showShake = true }, Modifier.padding(top = 8.dp)) { Text("Open shake builder") }
+                    }
+                }
+                }
                 suggestion?.let { s ->
                     item {
                         PlateCard(Modifier.clickable { query = s }, padding = 14.dp) {

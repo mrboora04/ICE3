@@ -208,6 +208,14 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun searchIngredients(query: String): List<FoodItem> =
         withContext(Dispatchers.Default) { canadian.search(query.trim(), 12) }
 
+    /** Reads a homemade mix typed in plain English ("1 banana with 30 g berries and 400 ml milk"). */
+    suspend fun parseMix(text: String): com.mrboora.plate.data.MixParser.Draft {
+        val foods = mixIngredients()
+        return withContext(Dispatchers.Default) {
+            com.mrboora.plate.data.MixParser.parse(text, foods) { name -> canadian.search(name, 1).firstOrNull() }
+        }
+    }
+
     /** Saves the mix as one of your foods and logs one glass of it. */
     fun saveMix(meal: Meal, food: FoodItem) = viewModelScope.launch {
         dao.saveFood(food.toSaved(custom = true))

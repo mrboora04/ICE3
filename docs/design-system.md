@@ -62,3 +62,16 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 - **Saving**: the shake becomes one of your foods (brand "Homemade", counted per glass, marked ≈) and one glass is logged.
 - **Requests**: a homemade shake request offers "Build it now". The daily worker treats any shake request without a restaurant as done, because the builder can make it.
 - **Next**: the same engine with other templates, such as chai, lassi, protein oats, salad bowls and home-cooked dal or curry for the whole pot divided into bowls.
+
+## Plain-English mixes (2.7)
+
+- **The reader** (`data/MixParser.kt`): offline rules, with no AI and no internet.
+  - Splits the text at with / and / over / plus / commas.
+  - In each piece, a number with a unit is the amount:
+    - g and kg are weight.
+    - ml, L, cup (250 ml), glass (250 ml), spoon (15 ml; small spoon 5 ml), scoop (2 tbsp, protein powder 30 g; small × 0.75, big × 1.5) and handful (½ cup) are volume, turned into grams with the food's density.
+    - A bare count uses the food's natural unit (1 medium banana = 118 g).
+  - "3.25%" is a fat level, not an amount.
+  - Fixes common typos ("barries").
+  - The biggest liquid is the base.
+- **The screen**: Add food shows "Sounds homemade. I read: …" with ≈ kcal, and "Did you mean" is skipped for descriptions. The builder opens filled in, with "How I read it" listing every conversion in English.

@@ -358,4 +358,3 @@ class NutritionTest {
         assertEquals(listOf(shake), MenuUpdates.fulfilled(listOf(shake, chain), emptyList()))
     }
 }
-

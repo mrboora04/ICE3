@@ -75,6 +75,8 @@ fun ShakeBuilder(
     onDismiss: () -> Unit,
     onSave: (FoodItem) -> Unit,
     preview: Map<String, FoodItem>? = null,
+    /** What the user typed, already read into ingredients and amounts. */
+    draft: com.mrboora.plate.data.MixParser.Draft? = null,
 ) {
     val c = Plate.colors
     val foods = preview ?: produceState<Map<String, FoodItem>?>(null) { value = ingredients() }.value
@@ -86,11 +88,20 @@ fun ShakeBuilder(
     var nameEdited by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
 
-    // A brand-new builder starts the way most shakes start: one banana.
-    LaunchedEffect(foods) {
-        if (rows.isEmpty() && preview == null) foods?.get("Banana, raw")?.let { rows += MixRow("Banana", it, g(it.servingG)) }
+    // Start from what was typed; otherwise the way most shakes start, with one banana.
+    var started by remember { mutableStateOf(false) }
+    if (!started && draft != null) {
+        started = true
+        draft.parts.forEach { rows += MixRow(it.label, it.food, g(it.grams)) }
+        draft.base?.let { b ->
+            if (Mix.BASES.any { it.first == b.label }) { base = b.label; baseMl = "${(b.ml ?: 250f).roundToInt()}" }
+            else rows += MixRow(b.label, b.food, g(b.grams))
+        } ?: run { base = "Water"; baseMl = "0" }
     }
-    if (preview != null && rows.isEmpty()) {
+    LaunchedEffect(foods) {
+        if (rows.isEmpty() && preview == null && draft == null) foods?.get("Banana, raw")?.let { rows += MixRow("Banana", it, g(it.servingG)) }
+    }
+    if (preview != null && rows.isEmpty() && draft == null) {
         preview["Banana, raw"]?.let { rows += MixRow("Banana", it, "354") }
         preview[Mix.MIXED_BERRIES]?.let { rows += MixRow("Mixed berries", it, "30") }
     }
@@ -119,6 +130,21 @@ fun ShakeBuilder(
                 IconButton(onDismiss) { Icon(Icons.Rounded.Close, "Close") }
             }
             Spacer(Modifier.height(12.dp))
+            // How the typed text was read, step by step, so it can be checked.
+            if (draft != null) {
+                PlateCard(padding = 14.dp) {
+                    Eyebrow("How I read it")
+                    Spacer(Modifier.height(6.dp))
+                    draft.items.forEach { i ->
+                        Text("${i.label}: ${i.how}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 2.dp))
+                    }
+                    draft.unknown.forEach { u ->
+                        Text("“$u”: not found, add it with the search below", style = MaterialTheme.typography.bodyMedium, color = c.over, modifier = Modifier.padding(vertical = 2.dp))
+                    }
+                    Text("Change any amount below; the math updates.", style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp))
+                }
+                Spacer(Modifier.height(12.dp))
+            }
             if (foods == null) {
                 Text("Loading ingredients…", color = c.muted)
                 return@Column

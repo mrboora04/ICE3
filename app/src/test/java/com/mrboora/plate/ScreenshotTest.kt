@@ -234,6 +234,20 @@ class ScreenshotTest {
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, {}, preview = foods)
     }
 
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun shakeFromText() = shot("shake_from_text") {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS
+        val foods = names.mapNotNull { n -> cnf.byName(n)?.let { n to it } }.toMap().toMutableMap()
+        foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
+        foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
+        val draft = com.mrboora.plate.data.MixParser.parse(
+            "1 banana with around 30g 4 barries-blend with a regular spoon of peanut butter over with 3.25% milk around 400ml",
+            foods,
+        ) { cnf.search(it, 1).firstOrNull() }
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, {}, preview = foods, draft = draft)
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 
