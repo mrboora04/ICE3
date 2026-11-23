@@ -313,10 +313,37 @@ object MixParser {
         val factor = tpl?.sizes?.firstOrNull { it.first == sizeLabel }?.second ?: 1f
         // Only the cup itself (tea or coffee, and the milk) grows, and only where no amount was typed:
         // "2 spoons sugar" stays 2 spoons in a big cup.
-        val sized = if (factor == 1f) items else items.map {
-            val typed = !(it.how.startsWith("no amount given") || it.how.contains("a usual"))
-            if (typed || !(it.isBase || it.label in tpl!!.main)) it
+        fun typed(it: Item) = !(it.how.startsWith("no amount given") || it.how.contains("a usual"))
+        var sized = if (factor == 1f) items else items.map {
+            if (typed(it) || !(it.isBase || it.label in tpl!!.main)) it
             else it.copy(grams = it.grams * factor, ml = it.ml?.times(factor), how = it.how + " × ${fmt(factor)} for a ${sizeLabel!!.lowercase()} ${tpl.unit}")
+        }
+        // Sugar and cream follow the cup, like at Tim Hortons: 1, 2 or 3 for small, regular, big.
+        if (tpl != null && tpl.perSize.isNotEmpty()) {
+            val sz = sizeLabel ?: "Regular"
+            sized = sized.map {
+                val g = tpl.perSize[it.label]?.get(sz)
+                if (g == null || typed(it)) it
+                else it.copy(grams = g, how = "a usual ${sz.lowercase()} ${tpl.unit} takes ${tpl.quick[it.label]?.firstOrNull { q -> q.second == g }?.first ?: "${fmt(g)} g"}")
+            }
+            // Tim Hortons words: "double double" = 2 cream + 2 sugar, "triple triple", "black".
+            val t = clean(text)
+            val dd = Regex("""\b(double|triple|quad)[\s-]+(double|triple|quad)\b""").find(t)
+            val n = mapOf("double" to 2, "triple" to 3, "quad" to 4)
+            if (dd != null) {
+                val creams = n.getValue(dd.groupValues[1])
+                val sugars = n.getValue(dd.groupValues[2])
+                val creamFood = labels["Cream"]?.let { foods[it] }
+                val sugarFood = labels["Sugar"]?.let { foods[it] }
+                // One "cream" or "sugar" is sized to the cup: a regular cup's unit is 1 creamer / 1 tsp.
+                val unit = tpl.sizes.firstOrNull { it.first == sz }?.second ?: 1f
+                sized = sized.filter { it.label != "Cream" && it.label != "Sugar" && !it.isBase }
+                if (creamFood != null) sized = sized + Item("Cream", creamFood, creams * 11f * unit, null, false, "${dd.value}: $creams creams (1 creamer each) × ${fmt(unit)} for a ${sz.lowercase()} cup")
+                if (sugarFood != null) sized = sized + Item("Sugar", sugarFood, sugars * 4.2f * unit, null, false, "${dd.value}: $sugars sugars (1 tsp each) × ${fmt(unit)} for a ${sz.lowercase()} cup")
+            }
+            if (Regex("""\bblack\b""").containsMatchIn(t)) {
+                sized = sized.filter { !it.isBase && (it.label != "Sugar" || typed(it)) }
+            }
         }
         return Draft(sized, unknown, pizza?.let { Dish(it, crust) }, tpl, sizeLabel)
     }

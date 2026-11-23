@@ -102,6 +102,18 @@ class MixParserTest {
         assertEquals(120f * 1.5f, big.base!!.ml!!, 0.5f)
         assertEquals("Small", com.mrboora.plate.data.MixParser.parse("small chai", foods, search).sizeLabel)
 
+        // Sugar follows the cup like at Tim Hortons; Tim words work.
+        assertEquals(4.2f, com.mrboora.plate.data.MixParser.parse("small coffee with sugar", foods, search).items.first { it.label == "Sugar" }.grams, 0.01f)
+        assertEquals(12.7f, com.mrboora.plate.data.MixParser.parse("large coffee with sugar", foods, search).items.first { it.label == "Sugar" }.grams, 0.01f)
+        val dd = com.mrboora.plate.data.MixParser.parse("medium double double", foods, search)
+        assertEquals(listOf("Coffee", "Cream", "Sugar"), dd.items.map { it.label })
+        assertEquals(22f, dd.items[1].grams, 0.01f)
+        assertEquals(8.4f, dd.items[2].grams, 0.01f)
+        val ddLarge = com.mrboora.plate.data.MixParser.parse("large double double coffee", foods, search)
+        assertEquals(33f, ddLarge.items.first { it.label == "Cream" }.grams, 0.01f)
+        val black = com.mrboora.plate.data.MixParser.parse("black coffee", foods, search)
+        assertEquals(listOf("Coffee"), black.items.map { it.label })
+
         // Shakes and pizza keep their own builders.
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("mango lassi", foods, search).template)
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("pizza with corn", foods, search).template)

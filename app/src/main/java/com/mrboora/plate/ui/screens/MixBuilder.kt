@@ -241,6 +241,8 @@ fun ShakeBuilder(
                                 val ratio = factor / old
                                 // The cup grows: tea or coffee and the milk. Sugar and cream stay as set.
                                 rows.filter { it.label in tpl.main }.forEach { r -> r.value?.let { r.grams = g(it * ratio) } }
+                                // Sugar and cream follow the cup size, like Tim Hortons: 1, 2 or 3.
+                                rows.forEach { r -> tpl.perSize[r.label]?.get(label)?.let { r.grams = g(it) } }
                                 ml?.let { baseMl = "${(it * ratio).roundToInt()}" }
                                 cupSize = label
                             }, label = { Text(label) })

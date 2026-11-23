@@ -1,10 +1,10 @@
 {
-  "versionCode": 36,
-  "versionName": "2.12.1",
+  "versionCode": 37,
+  "versionName": "2.12.2",
   "notes": [
-    "Chai & coffee in plain words: Small, Regular or Big for the cup, 1, 2 or 3 tsp of sugar, creamers for cream",
-    "Type \"large coffee\" or \"small chai\": the cup and milk grow or shrink, sugar you typed stays as typed",
-    "Fixed: plain \"coffee\" no longer adds tea too"
+    "Coffee like Tim's: sugar and cream follow the cup size, 1 for small, 2 for regular, 3 for big",
+    "Type \"double double\" or \"triple triple\" and Plate adds the creams and sugars, sized to your cup",
+    "\"Black coffee\" is just coffee: no milk, no sugar"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

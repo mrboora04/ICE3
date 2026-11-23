@@ -41,11 +41,13 @@ object Templates {
         val sizes: List<Pair<String, Float>> = emptyList(),
         /** Words for those sizes when typed ("large coffee", "tall latte"). */
         val sizeWords: Map<String, String> = emptyMap(),
+        /** Amounts that follow the cup size, like Tim Hortons: 1, 2 or 3 sugars for small, regular, big. */
+        val perSize: Map<String, Map<String, Float>> = emptyMap(),
     )
 
     val CHAI = Template(
         id = "chai", title = "CHAI & COFFEE", subtitle = "Tea or coffee, milk and sugar, worked out from Health Canada numbers",
-        triggers = listOf("chai", "tea", "coffee", "latte", "cappuccino"),
+        triggers = listOf("chai", "tea", "coffee", "latte", "cappuccino", "double double", "triple triple"),
         chips = listOf(
             "Tea" to "Tea, brewed",
             "Coffee" to "Coffee, brewed, prepared with tap water",
@@ -55,7 +57,7 @@ object Templates {
         ),
         aliases = listOf(
             "chai" to "Tea", "tea" to "Tea", "coffee" to "Coffee", "latte" to "Coffee", "cappuccino" to "Coffee",
-            "espresso" to "Coffee", "sugar" to "Sugar", "cream" to "Cream", "ginger" to "Ginger", "adrak" to "Ginger",
+            "espresso" to "Coffee", "double double" to "Coffee", "triple triple" to "Coffee", "sugar" to "Sugar", "cream" to "Cream", "ginger" to "Ginger", "adrak" to "Ginger",
         ),
         starts = listOf("Tea" to 120f, "Sugar" to 8.5f),
         usual = mapOf("Tea" to 120f, "Coffee" to 240f, "Sugar" to 8.5f, "Cream" to 15f, "Ginger" to 3f),
@@ -69,6 +71,10 @@ object Templates {
             "Ginger" to listOf("A little" to 2f, "Some" to 4f, "Lots" to 8f),
         ),
         sizes = listOf("Small" to 0.75f, "Regular" to 1f, "Big" to 1.5f),
+        perSize = mapOf(
+            "Sugar" to mapOf("Small" to 4.2f, "Regular" to 8.5f, "Big" to 12.7f),   // 1, 2, 3 tsp
+            "Cream" to mapOf("Small" to 11f, "Regular" to 22f, "Big" to 33f),       // 1, 2, 3 creamers
+        ),
         sizeWords = mapOf(
             "small" to "Small", "short" to "Small", "regular" to "Regular", "medium" to "Regular", "tall" to "Regular",
             "large" to "Big", "big" to "Big", "grande" to "Big", "extra large" to "Big", "xl" to "Big",
