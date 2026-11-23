@@ -99,3 +99,19 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 - Typing "pizza" alone offers the builder. "Juice" counts as a shake.
 - **Crust**: regular, thin or thick (Health Canada has all three; a thin 14″ pizza is 556 g vs 853 g). The numbers are for the whole pizza: crust (wheat dough), sauce and cheese.
 - **Toppings** are tap only, with a rough amount by size shown in one line. The grams are behind "Adjust amounts". "How I read it" is a single line for pizza.
+
+## Templates (2.12)
+
+`data/Templates.kt` holds one entry per builder: trigger words, chips (food names), aliases, usual amounts, starting recipe, main item, unit, and an optional milk or water base. Everything uses the same engine and screen as the shake.
+
+| Builder | Triggers | Per | Notes |
+|---|---|---|---|
+| Chai & coffee | chai, tea, coffee, latte, cappuccino | cup | Base milk 120 ml; "a spoon" = teaspoon |
+| Roti meal | roti, chapati, chapatti, phulka, paratha, thali | plate | "A spoon of ghee" = teaspoon |
+| Sandwich & toast | sandwich, toast, grilled cheese | sandwich | Bread is added if not mentioned |
+| Eggs & omelette | omelette, omelet, bhurji, scrambled, egg(s) | plate | 2 eggs + 1 tsp oil by default |
+| Rice bowl | rice bowl, burrito / grain / poke / buddha bowl | bowl | Rice is added if not mentioned |
+
+- A bare trigger word starts the usual recipe.
+- The maths shows each chip's own name ("Sugar", not "Sweets, sugars, granulated").
+- Add food has a chip for each builder.

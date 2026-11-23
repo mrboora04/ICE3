@@ -16,7 +16,7 @@ class MixParserTest {
     fun readsAHomemadeMixWrittenInPlainEnglish() {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS + com.mrboora.plate.data.Templates.foodNames
         val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
         foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
@@ -66,5 +66,34 @@ class MixParserTest {
         assertEquals("Pizza, cheese, thin crust, frozen, cooked", thin.items[0].food.name)
         assertEquals(1, com.mrboora.plate.data.MixParser.parse("pizza", foods, search).items.size)
         assertTrue(com.mrboora.plate.data.Mix.isShake("orange juice with ginger"))
+
+        // Templates: chai (a spoon is a teaspoon here), roti meal, sandwich, eggs, rice bowl.
+        val chai = com.mrboora.plate.data.MixParser.parse("chai with 2% milk and 2 spoons sugar", foods, search)
+        assertEquals("chai", chai.template!!.id)
+        assertEquals(listOf("Tea", "Milk 2%", "Sugar"), chai.items.map { it.label })
+        assertEquals(120f, chai.base!!.ml!!, 0.5f)
+        assertEquals(2 * 5f * 211.3f / 250f, chai.items[2].grams, 0.1f)
+
+        val roti = com.mrboora.plate.data.MixParser.parse("2 roti with dal and a spoon of ghee", foods, search)
+        assertEquals("roti", roti.template!!.id)
+        assertEquals(listOf("Roti", "Dal", "Ghee"), roti.items.map { it.label })
+        assertEquals(80f, roti.items[0].grams, 0.5f)
+        assertEquals(200f, roti.items[1].grams, 0.5f)
+
+        val sandwich = com.mrboora.plate.data.MixParser.parse("egg sandwich with cheese", foods, search)
+        assertEquals("sandwich", sandwich.template!!.id)
+        assertEquals(listOf("Brown bread", "Egg", "Cheese"), sandwich.items.map { it.label })
+
+        val omelette = com.mrboora.plate.data.MixParser.parse("omelette", foods, search)
+        assertEquals(listOf("Eggs", "Oil"), omelette.items.map { it.label })
+
+        val bowl = com.mrboora.plate.data.MixParser.parse("rice bowl with chicken and corn", foods, search)
+        assertEquals("bowl", bowl.template!!.id)
+        assertEquals(listOf("Rice", "Chicken", "Corn"), bowl.items.map { it.label })
+        assertTrue(bowl.unknown.isEmpty())
+
+        // Shakes and pizza keep their own builders.
+        assertEquals(null, com.mrboora.plate.data.MixParser.parse("mango lassi", foods, search).template)
+        assertEquals(null, com.mrboora.plate.data.MixParser.parse("pizza with corn", foods, search).template)
     }
 }

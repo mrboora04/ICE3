@@ -38,7 +38,13 @@ object MixParser {
     /** A dish such as a pizza: its size, and how many slices it's cut into. */
     data class Dish(val size: Mix.Size, val crust: Mix.Crust = Mix.CRUSTS.first())
 
-    data class Draft(val items: List<Item>, val unknown: List<String>, val dish: Dish? = null) {
+    data class Draft(
+        val items: List<Item>,
+        val unknown: List<String>,
+        val dish: Dish? = null,
+        /** A chai, roti meal, sandwich, eggs or rice bowl template, when the text asked for one. */
+        val template: Templates.Template? = null,
+    ) {
         /** The base is the liquid there's most of; any other milk, yogurt or drink is an ingredient. */
         val base: Item? get() = items.filter { it.isBase }.maxByOrNull { it.ml ?: 0f }
         val parts: List<Item> get() = items.filter { it !== base }
@@ -155,8 +161,11 @@ object MixParser {
      * anything else in Health Canada's file.
      */
     fun parse(text: String, foods: Map<String, FoodItem>, search: (String) -> FoodItem?): Draft {
-        val labels = (Mix.FRUITS + Mix.EXTRAS + Mix.BASES + Mix.TOPPINGS).toMap()
         val pizza = pizzaSize(text)
+        // A template (chai, roti meal, sandwich, eggs, rice bowl) brings its own words and amounts.
+        val tpl = if (pizza == null && !Mix.isShake(text)) Templates.forText(text) else null
+        val labels = (Mix.FRUITS + Mix.EXTRAS + Mix.BASES + Mix.TOPPINGS).toMap() + (tpl?.chips?.toMap() ?: emptyMap())
+        val tplAliases = tpl?.aliases.orEmpty().sortedByDescending { it.first.length }
         val crust = pizzaCrust(text)
         val toppingLabels = Mix.TOPPINGS.map { it.first }.toSet()
         val baseLabels = Mix.BASES.map { it.first }.toSet()
@@ -203,7 +212,8 @@ object MixParser {
             if (name.isBlank()) continue
 
             // Which food.
-            var label = ALIASES.firstOrNull { (alias, _) -> Regex("""\b$alias\b""").containsMatchIn(name) }?.second
+            var label = tplAliases.firstOrNull { (alias, _) -> Regex("""\b${Regex.escape(alias)}\b""").containsMatchIn(name) }?.second
+                ?: ALIASES.firstOrNull { (alias, _) -> Regex("""\b$alias\b""").containsMatchIn(name) }?.second
             if (label == "Milk") label = when {
                 fat == null -> "Milk 2%"
                 fat >= 3f -> "Milk 3.25%"
@@ -234,7 +244,8 @@ object MixParser {
                 qty != null && (unit == "l" || unit.startsWith("lit")) -> fromMl(qty * 1000f, "${fmt(qty)} L")
                 qty != null && unit.startsWith("cup") -> fromMl(qty * 250f, "${fmt(qty)} cup (250 ml each)")
                 qty != null && unit.startsWith("glass") -> fromMl(qty * 250f, "${fmt(qty)} glass (250 ml each)")
-                qty != null && (unit == "tsp" || unit.startsWith("teaspoon") || (unit.startsWith("spoon") && size in setOf("small", "little"))) ->
+                qty != null && (unit == "tsp" || unit.startsWith("teaspoon") ||
+                    (unit.startsWith("spoon") && (size in setOf("small", "little") || (tpl?.spoonIsTeaspoon == true && size !in setOf("big", "large", "heaped", "heaping", "full"))))) ->
                     fromMl(qty * 5f, "${fmt(qty)} teaspoon (5 ml)")
                 qty != null && (unit == "tbsp" || unit.startsWith("tablespoon") || unit.startsWith("spoon")) ->
                     fromMl(qty * 15f * (if (size in setOf("big", "large", "heaped", "heaping", "full")) 1.5f else 1f),
@@ -250,7 +261,12 @@ object MixParser {
                     val unitName = each.first.removePrefix("1 ").removePrefix("30 g").ifBlank { "serving" }
                     (count!! * each.second) to "${fmt(count!!)} × $unitName (${fmt(each.second.roundToInt().toFloat())} g each) = ${fmt((count!! * each.second).roundToInt().toFloat())} g"
                 }
+                isBase && tpl?.hasBase == true -> fromMl(tpl.baseMl.toFloat(), "no amount given: a usual ${tpl.unit} has ${tpl.baseMl} ml")
                 isBase -> fromMl(250f, "no amount given, so 1 glass")
+                tpl != null && tpl.usual[label] != null -> {
+                    val gr = tpl.usual.getValue(label!!)
+                    gr to "no amount given: a usual amount in a ${tpl.unit} ≈ ${fmt(gr)} g (change it if yours had more)"
+                }
                 pizza != null -> {
                     val gr = Mix.toppingGrams(if (label in toppingLabels) label!! else "", pizza)
                     gr to "no amount given: a usual topping on a ${pizza.label.lowercase()} pizza ≈ ${fmt(gr)} g (change it if yours had more)"
@@ -263,6 +279,28 @@ object MixParser {
             val ml = if (isBase) grams / density else null
             items += Item(label!!, food, grams, ml, isBase, how)
         }
-        return Draft(items, unknown, pizza?.let { Dish(it, crust) })
+        // A bare "chai" or "omelette": start from the template's usual recipe.
+        if (tpl != null) {
+            // Nothing but a base named: the whole usual recipe. Otherwise only the main thing if it's
+            // missing (an "egg sandwich" still has bread), so nothing else is added that wasn't asked for.
+            // Just the word ("omelette", "2 chai") counts as bare too.
+            val onlyWord = tpl.triggers.any { Regex("""^(\S+\s+)?${Regex.escape(it)}s?$""").matches(clean(text)) }
+            val bare = items.all { it.isBase } || onlyWord
+            tpl.starts.forEachIndexed { i, (lbl, gr) ->
+                if (items.any { it.label == lbl }) return@forEachIndexed
+                val needed = bare || (i == 0 && items.none { it.label in tpl.main })
+                val food = labels[lbl]?.let { foods[it] } ?: return@forEachIndexed
+                if (needed) items.add(if (bare) items.size else 0, Item(lbl, food, gr, null, false, "${fmt(gr)} g, a usual ${tpl.unit}"))
+            }
+            if (tpl.hasBase && items.none { it.isBase }) {
+                val key = labels[tpl.baseLabel]
+                val baseFood = key?.let { foods[it] }
+                if (baseFood != null) {
+                    val gr = Mix.mlToGrams(baseFood, tpl.baseMl.toFloat())
+                    items += Item(tpl.baseLabel, baseFood, gr, tpl.baseMl.toFloat(), true, "${tpl.baseMl} ml, a usual ${tpl.unit}")
+                }
+            }
+        }
+        return Draft(items, unknown, pizza?.let { Dish(it, crust) }, tpl)
     }
 }

@@ -1,10 +1,10 @@
 {
-  "versionCode": 34,
-  "versionName": "2.11.0",
+  "versionCode": 35,
+  "versionName": "2.12.0",
   "notes": [
-    "Just type \"pizza\" to open the pizza builder (\"juice\" opens the shake builder too)",
-    "Toppings are tap only: Plate uses a rough amount for your pizza's size, no weighing",
-    "Pick the crust (regular, thin or thick); the pizza's numbers include the crust, sauce and cheese"
+    "Five new builders: chai & coffee, roti meal, sandwich & toast, eggs & omelette, rice bowl",
+    "Type it your way (\"chai with 2% milk and 2 spoons sugar\", \"2 roti with dal and a spoon of ghee\") or tap a builder in Add food",
+    "Same math as the shake and pizza: every step shown, saved as one cup, plate, sandwich or bowl"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

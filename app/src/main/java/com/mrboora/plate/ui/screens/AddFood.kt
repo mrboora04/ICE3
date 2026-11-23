@@ -124,23 +124,27 @@ fun AddFoodScreen(
     val isMix = com.mrboora.plate.data.MixParser.looksLikeMix(query)
     // The word "pizza" alone is enough to offer the pizza builder.
     val isPizza = com.mrboora.plate.data.MixParser.pizzaSize(query) != null
+    // So are chai, roti, sandwich, omelette, rice bowl and their other words.
+    val isTemplate = !com.mrboora.plate.data.Mix.isShake(query) && com.mrboora.plate.data.Templates.forText(query) != null
     val mixDraft = androidx.compose.runtime.produceState<com.mrboora.plate.data.MixParser.Draft?>(null, query) {
         value = when {
-            isPizza -> parseMix(query)?.takeIf { it.items.isNotEmpty() }
+            isPizza || isTemplate -> parseMix(query)?.takeIf { it.items.isNotEmpty() }
             isMix -> parseMix(query)?.takeIf { it.items.size >= 2 }
             else -> null
         }
     }.value
     var useDraft by remember { mutableStateOf(false) }
+    /** A builder opened from a chip rather than from typing. */
+    var chipDraft by remember { mutableStateOf<com.mrboora.plate.data.MixParser.Draft?>(null) }
     if (showShake) {
         ShakeBuilder(
-            mixIngredients, searchIngredients, onDismiss = { showShake = false; useDraft = false },
+            mixIngredients, searchIngredients, onDismiss = { showShake = false; useDraft = false; chipDraft = null },
             onSave = { food, count ->
                 showShake = false
                 onSaveMix(food, count)
                 onBack()
             },
-            draft = if (useDraft) mixDraft else null,
+            draft = if (useDraft) chipDraft ?: mixDraft else null,
         )
     }
     var local by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
@@ -348,6 +352,13 @@ fun AddFoodScreen(
                 item {
                     val chips: @Composable () -> Unit = {
                         AssistChip({ showShake = true }, { Text("Shake builder") }, leadingIcon = { Icon(Icons.Rounded.LocalDrink, null, Modifier.size(18.dp), tint = c.accent) })
+                        // The other make-it-yourself builders, opened with their usual recipe.
+                        listOf("Pizza" to "pizza", "Chai" to "chai", "Roti meal" to "roti", "Sandwich" to "sandwich", "Eggs" to "omelette", "Rice bowl" to "rice bowl")
+                            .forEach { (label, word) ->
+                                AssistChip({
+                                    scope.launch { chipDraft = parseMix(word); useDraft = true; showShake = true }
+                                }, { Text(label) })
+                            }
                         Shelves.all.forEach { s ->
                             AssistChip(
                                 { shelf = s.title; chain = null },
@@ -380,7 +391,11 @@ fun AddFoodScreen(
                 if (mixDraft != null) {
                     PlateCard(Modifier.padding(top = 12.dp).clickable { useDraft = true; showShake = true }, padding = 14.dp) {
                         Text(
-                            if (mixDraft.dish != null) "Build your pizza: size, crust, toppings, slices" else "Sounds homemade. I read:",
+                            when {
+                                mixDraft.dish != null -> "Build your pizza: size, crust, toppings, slices"
+                                mixDraft.template != null -> "Make it yourself: ${mixDraft.template.title.lowercase()}. I read:"
+                                else -> "Sounds homemade. I read:"
+                            },
                             style = MaterialTheme.typography.titleSmall,
                         )
                         mixDraft.items.forEach { i ->

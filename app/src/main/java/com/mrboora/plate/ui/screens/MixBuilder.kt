@@ -91,6 +91,8 @@ fun ShakeBuilder(
     var glasses by remember { mutableStateOf(1) }
     // Dish mode (pizza): its size, how many slices it's cut into, and how many were eaten.
     val dishMode = draft?.dish != null
+    // Chai, roti meal, sandwich, eggs or rice bowl.
+    val tpl = draft?.template
     var size by remember { mutableStateOf(draft?.dish?.size ?: Mix.PIZZA_DEFAULT) }
     var slices by remember { mutableStateOf(draft?.dish?.size?.slices ?: 8) }
     var ate by remember { mutableStateOf(1) }
@@ -129,11 +131,17 @@ fun ShakeBuilder(
         val tops = rows.filter { it.food.name !in Mix.CRUST_FOODS }.map { it.label.lowercase() }
         "${size.label} ${if (crust.label == "Regular") "" else crust.label.lowercase() + " crust "}cheese pizza" +
             if (tops.isEmpty()) "" else " with " + tops.joinToString(" & ")
+    } else if (tpl != null) {
+        val main = if (tpl.id == "chai" && rows.any { it.label == "Coffee" }) "Coffee" else tpl.dishName
+        val rest = rows.map { it.label }.filter { it != main && it !in tpl.main }.map { it.lowercase() } +
+            (if (tpl.hasBase && (ml ?: 0f) > 0f) listOf(base.lowercase()) else emptyList())
+        main + if (rest.isEmpty()) "" else " with " + rest.distinct().joinToString(", ")
     } else Mix.shakeName(rows.map { it.label })
     val shownName = if (nameEdited) name else auto
     val t = Mix.totals(parts)
     val n = (if (dishMode) slices else glasses).coerceAtLeast(1)
-    val one = if (dishMode) "slice" else "glass"
+    val one = when { dishMode -> "slice"; tpl != null -> tpl.unit; else -> "glass" }
+    fun plural(u: String) = if (u.endsWith("ch") || u.endsWith("ss")) "${u}es" else "${u}s"
 
     val content = @Composable {
         Column(
@@ -142,9 +150,10 @@ fun ShakeBuilder(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(if (dishMode) "PIZZA BUILDER" else "SHAKE BUILDER", style = PosterType.title)
+                    Text(if (dishMode) "PIZZA BUILDER" else tpl?.title ?: "SHAKE BUILDER", style = PosterType.title)
                     Text(
-                        if (dishMode) "Pizza + toppings, worked out from Health Canada numbers" else "Fruit + base, worked out from Health Canada numbers",
+                        if (dishMode) "Pizza + toppings, worked out from Health Canada numbers"
+                        else tpl?.subtitle ?: "Fruit + base, worked out from Health Canada numbers",
                         style = MaterialTheme.typography.bodySmall, color = c.muted,
                     )
                 }
@@ -221,15 +230,19 @@ fun ShakeBuilder(
                     )
                     Spacer(Modifier.height(14.dp))
                 }
-                Eyebrow(if (dishMode) "Toppings" else "1 · Fruit and extras")
+                Eyebrow(if (dishMode) "Toppings" else if (tpl != null) "1 · What's in it" else "1 · Fruit and extras")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    (if (dishMode) Mix.TOPPINGS else Mix.FRUITS + Mix.EXTRAS).forEach { (label, key) ->
+                    (if (dishMode) Mix.TOPPINGS else tpl?.chips ?: (Mix.FRUITS + Mix.EXTRAS)).forEach { (label, key) ->
                         val food = foods[key] ?: return@forEach
                         val on = rows.any { it.label == label }
                         FilterChip(on, {
                             if (on) rows.removeAll { it.label == label }
-                            else rows += MixRow(label, food, g(if (dishMode) Mix.toppingGrams(label, size) else Mix.quickAmounts(food).first().second))
+                            else rows += MixRow(label, food, g(when {
+                                dishMode -> Mix.toppingGrams(label, size)
+                                tpl != null -> tpl.usual[label] ?: tpl.starts.firstOrNull { it.first == label }?.second ?: Mix.quickAmounts(food).first().second
+                                else -> Mix.quickAmounts(food).first().second
+                            }))
                         }, label = { Text(label) })
                     }
                 }
@@ -285,7 +298,7 @@ fun ShakeBuilder(
             Spacer(Modifier.height(12.dp))
 
             // 2. Base (shakes only; a pizza has no liquid base).
-            if (!dishMode) PlateCard(padding = 14.dp) {
+            if (!dishMode && (tpl == null || tpl.hasBase)) PlateCard(padding = 14.dp) {
                 Eyebrow("2 · Base")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -296,7 +309,7 @@ fun ShakeBuilder(
                         baseMl, { baseMl = it }, singleLine = true, suffix = { Text("ml") }, isError = ml == null,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(120.dp),
                     )
-                    listOf(125, 250, 350).forEach { v -> FilterChip(ml == v.toFloat(), { baseMl = "$v" }, label = { Text("$v") }) }
+                    (tpl?.mlChips ?: listOf(125, 250, 350)).forEach { v -> FilterChip(ml == v.toFloat(), { baseMl = "$v" }, label = { Text("$v") }) }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -309,7 +322,9 @@ fun ShakeBuilder(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     parts.forEach { p ->
                         MenuLine(
-                            (if (p.food.name in Mix.CRUST_FOODS) "Pizza" else p.food.name.substringBefore(',')) +
+                            // The chip's own name ("Sugar"), not Health Canada's ("Sweets, sugars, granulated").
+                            (if (p.food.name in Mix.CRUST_FOODS) "Pizza"
+                            else rows.firstOrNull { it.food === p.food }?.label ?: if (p.food === baseFood) base else p.food.name.substringBefore(',')) +
                                 " ${g(p.grams)} g × ${p.food.kcal100.roundToInt()}/100 g",
                             "%,d".format(p.kcal.roundToInt()), unit = "KCAL", nameStyle = MaterialTheme.typography.bodyMedium, numberStyle = num,
                         )
@@ -327,11 +342,11 @@ fun ShakeBuilder(
                         Text("slices", style = MaterialTheme.typography.titleSmall)
                     } else {
                         Text("Makes", style = MaterialTheme.typography.titleSmall)
-                        (1..3).forEach { k -> FilterChip(glasses == k, { glasses = k }, label = { Text("$k glass${if (k > 1) "es" else ""}") }) }
+                        (1..3).forEach { k -> FilterChip(glasses == k, { glasses = k }, label = { Text("$k ${if (k > 1) plural(one) else one}") }) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                MenuLine(if (dishMode) "≈ One slice" else "≈ One glass", "%,d".format((t.kcal / n).roundToInt()), unit = "KCAL", numberStyle = PosterType.number, numberColor = c.accent)
+                MenuLine("≈ One $one", "%,d".format((t.kcal / n).roundToInt()), unit = "KCAL", numberStyle = PosterType.number, numberColor = c.accent)
                 Text(
                     "P ${(t.protein / n).roundToInt()} g · C ${(t.carbs / n).roundToInt()} g · F ${(t.fat / n).roundToInt()} g · ≈ homemade, no official label",
                     style = MaterialTheme.typography.bodySmall, color = c.muted,
@@ -356,7 +371,7 @@ fun ShakeBuilder(
             ) {
                 Text(
                     if (dishMode) "Save and add $ate slice${if (ate > 1) "s" else ""} · ≈ %,d kcal".format((t.kcal / n * ate).roundToInt())
-                    else "Save and add 1 glass",
+                    else "Save and add 1 $one · ≈ %,d kcal".format((t.kcal / n).roundToInt()),
                 )
             }
             Text(
