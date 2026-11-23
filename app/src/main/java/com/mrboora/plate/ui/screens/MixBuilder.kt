@@ -93,6 +93,8 @@ fun ShakeBuilder(
     val dishMode = draft?.dish != null
     // Chai, roti meal, sandwich, eggs or rice bowl.
     val tpl = draft?.template
+    // Small / Regular / Big for a whole cup (chai & coffee).
+    var cupSize by remember { mutableStateOf(draft?.sizeLabel ?: "Regular") }
     var size by remember { mutableStateOf(draft?.dish?.size ?: Mix.PIZZA_DEFAULT) }
     var slices by remember { mutableStateOf(draft?.dish?.size?.slices ?: 8) }
     var ate by remember { mutableStateOf(1) }
@@ -230,6 +232,22 @@ fun ShakeBuilder(
                     )
                     Spacer(Modifier.height(14.dp))
                 }
+                if (tpl != null && tpl.sizes.isNotEmpty()) {
+                    Eyebrow("Size")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        tpl.sizes.forEach { (label, factor) ->
+                            FilterChip(cupSize == label, {
+                                val old = tpl.sizes.firstOrNull { it.first == cupSize }?.second ?: 1f
+                                val ratio = factor / old
+                                // The cup grows: tea or coffee and the milk. Sugar and cream stay as set.
+                                rows.filter { it.label in tpl.main }.forEach { r -> r.value?.let { r.grams = g(it * ratio) } }
+                                ml?.let { baseMl = "${(it * ratio).roundToInt()}" }
+                                cupSize = label
+                            }, label = { Text(label) })
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
                 Eyebrow(if (dishMode) "Toppings" else if (tpl != null) "1 · What's in it" else "1 · Fruit and extras")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -289,8 +307,11 @@ fun ShakeBuilder(
                         )
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else Mix.quickAmounts(r.food)).forEach { (label, grams) ->
-                            FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} g") })
+                        // Plain words where the template has them: Small · Regular · Big, 1 tsp · 2 tsp.
+                        val plain = tpl?.quick?.get(r.label)
+                        val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"
+                        (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else plain ?: Mix.quickAmounts(r.food)).forEach { (label, grams) ->
+                            FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} $unitWord") })
                         }
                     }
                 }

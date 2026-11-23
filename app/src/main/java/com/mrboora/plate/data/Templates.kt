@@ -35,6 +35,12 @@ object Templates {
         val dishName: String,
         /** The thing it can't be without (bread in a sandwich); added from [starts] when not mentioned. */
         val main: Set<String> = emptySet(),
+        /** Plain-word quick amounts per chip ("Regular · 240 ml"), instead of grams and cups. */
+        val quick: Map<String, List<Pair<String, Float>>> = emptyMap(),
+        /** Whole-portion sizes, as a multiplier of the usual recipe: Small ×0.75, Regular ×1, Big ×1.5. */
+        val sizes: List<Pair<String, Float>> = emptyList(),
+        /** Words for those sizes when typed ("large coffee", "tall latte"). */
+        val sizeWords: Map<String, String> = emptyMap(),
     )
 
     val CHAI = Template(
@@ -55,6 +61,18 @@ object Templates {
         usual = mapOf("Tea" to 120f, "Coffee" to 240f, "Sugar" to 8.5f, "Cream" to 15f, "Ginger" to 3f),
         unit = "cup", hasBase = true, baseLabel = "Milk 2%", baseMl = 120, mlChips = listOf(30, 60, 120),
         spoonIsTeaspoon = true, dishName = "Chai", main = setOf("Tea", "Coffee"),
+        quick = mapOf(
+            "Tea" to listOf("Small" to 90f, "Regular" to 120f, "Big" to 180f),
+            "Coffee" to listOf("Small" to 180f, "Regular" to 240f, "Big" to 360f),
+            "Sugar" to listOf("1 tsp" to 4.2f, "2 tsp" to 8.5f, "3 tsp" to 12.7f),
+            "Cream" to listOf("1 creamer" to 11f, "2 creamers" to 22f, "3 creamers" to 33f),
+            "Ginger" to listOf("A little" to 2f, "Some" to 4f, "Lots" to 8f),
+        ),
+        sizes = listOf("Small" to 0.75f, "Regular" to 1f, "Big" to 1.5f),
+        sizeWords = mapOf(
+            "small" to "Small", "short" to "Small", "regular" to "Regular", "medium" to "Regular", "tall" to "Regular",
+            "large" to "Big", "big" to "Big", "grande" to "Big", "extra large" to "Big", "xl" to "Big",
+        ),
     )
 
     val ROTI = Template(

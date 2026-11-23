@@ -273,6 +273,12 @@ class ScreenshotTest {
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
     }
 
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun coffeeFromText() = shot("coffee_from_text") {
+        val (foods, cnf) = mixFoods()
+        val draft = com.mrboora.plate.data.MixParser.parse("large coffee with milk and 2 spoons sugar", foods) { cnf.search(it, 1).firstOrNull() }
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
+    }
+
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun rotiFromText() = shot("roti_from_text") {
         val (foods, cnf) = mixFoods()
         val draft = com.mrboora.plate.data.MixParser.parse("2 roti with dal and a spoon of ghee", foods) { cnf.search(it, 1).firstOrNull() }

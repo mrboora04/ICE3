@@ -92,6 +92,16 @@ class MixParserTest {
         assertEquals(listOf("Rice", "Chicken", "Corn"), bowl.items.map { it.label })
         assertTrue(bowl.unknown.isEmpty())
 
+        // "Coffee" is coffee: no tea added. Cup sizes in plain words scale the whole cup.
+        val coffee = com.mrboora.plate.data.MixParser.parse("coffee", foods, search)
+        assertEquals(listOf("Coffee", "Sugar", "Milk 2%"), coffee.items.map { it.label })
+        val big = com.mrboora.plate.data.MixParser.parse("large coffee with milk and 2 spoons sugar", foods, search)
+        assertEquals(2 * 5f * 211.3f / 250f, big.items.first { it.label == "Sugar" }.grams, 0.1f) // typed: not scaled
+        assertEquals("Big", big.sizeLabel)
+        assertEquals(240f * 1.5f, big.items.first { it.label == "Coffee" }.grams, 0.5f)
+        assertEquals(120f * 1.5f, big.base!!.ml!!, 0.5f)
+        assertEquals("Small", com.mrboora.plate.data.MixParser.parse("small chai", foods, search).sizeLabel)
+
         // Shakes and pizza keep their own builders.
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("mango lassi", foods, search).template)
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("pizza with corn", foods, search).template)

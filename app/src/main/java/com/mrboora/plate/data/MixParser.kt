@@ -44,6 +44,8 @@ object MixParser {
         val dish: Dish? = null,
         /** A chai, roti meal, sandwich, eggs or rice bowl template, when the text asked for one. */
         val template: Templates.Template? = null,
+        /** The template size that was typed ("Big" for "large coffee"), if any. */
+        val sizeLabel: String? = null,
     ) {
         /** The base is the liquid there's most of; any other milk, yogurt or drink is an ingredient. */
         val base: Item? get() = items.filter { it.isBase }.maxByOrNull { it.ml ?: 0f }
@@ -288,6 +290,8 @@ object MixParser {
             val bare = items.all { it.isBase } || onlyWord
             tpl.starts.forEachIndexed { i, (lbl, gr) ->
                 if (items.any { it.label == lbl }) return@forEachIndexed
+                // "Coffee" is already the main thing: don't add tea to it.
+                if (lbl in tpl.main && items.any { it.label in tpl.main }) return@forEachIndexed
                 val needed = bare || (i == 0 && items.none { it.label in tpl.main })
                 val food = labels[lbl]?.let { foods[it] } ?: return@forEachIndexed
                 if (needed) items.add(if (bare) items.size else 0, Item(lbl, food, gr, null, false, "${fmt(gr)} g, a usual ${tpl.unit}"))
@@ -301,6 +305,19 @@ object MixParser {
                 }
             }
         }
-        return Draft(items, unknown, pizza?.let { Dish(it, crust) }, tpl)
+        // A cup size ("large coffee", "small chai") scales the whole cup, milk included.
+        val sizeLabel = tpl?.let { t ->
+            t.sizeWords.entries.sortedByDescending { it.key.length }
+                .firstOrNull { (w, _) -> Regex("""\b${Regex.escape(w)}\b""").containsMatchIn(clean(text)) }?.value
+        }
+        val factor = tpl?.sizes?.firstOrNull { it.first == sizeLabel }?.second ?: 1f
+        // Only the cup itself (tea or coffee, and the milk) grows, and only where no amount was typed:
+        // "2 spoons sugar" stays 2 spoons in a big cup.
+        val sized = if (factor == 1f) items else items.map {
+            val typed = !(it.how.startsWith("no amount given") || it.how.contains("a usual"))
+            if (typed || !(it.isBase || it.label in tpl!!.main)) it
+            else it.copy(grams = it.grams * factor, ml = it.ml?.times(factor), how = it.how + " × ${fmt(factor)} for a ${sizeLabel!!.lowercase()} ${tpl.unit}")
+        }
+        return Draft(sized, unknown, pizza?.let { Dish(it, crust) }, tpl, sizeLabel)
     }
 }
