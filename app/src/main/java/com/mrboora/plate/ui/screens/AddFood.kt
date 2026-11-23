@@ -113,7 +113,7 @@ fun AddFoodScreen(
     mixIngredients: suspend () -> Map<String, FoodItem> = { emptyMap() },
     searchIngredients: suspend (String) -> List<FoodItem> = { emptyList() },
     /** A homemade shake was built: save it and log one glass. */
-    onSaveMix: (FoodItem) -> Unit = {},
+    onSaveMix: (FoodItem, Float) -> Unit = { _, _ -> },
     parseMix: suspend (String) -> com.mrboora.plate.data.MixParser.Draft? = { null },
 ) {
     val c = Plate.colors
@@ -129,9 +129,9 @@ fun AddFoodScreen(
     if (showShake) {
         ShakeBuilder(
             mixIngredients, searchIngredients, onDismiss = { showShake = false; useDraft = false },
-            onSave = { food ->
+            onSave = { food, count ->
                 showShake = false
-                onSaveMix(food)
+                onSaveMix(food, count)
                 onBack()
             },
             draft = if (useDraft) mixDraft else null,

@@ -22,6 +22,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -55,7 +57,8 @@ import com.mrboora.plate.ui.theme.Plate
 import com.mrboora.plate.ui.theme.PosterType
 import kotlin.math.roundToInt
 
-private fun g(v: Float) = if (v < 10f) "%.1f".format(v) else "%,d".format(v.roundToInt())
+/** Grams for the text fields: no thousands separator, because the field reads "1,5" as 1.5. */
+private fun g(v: Float) = if (v < 10f) "%.1f".format(java.util.Locale.ROOT, v) else "${v.roundToInt()}"
 
 /** One editable ingredient row's state. */
 private class MixRow(val label: String, val food: FoodItem, grams: String) {
@@ -73,7 +76,8 @@ fun ShakeBuilder(
     ingredients: suspend () -> Map<String, FoodItem>,
     searchIngredients: suspend (String) -> List<FoodItem>,
     onDismiss: () -> Unit,
-    onSave: (FoodItem) -> Unit,
+    /** The saved food (one glass or one slice) and how many of them to log now. */
+    onSave: (FoodItem, Float) -> Unit,
     preview: Map<String, FoodItem>? = null,
     /** What the user typed, already read into ingredients and amounts. */
     draft: com.mrboora.plate.data.MixParser.Draft? = null,
@@ -84,6 +88,11 @@ fun ShakeBuilder(
     var base by remember { mutableStateOf("Milk 3.25%") }
     var baseMl by remember { mutableStateOf("250") }
     var glasses by remember { mutableStateOf(1) }
+    // Dish mode (pizza): its size, how many slices it's cut into, and how many were eaten.
+    val dishMode = draft?.dish != null
+    var size by remember { mutableStateOf(draft?.dish?.size ?: Mix.PIZZA_DEFAULT) }
+    var slices by remember { mutableStateOf(draft?.dish?.size?.slices ?: 8) }
+    var ate by remember { mutableStateOf(1) }
     var name by remember { mutableStateOf("") }
     var nameEdited by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -112,10 +121,14 @@ fun ShakeBuilder(
         rows.forEach { r -> r.value?.let { add(Mix.Part(r.food, it)) } }
         if (baseFood != null && ml != null && ml > 0f) add(Mix.Part(baseFood, Mix.mlToGrams(baseFood, ml)))
     }
-    val auto = Mix.shakeName(rows.map { it.label })
+    val auto = if (dishMode) {
+        val tops = rows.filter { it.food.name != Mix.PIZZA }.map { it.label.lowercase() }
+        "${size.label} cheese pizza" + if (tops.isEmpty()) "" else " with " + tops.joinToString(" & ")
+    } else Mix.shakeName(rows.map { it.label })
     val shownName = if (nameEdited) name else auto
     val t = Mix.totals(parts)
-    val n = glasses.coerceAtLeast(1)
+    val n = (if (dishMode) slices else glasses).coerceAtLeast(1)
+    val one = if (dishMode) "slice" else "glass"
 
     val content = @Composable {
         Column(
@@ -124,8 +137,11 @@ fun ShakeBuilder(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SHAKE BUILDER", style = PosterType.title)
-                    Text("Fruit + base, worked out from Health Canada numbers", style = MaterialTheme.typography.bodySmall, color = c.muted)
+                    Text(if (dishMode) "PIZZA BUILDER" else "SHAKE BUILDER", style = PosterType.title)
+                    Text(
+                        if (dishMode) "Pizza + toppings, worked out from Health Canada numbers" else "Fruit + base, worked out from Health Canada numbers",
+                        style = MaterialTheme.typography.bodySmall, color = c.muted,
+                    )
                 }
                 IconButton(onDismiss) { Icon(Icons.Rounded.Close, "Close") }
             }
@@ -152,15 +168,30 @@ fun ShakeBuilder(
 
             // 1. Fruit and extras.
             PlateCard(padding = 14.dp) {
-                Eyebrow("1 · Fruit and extras")
+                if (dishMode) {
+                    // Size: changing it rescales the pizza and its toppings by area.
+                    Eyebrow("Size")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Mix.PIZZA_SIZES.forEach { s ->
+                            FilterChip(size == s, {
+                                val ratio = s.grams / size.grams
+                                rows.forEach { r -> r.value?.let { r.grams = g(it * ratio) } }
+                                size = s; slices = s.slices; if (ate > s.slices) ate = s.slices
+                            }, label = { Text(s.label) })
+                        }
+                    }
+                    Text(size.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
+                    Spacer(Modifier.height(14.dp))
+                }
+                Eyebrow(if (dishMode) "1 · Pizza and toppings" else "1 · Fruit and extras")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    (Mix.FRUITS + Mix.EXTRAS).forEach { (label, key) ->
+                    (if (dishMode) Mix.TOPPINGS else Mix.FRUITS + Mix.EXTRAS).forEach { (label, key) ->
                         val food = foods[key] ?: return@forEach
                         val on = rows.any { it.label == label }
                         FilterChip(on, {
                             if (on) rows.removeAll { it.label == label }
-                            else rows += MixRow(label, food, g(Mix.quickAmounts(food).first().second))
+                            else rows += MixRow(label, food, g(if (dishMode) Mix.toppingGrams(label, size) else Mix.quickAmounts(food).first().second))
                         }, label = { Text(label) })
                     }
                 }
@@ -198,8 +229,8 @@ fun ShakeBuilder(
             }
             Spacer(Modifier.height(12.dp))
 
-            // 2. Base.
-            PlateCard(padding = 14.dp) {
+            // 2. Base (shakes only; a pizza has no liquid base).
+            if (!dishMode) PlateCard(padding = 14.dp) {
                 Eyebrow("2 · Base")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -234,11 +265,17 @@ fun ShakeBuilder(
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Makes", style = MaterialTheme.typography.titleSmall)
-                    (1..3).forEach { k -> FilterChip(glasses == k, { glasses = k }, label = { Text("$k glass${if (k > 1) "es" else ""}") }) }
+                    if (dishMode) {
+                        Text("Cut into", style = MaterialTheme.typography.titleSmall)
+                        Stepper(slices, 1..48) { slices = it; if (ate > it) ate = it }
+                        Text("slices", style = MaterialTheme.typography.titleSmall)
+                    } else {
+                        Text("Makes", style = MaterialTheme.typography.titleSmall)
+                        (1..3).forEach { k -> FilterChip(glasses == k, { glasses = k }, label = { Text("$k glass${if (k > 1) "es" else ""}") }) }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
-                MenuLine("≈ One glass", "%,d".format((t.kcal / n).roundToInt()), unit = "KCAL", numberStyle = PosterType.number, numberColor = c.accent)
+                MenuLine(if (dishMode) "≈ One slice" else "≈ One glass", "%,d".format((t.kcal / n).roundToInt()), unit = "KCAL", numberStyle = PosterType.number, numberColor = c.accent)
                 Text(
                     "P ${(t.protein / n).roundToInt()} g · C ${(t.carbs / n).roundToInt()} g · F ${(t.fat / n).roundToInt()} g · ≈ homemade, no official label",
                     style = MaterialTheme.typography.bodySmall, color = c.muted,
@@ -249,13 +286,25 @@ fun ShakeBuilder(
                 shownName, { name = it; nameEdited = true }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
+            if (dishMode) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                    Text("I ate", style = MaterialTheme.typography.titleSmall)
+                    Stepper(ate.coerceAtMost(slices), 1..slices) { ate = it }
+                    Text("slice${if (ate > 1) "s" else ""} of $slices", style = MaterialTheme.typography.titleSmall)
+                }
+            }
             Button(
-                { onSave(Mix.build(shownName.ifBlank { auto }, parts, n)) },
+                { onSave(Mix.build(shownName.ifBlank { auto }, parts, n, unit = one), (if (dishMode) ate else 1).toFloat()) },
                 enabled = parts.isNotEmpty() && rows.isNotEmpty() && rows.all { it.value != null } && ml != null,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("Save and add 1 glass") }
+            ) {
+                Text(
+                    if (dishMode) "Save and add $ate slice${if (ate > 1) "s" else ""} · ≈ %,d kcal".format((t.kcal / n * ate).roundToInt())
+                    else "Save and add 1 glass",
+                )
+            }
             Text(
-                "It's saved in your foods, so next time it's one tap. The grams are only for building it; you log it by the glass.",
+                "It's saved in your foods, so next time it's one tap. The grams are only for building it; you log it by the $one.",
                 style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),
             )
             Spacer(Modifier.height(24.dp))
@@ -263,4 +312,18 @@ fun ShakeBuilder(
     }
     if (preview != null) content()
     else Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) { content() }
+}
+
+/** − n + for small whole numbers. */
+@Composable
+private fun Stepper(value: Int, range: IntRange, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.FilledTonalIconButton({ onChange((value - 1).coerceIn(range)) }, enabled = value > range.first, modifier = Modifier.size(36.dp)) {
+            Icon(androidx.compose.material.icons.Icons.Rounded.Remove, "Fewer", Modifier.size(18.dp))
+        }
+        Text("$value", style = PosterType.number.copy(fontSize = 22.sp, lineHeight = 22.sp), modifier = Modifier.padding(horizontal = 10.dp))
+        androidx.compose.material3.FilledTonalIconButton({ onChange((value + 1).coerceIn(range)) }, enabled = value < range.last, modifier = Modifier.size(36.dp)) {
+            Icon(androidx.compose.material.icons.Icons.Rounded.Add, "More", Modifier.size(18.dp))
+        }
+    }
 }

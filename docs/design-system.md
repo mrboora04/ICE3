@@ -75,3 +75,21 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
   - Fixes common typos ("barries").
   - The biggest liquid is the base.
 - **The screen**: Add food shows "Sounds homemade. I read: …" with ≈ kcal, and "Did you mean" is skipped for descriptions. The builder opens filled in, with "How I read it" listing every conversion in English.
+
+## Dishes: pizza (2.10)
+
+- **Same engine, a dish template:** cheese pizza (Health Canada, 261 kcal / 100 g; a 14″ pizza = 853 g) plus toppings, cut into slices.
+- **Size sets the weight by area:**
+
+  | Size | Weight | Slices | How |
+  |---|---|---|---|
+  | Small, 10″ | 435 g | 6 | 853 × 10² ÷ 14² |
+  | Medium, 12″ | 627 g | 8 | 853 × 12² ÷ 14² |
+  | Large, 14″ | 853 g | 10 | Health Canada's own weight |
+  | X-Large, 16″ | 1,114 g | 12 | 853 × 16² ÷ 14² |
+  | Party, ≈ 21 × 15 in | 1,745 g | 24 | 853 × 315 ÷ 154 in² |
+
+- **Toppings** (paneer, onion, green pepper, mushrooms, tomato, spinach, corn, chicken, extra cheese):
+  - With no amount given, a usual amount scaled by size: on a medium, 70 g for paneer, chicken or cheese and 40 g for vegetables.
+  - Changing the size rescales the pizza and its toppings.
+- **The screen**: PIZZA BUILDER with size chips, topping chips, "Cut into N slices", "I ate N slices", and save logs that many slices.

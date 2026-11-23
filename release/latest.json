@@ -1,10 +1,10 @@
 {
-  "versionCode": 31,
-  "versionName": "2.9.0",
+  "versionCode": 32,
+  "versionName": "2.10.0",
   "notes": [
-    "Water your way: one tap adds a whole bottle (500 ml) or a glass (250 ml), plus ½ bottle",
-    "Edit sets what you drink from: cup, glass, can, any bottle size, up to four",
-    "The minus button takes off exactly what you last added"
+    "Pizza builder: type \"party size cheese pizza with paneer and onion\" and Plate works it out, same math as the shake",
+    "Size sets the weight (small to party), toppings scale with it, and you pick how many slices you ate",
+    "Fixed: amounts of 1,000 g or more were misread in the builder"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

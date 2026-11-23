@@ -16,8 +16,8 @@ class MixParserTest {
     fun readsAHomemadeMixWrittenInPlainEnglish() {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS
-        val foods = names.mapNotNull { n -> cnf.byName(n)?.let { n to it } }.toMap().toMutableMap()
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
         foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
         val search: (String) -> FoodItem? = { cnf.search(it, 1).firstOrNull() }
@@ -43,5 +43,20 @@ class MixParserTest {
         // One food's name is not a mix.
         assertFalse(com.mrboora.plate.data.MixParser.looksLikeMix("banana bread"))
         assertFalse(com.mrboora.plate.data.MixParser.looksLikeMix("chicken shawarma plate"))
+
+        // A pizza: same math, with the size setting the whole weight and toppings scaling with it.
+        val pz = "party size cheese pizza with paneer topping with onion"
+        assertTrue(com.mrboora.plate.data.MixParser.looksLikeMix(pz))
+        val p = com.mrboora.plate.data.MixParser.parse(pz, foods, search)
+        assertEquals("Party", p.dish!!.size.label)
+        assertEquals(24, p.dish!!.size.slices)
+        assertEquals(listOf("Cheese pizza, party", "Paneer", "Onion"), p.items.map { it.label })
+        assertEquals(1745f, p.items[0].grams, 0.5f)
+        assertEquals(195f, p.items[1].grams, 0.5f)   // 70 g on a medium × 1745/627, to the nearest 5 g
+        assertEquals(110f, p.items[2].grams, 0.5f)   // 40 g × 1745/627
+        assertTrue(p.unknown.isEmpty())
+        assertEquals("X-Large", com.mrboora.plate.data.MixParser.pizzaSize("extra large pizza with corn")!!.label)
+        assertEquals("Large", com.mrboora.plate.data.MixParser.pizzaSize("14 inch pizza with onion")!!.label)
+        assertEquals("Medium", com.mrboora.plate.data.MixParser.pizzaSize("cheese pizza with mushrooms")!!.label)
     }
 }

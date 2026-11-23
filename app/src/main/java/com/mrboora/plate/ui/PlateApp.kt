@@ -349,7 +349,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     onBack = { nav.popBackStack() },
                     mixIngredients = vm::mixIngredients,
                     searchIngredients = vm::searchIngredients,
-                    onSaveMix = { vm.saveMix(meal, it) },
+                    onSaveMix = { food, count -> vm.saveMix(meal, food, count) },
                     parseMix = vm::parseMix,
                 )
             }

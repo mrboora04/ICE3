@@ -35,7 +35,10 @@ object MixParser {
         val how: String,
     )
 
-    data class Draft(val items: List<Item>, val unknown: List<String>) {
+    /** A dish such as a pizza: its size, and how many slices it's cut into. */
+    data class Dish(val size: Mix.Size)
+
+    data class Draft(val items: List<Item>, val unknown: List<String>, val dish: Dish? = null) {
         /** The base is the liquid there's most of; any other milk, yogurt or drink is an ingredient. */
         val base: Item? get() = items.filter { it.isBase }.maxByOrNull { it.ml ?: 0f }
         val parts: List<Item> get() = items.filter { it !== base }
@@ -64,6 +67,14 @@ object MixParser {
         "yogurt" to "Yogurt", "yoghurt" to "Yogurt", "yogourt" to "Yogurt", "curd" to "Yogurt", "dahi" to "Yogurt",
         "whole milk" to "Milk 3.25%", "homo milk" to "Milk 3.25%", "milk" to "Milk",
         "water" to "Water",
+        // Toppings.
+        "paneer" to "Paneer", "cottage cheese" to "Paneer",
+        "onions" to "Onion", "onion" to "Onion",
+        "green peppers" to "Green pepper", "green pepper" to "Green pepper", "bell pepper" to "Green pepper",
+        "capsicum" to "Green pepper", "peppers" to "Green pepper",
+        "mushrooms" to "Mushrooms", "mushroom" to "Mushrooms",
+        "tomatoes" to "Tomato", "tomato" to "Tomato", "corn" to "Corn",
+        "chicken" to "Chicken", "extra cheese" to "Extra cheese", "mozzarella" to "Extra cheese",
     ).sortedByDescending { it.first.length }
 
     /** Common slips, fixed before matching. */
@@ -89,7 +100,25 @@ object MixParser {
     private val WITH_UNIT = Regex("""(?<![\w.])$NUM\s*$SIZE$UNIT\b""")
     private val BARE = Regex("""(?<![\w.%])$NUM\b(?!\s*%)""")
     private val FAT = Regex("""(\d+(?:[.,]\d+)?)\s*%|\b3\s25\b""")
+    private val PIZZA = Regex("""\bpizzas?\b""")
+    private val INCH = Regex("""(\d{1,2})\s*(?:"|inch(?:es)?\b|in\b)""")
+
+    /** Pizza in the text, and its size: a size word, inches, or medium if none is given. */
+    fun pizzaSize(text: String): Mix.Size? {
+        val t = clean(text)
+        if (!PIZZA.containsMatchIn(t)) return null
+        INCH.find(t)?.groupValues?.get(1)?.toIntOrNull()?.let { inches ->
+            return Mix.PIZZA_SIZES.filter { it.label != "Party" }.minBy { s ->
+                kotlin.math.abs((s.words.firstNotNullOfOrNull { w -> Regex("""(\d+) inch""").find(w)?.groupValues?.get(1)?.toInt() } ?: 0) - inches)
+            }
+        }
+        // Longest words first, so "extra large" isn't read as "large".
+        val byWord = Mix.PIZZA_SIZES.flatMap { s -> s.words.map { it to s } }.sortedByDescending { it.first.length }
+        return byWord.firstOrNull { (w, _) -> Regex("""\b$w\b""").containsMatchIn(t) }?.second ?: Mix.PIZZA_DEFAULT
+    }
+
     private val STOP = setOf(
+        "topping", "toppings", "size", "slices", "slice", "topped",
         "around", "about", "approx", "approximately", "roughly", "some", "of", "the", "blend", "blended", "mix",
         "fresh", "frozen", "cold", "in", "on", "it", "my", "regular", "normal", "little", "bit", "plain", "fat",
     )
@@ -99,6 +128,7 @@ object MixParser {
         val t = clean(text)
         if (t.split(' ').size < 4) return false
         val pieces = t.split(SPLIT).filter { it.isNotBlank() }
+        if (PIZZA.containsMatchIn(t)) return pieces.size >= 2
         return pieces.size >= 2 && (WITH_UNIT.containsMatchIn(t) || BARE.containsMatchIn(t))
     }
 
@@ -118,7 +148,9 @@ object MixParser {
      * anything else in Health Canada's file.
      */
     fun parse(text: String, foods: Map<String, FoodItem>, search: (String) -> FoodItem?): Draft {
-        val labels = (Mix.FRUITS + Mix.EXTRAS + Mix.BASES).toMap()
+        val labels = (Mix.FRUITS + Mix.EXTRAS + Mix.BASES + Mix.TOPPINGS).toMap()
+        val pizza = pizzaSize(text)
+        val toppingLabels = Mix.TOPPINGS.map { it.first }.toSet()
         val baseLabels = Mix.BASES.map { it.first }.toSet()
         val items = mutableListOf<Item>()
         val unknown = mutableListOf<String>()
@@ -140,6 +172,18 @@ object MixParser {
             var count: Float? = null
             if (unitMatch == null) {
                 BARE.find(piece)?.let { m -> count = number(m.groupValues[1]); piece = piece.removeRange(m.range) }
+            }
+
+            // The pizza itself: its whole weight from its size.
+            if (pizza != null && PIZZA.containsMatchIn(piece)) {
+                val food = foods[Mix.PIZZA]
+                if (food == null) { unknown += raw.trim(); continue }
+                val n = (count ?: qty)?.takeIf { it in 1f..10f } ?: 1f
+                items += Item(
+                    "Cheese pizza, ${pizza.label.lowercase()}", food, pizza.grams * n, null, false,
+                    "${pizza.note} = ${fmt(pizza.grams)} g" + if (n != 1f) " × ${fmt(n)} pizzas" else "",
+                )
+                continue
             }
 
             val words = piece.split(' ').filter { it.isNotBlank() && it !in STOP && it.toFloatOrNull() == null }
@@ -195,6 +239,10 @@ object MixParser {
                     (count!! * each.second) to "${fmt(count!!)} × $unitName (${fmt(each.second.roundToInt().toFloat())} g each) = ${fmt((count!! * each.second).roundToInt().toFloat())} g"
                 }
                 isBase -> fromMl(250f, "no amount given, so 1 glass")
+                pizza != null -> {
+                    val gr = Mix.toppingGrams(if (label in toppingLabels) label!! else "", pizza)
+                    gr to "no amount given: a usual topping on a ${pizza.label.lowercase()} pizza ≈ ${fmt(gr)} g (change it if yours had more)"
+                }
                 else -> {
                     val each = Mix.quickAmounts(food).first()
                     each.second to "no amount given, so ${each.first} = ${fmt(each.second.roundToInt().toFloat())} g"
@@ -203,6 +251,6 @@ object MixParser {
             val ml = if (isBase) grams / density else null
             items += Item(label!!, food, grams, ml, isBase, how)
         }
-        return Draft(items, unknown)
+        return Draft(items, unknown, pizza?.let { Dish(it) })
     }
 }

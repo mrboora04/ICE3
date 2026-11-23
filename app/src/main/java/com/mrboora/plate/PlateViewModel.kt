@@ -202,9 +202,10 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The builder's ingredients by exact Health Canada name, with mixed berries and water worked out. */
     suspend fun mixIngredients(): Map<String, FoodItem> = withContext(Dispatchers.Default) {
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES)
-            .map { it.second }.toSet() + com.mrboora.plate.data.Mix.BERRY_PARTS
-        val found = names.mapNotNull { n -> canadian.byName(n)?.let { n to it } }.toMap().toMutableMap()
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS)
+            .map { it.second }.toSet() + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        // Health Canada first; Plate's own list for things it lacks (paneer).
+        val found = names.mapNotNull { n -> (canadian.byName(n) ?: FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { found[it] })
             ?.let { found[com.mrboora.plate.data.Mix.MIXED_BERRIES] = it }
         found[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
@@ -224,9 +225,9 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Saves the mix as one of your foods and logs one glass of it. */
-    fun saveMix(meal: Meal, food: FoodItem) = viewModelScope.launch {
+    fun saveMix(meal: Meal, food: FoodItem, count: Float = 1f) = viewModelScope.launch {
         dao.saveFood(food.toSaved(custom = true))
-        addEntry(meal, food, 1f)
+        addEntry(meal, food, count)
     }
 
     fun forgetFood(food: FoodItem) = viewModelScope.launch { dao.deleteFood(food.key) }

@@ -66,6 +66,45 @@ object Mix {
     /** Grams in [ml] of a liquid base, from that food's own Health Canada density (milk: 257.8 g per 250 ml). */
     fun mlToGrams(food: FoodItem, ml: Float): Float = ml * Portions.density(food).first
 
+    // ---- Dish template: pizza ----------------------------------------------------------------
+
+    /** A size of a dish: its whole weight and how many slices it's usually cut into. */
+    data class Size(val label: String, val words: List<String>, val grams: Float, val slices: Int, val note: String)
+
+    /** Health Canada: cheese pizza, regular crust, 261 kcal / 100 g; 1 pizza (14") = 853 g. */
+    const val PIZZA = "Pizza, cheese, regular crust, frozen, cooked"
+
+    /**
+     * Pizza weight grows with its area: grams = 853 × (area ÷ area of a 14" pizza).
+     * Party size is the rectangular kind Canadian chains sell, about 21 × 15 in.
+     */
+    val PIZZA_SIZES = listOf(
+        Size("Small", listOf("small", "10 inch", "10 in"), 435f, 6, "10\" round: 853 g × 10² ÷ 14²"),
+        Size("Medium", listOf("medium", "12 inch", "12 in"), 627f, 8, "12\" round: 853 g × 12² ÷ 14²"),
+        Size("Large", listOf("large", "14 inch", "14 in"), 853f, 10, "14\" round: Health Canada's 1 pizza = 853 g"),
+        Size("X-Large", listOf("x large", "xl", "extra large", "16 inch", "16 in"), 1114f, 12, "16\" round: 853 g × 16² ÷ 14²"),
+        Size("Party", listOf("party", "party size"), 1745f, 24, "about 21 × 15 in rectangle: 853 g × 315 ÷ 154 in²"),
+    )
+    val PIZZA_DEFAULT = PIZZA_SIZES[1]
+
+    /** Toppings: label → food name (Health Canada, or Plate's own list for paneer). */
+    val TOPPINGS = listOf(
+        "Paneer" to "Paneer",
+        "Onion" to "Onion, raw",
+        "Green pepper" to "Pepper, sweet, green, raw",
+        "Mushrooms" to "Mushroom, white, raw",
+        "Tomato" to "Tomato, red, ripe, raw, year round average",
+        "Spinach" to "Spinach, raw",
+        "Corn" to "Corn, sweet, yellow, raw",
+        "Chicken" to "Chicken, broiler, breast, meat, roasted",
+        "Extra cheese" to "Cheese, mozzarella/pizza mozzarella (25% M.F.)",
+    )
+    private val HEAVY = setOf("Paneer", "Chicken", "Extra cheese")
+
+    /** A usual amount of a topping: on a medium pizza, 70 g for paneer, chicken or cheese, 40 g for vegetables; scaled by size. */
+    fun toppingGrams(label: String, size: Size): Float =
+        ((if (label in HEAVY) 70f else 40f) * size.grams / PIZZA_DEFAULT.grams).let { (it / 5f).roundToInt() * 5f }
+
     // ---- Shake template ---------------------------------------------------------------------
 
     /** Fruit chips: label → exact Health Canada name. */
@@ -132,7 +171,8 @@ object Mix {
         }
         return if (!byMl && label.isNotBlank() && food.servingG > 0f) {
             val unit = label.substringBefore('(').trim().removePrefix("1 ").ifBlank { "piece" }
-            (1..3).map { n -> "$n $unit" to food.servingG * n }
+            // "5 cubes" already has a number: say "2 × 5 cubes", not "2 5 cubes".
+            (1..3).map { n -> (if (unit.first().isDigit()) "$n × $unit" else "$n $unit") to food.servingG * n }
         } else {
             val cup = Portions.kitchen(food).firstOrNull { it.name == "1 cup" }?.grams ?: 150f
             listOf("30 g" to 30f, "½ cup" to cup / 2f, "1 cup" to cup)
