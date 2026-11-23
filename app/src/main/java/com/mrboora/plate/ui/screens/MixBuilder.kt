@@ -211,17 +211,25 @@ fun ShakeBuilder(
                     )
                 }
                 rows.forEach { r ->
+                    // The pizza row always follows the size picked above, and says what its grams mean.
+                    val isPizza = dishMode && r.food.name == Mix.PIZZA
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(if (isPizza) "Whole ${size.label.lowercase()} pizza" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                         OutlinedTextField(
                             r.grams, { r.grams = it }, singleLine = true, suffix = { Text("g") }, isError = r.value == null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(110.dp),
                         )
                         IconButton({ rows.remove(r) }) { Icon(Icons.Rounded.Close, "Remove ${r.label}", tint = c.muted) }
                     }
+                    if (isPizza) {
+                        Text(
+                            "The whole pizza before it's cut. How much you ate is set with slices below.",
+                            style = MaterialTheme.typography.bodySmall, color = c.muted,
+                        )
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Mix.quickAmounts(r.food).forEach { (label, grams) ->
+                        (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else Mix.quickAmounts(r.food)).forEach { (label, grams) ->
                             FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} g") })
                         }
                     }
