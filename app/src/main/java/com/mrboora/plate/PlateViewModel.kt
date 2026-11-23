@@ -203,7 +203,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     /** The builder's ingredients by exact Health Canada name, with mixed berries and water worked out. */
     suspend fun mixIngredients(): Map<String, FoodItem> = withContext(Dispatchers.Default) {
         val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS)
-            .map { it.second }.toSet() + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+            .map { it.second }.toSet() + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
         // Health Canada first; Plate's own list for things it lacks (paneer).
         val found = names.mapNotNull { n -> (canadian.byName(n) ?: FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { found[it] })

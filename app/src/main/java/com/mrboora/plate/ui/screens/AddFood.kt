@@ -122,8 +122,14 @@ fun AddFoodScreen(
     var showShake by rememberSaveable { mutableStateOf(false) }
     // Typed a description like "1 banana with 30 g berries and 400 ml milk": read it into a mix.
     val isMix = com.mrboora.plate.data.MixParser.looksLikeMix(query)
+    // The word "pizza" alone is enough to offer the pizza builder.
+    val isPizza = com.mrboora.plate.data.MixParser.pizzaSize(query) != null
     val mixDraft = androidx.compose.runtime.produceState<com.mrboora.plate.data.MixParser.Draft?>(null, query) {
-        value = if (isMix) parseMix(query)?.takeIf { it.items.size >= 2 } else null
+        value = when {
+            isPizza -> parseMix(query)?.takeIf { it.items.isNotEmpty() }
+            isMix -> parseMix(query)?.takeIf { it.items.size >= 2 }
+            else -> null
+        }
     }.value
     var useDraft by remember { mutableStateOf(false) }
     if (showShake) {
@@ -373,7 +379,10 @@ fun AddFoodScreen(
                     // Typed what's in it: show how it was read and open the builder filled in.
                 if (mixDraft != null) {
                     PlateCard(Modifier.padding(top = 12.dp).clickable { useDraft = true; showShake = true }, padding = 14.dp) {
-                        Text("Sounds homemade. I read:", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (mixDraft.dish != null) "Build your pizza: size, crust, toppings, slices" else "Sounds homemade. I read:",
+                            style = MaterialTheme.typography.titleSmall,
+                        )
                         mixDraft.items.forEach { i ->
                             Text(
                                 "• ${i.label}, ${if (i.isBase && i.ml != null) "${i.ml.roundToInt()} ml" else "${i.grams.roundToInt()} g"}",

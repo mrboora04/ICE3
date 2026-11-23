@@ -227,7 +227,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun shakeBuilder() = shot("shake_builder") {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
         val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
         foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
@@ -237,7 +237,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun shakeFromText() = shot("shake_from_text") {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
         val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
         foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
@@ -251,7 +251,7 @@ class ScreenshotTest {
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun pizzaFromText() = shot("pizza_from_text") {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
         val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap()
         val draft = com.mrboora.plate.data.MixParser.parse("party size cheese pizza with paneer topping with onion", foods) { cnf.search(it, 1).firstOrNull() }
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)

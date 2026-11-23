@@ -1,9 +1,10 @@
 {
-  "versionCode": 33,
-  "versionName": "2.10.1",
+  "versionCode": 34,
+  "versionName": "2.11.0",
   "notes": [
-    "Pizza builder: the pizza row now always matches the size you picked (\"Whole party pizza · 1745 g\")",
-    "Its quick buttons follow your size too, with a note that slices set how much you ate"
+    "Just type \"pizza\" to open the pizza builder (\"juice\" opens the shake builder too)",
+    "Toppings are tap only: Plate uses a rough amount for your pizza's size, no weighing",
+    "Pick the crust (regular, thin or thick); the pizza's numbers include the crust, sauce and cheese"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

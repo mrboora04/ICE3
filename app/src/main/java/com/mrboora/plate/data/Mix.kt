@@ -87,6 +87,18 @@ object Mix {
     )
     val PIZZA_DEFAULT = PIZZA_SIZES[1]
 
+    /**
+     * The crust: Health Canada's numbers are for the whole pizza (crust, sauce and cheese together).
+     * A thin crust pizza is lighter: 556 g for 14" instead of 853 g.
+     */
+    data class Crust(val label: String, val words: List<String>, val food: String, val weight: Float)
+    val CRUSTS = listOf(
+        Crust("Regular", listOf("regular", "hand tossed", "hand-tossed", "classic"), PIZZA, 1f),
+        Crust("Thin", listOf("thin", "thin crust", "crispy"), "Pizza, cheese, thin crust, frozen, cooked", 556f / 853f),
+        Crust("Thick", listOf("thick", "rising", "deep dish", "pan", "stuffed"), "Pizza, cheese, rising crust, frozen, cooked", 1f),
+    )
+    val CRUST_FOODS: Set<String> get() = CRUSTS.map { it.food }.toSet()
+
     /** Toppings: label → food name (Health Canada, or Plate's own list for paneer). */
     val TOPPINGS = listOf(
         "Paneer" to "Paneer",
@@ -180,5 +192,5 @@ object Mix {
     }
 
     /** True when a request is for a homemade shake or smoothie, which the builder makes. */
-    fun isShake(text: String): Boolean = Regex("""\b(shake|smoothie|smoothy|milkshake|lassi)s?\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)
+    fun isShake(text: String): Boolean = Regex("""\b(shake|smoothie|smoothy|milkshake|lassi|juice)s?\b""", RegexOption.IGNORE_CASE).containsMatchIn(text)
 }

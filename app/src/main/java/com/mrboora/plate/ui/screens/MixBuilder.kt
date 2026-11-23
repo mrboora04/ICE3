@@ -32,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,6 +94,9 @@ fun ShakeBuilder(
     var size by remember { mutableStateOf(draft?.dish?.size ?: Mix.PIZZA_DEFAULT) }
     var slices by remember { mutableStateOf(draft?.dish?.size?.slices ?: 8) }
     var ate by remember { mutableStateOf(1) }
+    var crust by remember { mutableStateOf(draft?.dish?.crust ?: Mix.CRUSTS.first()) }
+    // Pizza toppings are a rough amount by size; the exact grams stay tucked away unless asked for.
+    var showAmounts by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var nameEdited by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -122,8 +126,9 @@ fun ShakeBuilder(
         if (baseFood != null && ml != null && ml > 0f) add(Mix.Part(baseFood, Mix.mlToGrams(baseFood, ml)))
     }
     val auto = if (dishMode) {
-        val tops = rows.filter { it.food.name != Mix.PIZZA }.map { it.label.lowercase() }
-        "${size.label} cheese pizza" + if (tops.isEmpty()) "" else " with " + tops.joinToString(" & ")
+        val tops = rows.filter { it.food.name !in Mix.CRUST_FOODS }.map { it.label.lowercase() }
+        "${size.label} ${if (crust.label == "Regular") "" else crust.label.lowercase() + " crust "}cheese pizza" +
+            if (tops.isEmpty()) "" else " with " + tops.joinToString(" & ")
     } else Mix.shakeName(rows.map { it.label })
     val shownName = if (nameEdited) name else auto
     val t = Mix.totals(parts)
@@ -147,7 +152,20 @@ fun ShakeBuilder(
             }
             Spacer(Modifier.height(12.dp))
             // How the typed text was read, step by step, so it can be checked.
-            if (draft != null) {
+            if (draft?.dish != null) {
+                // Pizza: one plain line is enough; no grams to check.
+                val tops = draft.parts.filter { it.food.name !in Mix.CRUST_FOODS }.map { it.label.lowercase() }
+                PlateCard(padding = 14.dp) {
+                    Eyebrow("I read")
+                    Text(
+                        "${draft.dish.size.label} pizza, ${draft.dish.crust.label.lowercase()} crust" +
+                            (if (tops.isEmpty()) "" else " with " + tops.joinToString(" and ")) + ".",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    draft.unknown.forEach { u -> Text("“$u”: not found", style = MaterialTheme.typography.bodySmall, color = c.over) }
+                }
+                Spacer(Modifier.height(12.dp))
+            } else if (draft != null) {
                 PlateCard(padding = 14.dp) {
                     Eyebrow("How I read it")
                     Spacer(Modifier.height(6.dp))
@@ -177,13 +195,33 @@ fun ShakeBuilder(
                                 val ratio = s.grams / size.grams
                                 rows.forEach { r -> r.value?.let { r.grams = g(it * ratio) } }
                                 size = s; slices = s.slices; if (ate > s.slices) ate = s.slices
+                                rows.firstOrNull { it.food.name in Mix.CRUST_FOODS }?.grams = g(s.grams * crust.weight)
                             }, label = { Text(s.label) })
                         }
                     }
                     Text(size.note, style = MaterialTheme.typography.bodySmall, color = c.muted)
+                    Spacer(Modifier.height(10.dp))
+                    // The bread: Health Canada's pizza numbers include crust, sauce and cheese.
+                    Eyebrow("Crust")
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Mix.CRUSTS.forEach { k ->
+                            val food = foods[k.food] ?: return@forEach
+                            FilterChip(crust == k, {
+                                crust = k
+                                val i = rows.indexOfFirst { it.food.name in Mix.CRUST_FOODS }
+                                val row = MixRow("Pizza", food, g(size.grams * k.weight))
+                                if (i >= 0) rows[i] = row else rows.add(0, row)
+                            }, label = { Text(k.label) })
+                        }
+                    }
+                    Text(
+                        "The pizza's numbers already include the crust (wheat dough), tomato sauce and cheese" +
+                            if (crust.weight != 1f) "; thin crust weighs about 35% less." else ".",
+                        style = MaterialTheme.typography.bodySmall, color = c.muted,
+                    )
                     Spacer(Modifier.height(14.dp))
                 }
-                Eyebrow(if (dishMode) "1 · Pizza and toppings" else "1 · Fruit and extras")
+                Eyebrow(if (dishMode) "Toppings" else "1 · Fruit and extras")
                 Spacer(Modifier.height(6.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     (if (dishMode) Mix.TOPPINGS else Mix.FRUITS + Mix.EXTRAS).forEach { (label, key) ->
@@ -195,7 +233,16 @@ fun ShakeBuilder(
                         }, label = { Text(label) })
                     }
                 }
-                OutlinedTextField(
+                if (dishMode) {
+                    val tops = rows.filter { it.food.name !in Mix.CRUST_FOODS && it.value != null }
+                    Text(
+                        if (tops.isEmpty()) "Tap the toppings on it. No need to weigh: Plate uses a usual amount for a ${size.label.lowercase()} pizza."
+                        else "Rough amounts for a ${size.label.lowercase()} pizza: " + tops.joinToString(", ") { "${it.label.lowercase()} ≈ ${it.grams} g" } + ".",
+                        style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
+                    )
+                    TextButton({ showAmounts = !showAmounts }) { Text(if (showAmounts) "Hide amounts" else "Adjust amounts") }
+                }
+                if (!dishMode || showAmounts) OutlinedTextField(
                     query, { query = it }, singleLine = true, label = { Text("Something else? Search any food") },
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 )
@@ -210,12 +257,12 @@ fun ShakeBuilder(
                         }.padding(vertical = 8.dp),
                     )
                 }
-                rows.forEach { r ->
+                if (!dishMode || showAmounts) rows.forEach { r ->
                     // The pizza row always follows the size picked above, and says what its grams mean.
-                    val isPizza = dishMode && r.food.name == Mix.PIZZA
+                    val isPizza = dishMode && r.food.name in Mix.CRUST_FOODS
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (isPizza) "Whole ${size.label.lowercase()} pizza" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(if (isPizza) "Whole ${size.label.lowercase()} pizza (crust, sauce, cheese)" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                         OutlinedTextField(
                             r.grams, { r.grams = it }, singleLine = true, suffix = { Text("g") }, isError = r.value == null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(110.dp),
@@ -262,7 +309,8 @@ fun ShakeBuilder(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     parts.forEach { p ->
                         MenuLine(
-                            "${p.food.name.substringBefore(',')} ${g(p.grams)} g × ${p.food.kcal100.roundToInt()}/100 g",
+                            (if (p.food.name in Mix.CRUST_FOODS) "Pizza" else p.food.name.substringBefore(',')) +
+                                " ${g(p.grams)} g × ${p.food.kcal100.roundToInt()}/100 g",
                             "%,d".format(p.kcal.roundToInt()), unit = "KCAL", nameStyle = MaterialTheme.typography.bodyMedium, numberStyle = num,
                         )
                     }

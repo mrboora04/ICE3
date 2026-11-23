@@ -16,7 +16,7 @@ class MixParserTest {
     fun readsAHomemadeMixWrittenInPlainEnglish() {
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cnf = CanadianFoods(ctx)
-        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.PIZZA
+        val names = (com.mrboora.plate.data.Mix.FRUITS + com.mrboora.plate.data.Mix.EXTRAS + com.mrboora.plate.data.Mix.BASES + com.mrboora.plate.data.Mix.TOPPINGS).map { it.second } + com.mrboora.plate.data.Mix.BERRY_PARTS + com.mrboora.plate.data.Mix.CRUST_FOODS
         val foods = names.mapNotNull { n -> (cnf.byName(n) ?: com.mrboora.plate.data.FoodCatalog.foods.firstOrNull { it.name == n })?.let { n to it } }.toMap().toMutableMap()
         foods[com.mrboora.plate.data.Mix.MIXED_BERRIES] = com.mrboora.plate.data.Mix.mixedBerries(com.mrboora.plate.data.Mix.BERRY_PARTS.mapNotNull { foods[it] })!!
         foods[com.mrboora.plate.data.Mix.WATER] = com.mrboora.plate.data.Mix.water
@@ -50,7 +50,8 @@ class MixParserTest {
         val p = com.mrboora.plate.data.MixParser.parse(pz, foods, search)
         assertEquals("Party", p.dish!!.size.label)
         assertEquals(24, p.dish!!.size.slices)
-        assertEquals(listOf("Cheese pizza, party", "Paneer", "Onion"), p.items.map { it.label })
+        assertEquals(listOf("Pizza", "Paneer", "Onion"), p.items.map { it.label })
+        assertEquals("Regular", p.dish!!.crust.label)
         assertEquals(1745f, p.items[0].grams, 0.5f)
         assertEquals(195f, p.items[1].grams, 0.5f)   // 70 g on a medium × 1745/627, to the nearest 5 g
         assertEquals(110f, p.items[2].grams, 0.5f)   // 40 g × 1745/627
@@ -58,5 +59,12 @@ class MixParserTest {
         assertEquals("X-Large", com.mrboora.plate.data.MixParser.pizzaSize("extra large pizza with corn")!!.label)
         assertEquals("Large", com.mrboora.plate.data.MixParser.pizzaSize("14 inch pizza with onion")!!.label)
         assertEquals("Medium", com.mrboora.plate.data.MixParser.pizzaSize("cheese pizza with mushrooms")!!.label)
+        // Crust: thin is lighter (556 g for 14" instead of 853 g); "pizza" alone is a pizza.
+        val thin = com.mrboora.plate.data.MixParser.parse("large thin crust pizza with corn", foods, search)
+        assertEquals("Thin", thin.dish!!.crust.label)
+        assertEquals(556f, thin.items[0].grams, 1f)
+        assertEquals("Pizza, cheese, thin crust, frozen, cooked", thin.items[0].food.name)
+        assertEquals(1, com.mrboora.plate.data.MixParser.parse("pizza", foods, search).items.size)
+        assertTrue(com.mrboora.plate.data.Mix.isShake("orange juice with ginger"))
     }
 }

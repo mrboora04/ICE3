@@ -93,3 +93,9 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
   - With no amount given, a usual amount scaled by size: on a medium, 70 g for paneer, chicken or cheese and 40 g for vegetables.
   - Changing the size rescales the pizza and its toppings.
 - **The screen**: PIZZA BUILDER with size chips, topping chips, "Cut into N slices", "I ate N slices", and save logs that many slices.
+
+## Pizza, simpler (2.11)
+
+- Typing "pizza" alone offers the builder. "Juice" counts as a shake.
+- **Crust**: regular, thin or thick (Health Canada has all three; a thin 14″ pizza is 556 g vs 853 g). The numbers are for the whole pizza: crust (wheat dough), sauce and cheese.
+- **Toppings** are tap only, with a rough amount by size shown in one line. The grams are behind "Adjust amounts". "How I read it" is a single line for pizza.

@@ -36,7 +36,7 @@ object MixParser {
     )
 
     /** A dish such as a pizza: its size, and how many slices it's cut into. */
-    data class Dish(val size: Mix.Size)
+    data class Dish(val size: Mix.Size, val crust: Mix.Crust = Mix.CRUSTS.first())
 
     data class Draft(val items: List<Item>, val unknown: List<String>, val dish: Dish? = null) {
         /** The base is the liquid there's most of; any other milk, yogurt or drink is an ingredient. */
@@ -117,6 +117,13 @@ object MixParser {
         return byWord.firstOrNull { (w, _) -> Regex("""\b$w\b""").containsMatchIn(t) }?.second ?: Mix.PIZZA_DEFAULT
     }
 
+    /** Thin, thick or regular crust; regular if not said. */
+    fun pizzaCrust(text: String): Mix.Crust {
+        val t = clean(text)
+        val byWord = Mix.CRUSTS.flatMap { c -> c.words.map { it to c } }.sortedByDescending { it.first.length }
+        return byWord.firstOrNull { (w, _) -> Regex("""\b${Regex.escape(w)}\b""").containsMatchIn(t) }?.second ?: Mix.CRUSTS.first()
+    }
+
     private val STOP = setOf(
         "topping", "toppings", "size", "slices", "slice", "topped",
         "around", "about", "approx", "approximately", "roughly", "some", "of", "the", "blend", "blended", "mix",
@@ -150,6 +157,7 @@ object MixParser {
     fun parse(text: String, foods: Map<String, FoodItem>, search: (String) -> FoodItem?): Draft {
         val labels = (Mix.FRUITS + Mix.EXTRAS + Mix.BASES + Mix.TOPPINGS).toMap()
         val pizza = pizzaSize(text)
+        val crust = pizzaCrust(text)
         val toppingLabels = Mix.TOPPINGS.map { it.first }.toSet()
         val baseLabels = Mix.BASES.map { it.first }.toSet()
         val items = mutableListOf<Item>()
@@ -176,12 +184,16 @@ object MixParser {
 
             // The pizza itself: its whole weight from its size.
             if (pizza != null && PIZZA.containsMatchIn(piece)) {
-                val food = foods[Mix.PIZZA]
+                val food = foods[crust.food] ?: foods[Mix.PIZZA]
                 if (food == null) { unknown += raw.trim(); continue }
                 val n = (count ?: qty)?.takeIf { it in 1f..10f } ?: 1f
+                val grams = pizza.grams * crust.weight
                 items += Item(
-                    "Cheese pizza, ${pizza.label.lowercase()}", food, pizza.grams * n, null, false,
-                    "${pizza.note} = ${fmt(pizza.grams)} g" + if (n != 1f) " × ${fmt(n)} pizzas" else "",
+                    "Pizza", food, grams * n, null, false,
+                    "${pizza.label.lowercase()} ${crust.label.lowercase()} crust, ${pizza.note}" +
+                        (if (crust.weight != 1f) " × ${"%.2f".format(crust.weight)} thin" else "") +
+                        " = ${fmt(grams.roundToInt().toFloat())} g, crust, sauce and cheese together" +
+                        if (n != 1f) " × ${fmt(n)} pizzas" else "",
                 )
                 continue
             }
@@ -251,6 +263,6 @@ object MixParser {
             val ml = if (isBase) grams / density else null
             items += Item(label!!, food, grams, ml, isBase, how)
         }
-        return Draft(items, unknown, pizza?.let { Dish(it) })
+        return Draft(items, unknown, pizza?.let { Dish(it, crust) })
     }
 }
