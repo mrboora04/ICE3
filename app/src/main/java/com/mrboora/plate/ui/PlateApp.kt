@@ -182,6 +182,28 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     )
     if (comparing) com.mrboora.plate.ui.components.SelfieCompare(selfieDays, selfieVersion) { comparing = false }
 
+    // Long-press shortcuts on the Plate icon.
+    var openWeightLog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val shortcut by com.mrboora.plate.MainActivity.shortcut
+    androidx.compose.runtime.LaunchedEffect(shortcut) {
+        val s = shortcut ?: return@LaunchedEffect
+        com.mrboora.plate.MainActivity.shortcut.value = null
+        vm.goToToday()
+        when (s) {
+            com.mrboora.plate.widget.Shortcuts.WATER -> {
+                val c = waterContainers.first()
+                vm.addWater(c.ml)
+                snackbar.showSnackbar("Added ${c.name.lowercase()}: ${c.ml} ml", withDismissAction = true)
+            }
+            com.mrboora.plate.widget.Shortcuts.FOOD -> nav.navigate("add/${Meal.forNow().name}")
+            com.mrboora.plate.widget.Shortcuts.SELFIE -> takers.takePhoto()
+            com.mrboora.plate.widget.Shortcuts.WEIGHT -> {
+                openWeightLog = true
+                nav.navigate(Tab.PROGRESS.route) { launchSingleTop = true }
+            }
+        }
+    }
+
     /** Saves the request (so we can notify when it's added) and opens a pre-filled email. */
     fun sendRequest(restaurant: String, item: String) {
         vm.saveRequest(restaurant, item)
@@ -271,8 +293,11 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                 )
             }
             composable(Tab.PROGRESS.route) {
+                // The weight dialog opens once from the shortcut, then the flag is cleared.
+                androidx.compose.runtime.LaunchedEffect(Unit) { openWeightLog = false }
                 ProgressScreen(
                     profile, targets, weights, history, content, vm::logWeight, vm::deleteWeight,
+                    startLogging = openWeightLog,
                     selfies = {
                         com.mrboora.plate.ui.components.SelfieProgressCard(
                             selfieDays,

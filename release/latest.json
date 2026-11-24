@@ -1,10 +1,10 @@
 {
-  "versionCode": 37,
-  "versionName": "2.12.2",
+  "versionCode": 38,
+  "versionName": "2.13.0",
   "notes": [
-    "Coffee like Tim's: sugar and cream follow the cup size, 1 for small, 2 for regular, 3 for big",
-    "Type \"double double\" or \"triple triple\" and Plate adds the creams and sugars, sized to your cup",
-    "\"Black coffee\" is just coffee: no milk, no sugar"
+    "Home-screen widgets: Water (add your bottle in one tap without opening Plate) and Today (kcal left + water)",
+    "Long-press the Plate icon: + your bottle, Add food, Selfie of the day, Log weight",
+    "Widgets follow your phone's light or dark mode and show nothing private"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

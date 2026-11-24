@@ -115,3 +115,10 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 - A bare trigger word starts the usual recipe.
 - The maths shows each chip's own name ("Sugar", not "Sweets, sugars, granulated").
 - Add food has a chip for each builder.
+
+## Widgets and shortcuts (2.13)
+
+- **Plate · Water (2 × 1):** water so far / goal, a bar, and the user's first container plus half of it (e.g. "+ Bottle 500", "½ Bottle"). One tap adds water without opening the app.
+- **Plate · Today (2 × 2):** the kcal-left ring (drawn as a bitmap, since widgets can't draw shapes), water, and the same buttons.
+- Built with Jetpack Glance. They follow the phone's light/dark mode in Plate's palette and show nothing private. They refresh when the app logs food or water, and every 30 minutes for the new day.
+- **Long-press shortcuts:** "+ Bottle 500 ml" (named after the user's own container), Add food, Selfie of the day, Log weight.

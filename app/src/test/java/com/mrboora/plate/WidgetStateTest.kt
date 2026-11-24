@@ -1,0 +1,45 @@
+package com.mrboora.plate
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.mrboora.plate.data.Activity
+import com.mrboora.plate.data.FoodEntry
+import com.mrboora.plate.data.Goal
+import com.mrboora.plate.data.Meal
+import com.mrboora.plate.data.Nutrition
+import com.mrboora.plate.data.PlateDatabase
+import com.mrboora.plate.data.Profile
+import com.mrboora.plate.data.Sex
+import com.mrboora.plate.data.Water
+import com.mrboora.plate.data.WaterContainers
+import com.mrboora.plate.widget.loadState
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
+
+/** The widgets show the same numbers as the app: water, kcal left, and the user's own buttons. */
+@RunWith(RobolectricTestRunner::class)
+class WidgetStateTest {
+    @Test
+    fun widgetReadsTodaysNumbers() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val dao = PlateDatabase.get(ctx).dao()
+        val p = Profile(name = "V", sex = Sex.MALE, age = 22, heightCm = 180f, weightKg = 110f, goalWeightKg = 85f,
+            activity = Activity.LIGHT, goal = Goal.LOSE, paceKgPerWeek = 0.75f, waterGoalMl = 3000)
+        dao.saveProfile(p)
+        val day = LocalDate.now().toEpochDay()
+        dao.saveWater(Water(day, 1250))
+        dao.addEntry(FoodEntry(day = day, meal = Meal.LUNCH, name = "Poha", brand = "", grams = 200f, kcal = 260f, protein = 5f, carbs = 46f, fat = 6f))
+        WaterContainers.save(ctx, listOf(WaterContainers.Container("Bottle", 500)))
+
+        val s = loadState(ctx)
+        assertEquals(1250, s.waterMl)
+        assertEquals(3000, s.waterGoal)
+        assertEquals(Nutrition.targets(p).kcal - 260, s.kcalLeft)
+        // Your bottle, then half of it.
+        assertEquals(listOf("Bottle" to 500, "½ Bottle" to 250), s.buttons.map { it.name to it.ml })
+    }
+}

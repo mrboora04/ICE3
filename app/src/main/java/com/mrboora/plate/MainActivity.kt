@@ -13,12 +13,24 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         com.mrboora.plate.data.MenuUpdates.schedule(this)
         takeUpdateRequest(intent)
+        takeShortcut(intent)
+        com.mrboora.plate.widget.Shortcuts.publish(this)
         setContent { PlateTheme { PlateApp() } }
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         takeUpdateRequest(intent)
+        takeShortcut(intent)
+    }
+
+    /** Opened from a long-press shortcut: the app acts on it once it's ready. */
+    private fun takeShortcut(intent: android.content.Intent?) {
+        val a = intent?.action ?: return
+        if (a.startsWith("com.mrboora.plate.shortcut.")) {
+            shortcut.value = a
+            intent.action = android.content.Intent.ACTION_MAIN
+        }
     }
 
     /** Opened from the update notification: the app starts the download as soon as it knows the version. */
@@ -31,5 +43,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         val updateRequested = androidx.compose.runtime.mutableStateOf(false)
+        val shortcut = androidx.compose.runtime.mutableStateOf<String?>(null)
     }
 }

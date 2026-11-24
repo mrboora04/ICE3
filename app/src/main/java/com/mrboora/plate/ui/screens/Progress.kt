@@ -105,9 +105,11 @@ fun ProgressScreen(
     onOpenDay: (Long) -> Unit = {},
     /** Selfie compare card; empty to leave it out. */
     selfies: @Composable () -> Unit = {},
+    /** Opened from the "Log weight" shortcut: show the weight dialog straight away. */
+    startLogging: Boolean = false,
 ) {
     val c = Plate.colors
-    var logging by remember { mutableStateOf(false) }
+    var logging by remember { mutableStateOf(startLogging) }
     var weightOpen by rememberSaveable { mutableStateOf(false) }
     var shown by rememberSaveable { mutableStateOf(14) }
     val byDay = remember(history) { history.associateBy { it.day } }

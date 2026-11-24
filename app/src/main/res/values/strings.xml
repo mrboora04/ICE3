@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Plate</string>
+    <string name="widget_water_description">Today\'s water, with one tap for your bottle or glass</string>
+    <string name="widget_today_description">Calories left today and your water</string>
 </resources>

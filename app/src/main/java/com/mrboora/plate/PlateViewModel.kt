@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -237,11 +238,16 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         dao.saveFood(food.toSaved(custom = existing?.custom == true || food.source == FoodItem.Source.CUSTOM))
     }
 
+    /** Redraws the home-screen widgets. */
+    private fun refreshWidgets() = viewModelScope.launch { com.mrboora.plate.widget.PlateWidgets.updateAll(getApplication()) }
+
     private val _waterContainers = MutableStateFlow(com.mrboora.plate.data.WaterContainers.load(app))
     val waterContainers: StateFlow<List<com.mrboora.plate.data.WaterContainers.Container>> = _waterContainers
     fun saveWaterContainers(list: List<com.mrboora.plate.data.WaterContainers.Container>) {
         com.mrboora.plate.data.WaterContainers.save(getApplication(), list)
         _waterContainers.value = com.mrboora.plate.data.WaterContainers.load(getApplication())
+        com.mrboora.plate.widget.Shortcuts.publish(getApplication())
+        refreshWidgets()
     }
 
     fun addWater(deltaMl: Int) = viewModelScope.launch {
@@ -317,6 +323,12 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     // Declared after the selfie state above, so it exists when this runs.
     init {
         refreshSelfies()
+        // Whenever today's food or water changes in the app, the home-screen widgets follow.
+        viewModelScope.launch {
+            combine(dao.entries(today()), dao.water(today())) { e, w -> e.sumOf { it.kcal.toDouble() } to (w?.ml ?: 0) }
+                .distinctUntilChanged()
+                .collect { com.mrboora.plate.widget.PlateWidgets.updateAll(getApplication()) }
+        }
     }
 
     private fun FoodItem.toSaved(custom: Boolean) = SavedFood(
