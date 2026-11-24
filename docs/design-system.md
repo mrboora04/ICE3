@@ -118,7 +118,7 @@ for sentences. Colours come only from `PlateColors`. The ribbon uses `dayOver` (
 
 ## Widgets and shortcuts (2.13)
 
-- **Plate · Water (2 × 1):** water so far / goal, a bar, and the user's first container plus half of it (e.g. "+ Bottle 500", "½ Bottle"). One tap adds water without opening the app.
+- **Plate · Water (2 × 1):** water so far / goal, a bar, and the first two of the water buttons (one shared list, `WaterContainers.buttons`, used by the water card, both widgets and the shortcut). One tap adds water without opening the app.
 - **Plate · Today (2 × 2):** the kcal-left ring (drawn as a bitmap, since widgets can't draw shapes), water, and the same buttons.
 - Built with Jetpack Glance. They follow the phone's light/dark mode in Plate's palette and show nothing private. They refresh when the app logs food or water, and every 30 minutes for the new day.
 - **Long-press shortcuts:** "+ Bottle 500 ml" (named after the user's own container), Add food, Selfie of the day, Log weight.

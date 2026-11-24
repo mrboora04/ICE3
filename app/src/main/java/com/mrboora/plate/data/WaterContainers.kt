@@ -43,4 +43,19 @@ object WaterContainers {
 
     /** "½ Bottle" helpers for containers big enough that people often drink part of one. */
     fun halves(list: List<Container>): List<Container> = list.filter { it.ml >= 500 }.map { Container("½ ${it.name}", it.ml / 2) }
+
+    /** A water button: what it says, how much it adds, and whether it's a whole container (filled) or a half (outlined). */
+    data class Button(val label: String, val ml: Int, val whole: Boolean)
+
+    /**
+     * The one list of water buttons, in order, used everywhere: the water card in the app, the
+     * home-screen widgets and the long-press shortcut. Whole containers first, then halves.
+     * Places with less room show the first few, in this same order.
+     */
+    fun buttons(list: List<Container>): List<Button> =
+        list.map { Button("+ ${it.name} ${it.ml} ml", it.ml, whole = true) } +
+            halves(list).map { Button(it.name, it.ml, whole = false) }
+
+    /** The saved containers' buttons. */
+    fun buttons(c: Context): List<Button> = buttons(load(c))
 }

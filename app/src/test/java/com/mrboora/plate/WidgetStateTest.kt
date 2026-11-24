@@ -39,7 +39,8 @@ class WidgetStateTest {
         assertEquals(1250, s.waterMl)
         assertEquals(3000, s.waterGoal)
         assertEquals(Nutrition.targets(p).kcal - 260, s.kcalLeft)
-        // Your bottle, then half of it.
-        assertEquals(listOf("Bottle" to 500, "½ Bottle" to 250), s.buttons.map { it.name to it.ml })
+        // The widget shows the first of the app's own buttons, from the same list.
+        assertEquals(WaterContainers.buttons(ctx).take(2), s.buttons)
+        assertEquals(listOf("+ Bottle 500 ml" to 500, "½ Bottle" to 250), s.buttons.map { it.label to it.ml })
     }
 }

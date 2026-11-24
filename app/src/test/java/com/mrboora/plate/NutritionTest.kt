@@ -378,6 +378,8 @@ class NutritionTest {
         assertEquals(listOf("½ Bottle" to 250), W.halves(list).map { it.name to it.ml })
         assertTrue(W.decode("junk|:12|x:99999").isEmpty())
         assertEquals(listOf(250, 500), W.defaults.map { it.ml })
+        // One list of buttons for the app and the widgets: whole containers, then halves.
+        assertEquals(listOf("+ Glass 250 ml", "+ Bottle 500 ml", "½ Bottle"), W.buttons(W.defaults).map { it.label })
     }
 }
 

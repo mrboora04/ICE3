@@ -1,10 +1,9 @@
 {
-  "versionCode": 38,
-  "versionName": "2.13.0",
+  "versionCode": 39,
+  "versionName": "2.13.1",
   "notes": [
-    "Home-screen widgets: Water (add your bottle in one tap without opening Plate) and Today (kcal left + water)",
-    "Long-press the Plate icon: + your bottle, Add food, Selfie of the day, Log weight",
-    "Widgets follow your phone's light or dark mode and show nothing private"
+    "Water buttons are now one set shared by the app, the widgets and the long-press shortcut",
+    "Change your bottle or glass once in Edit and every place updates the same way"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

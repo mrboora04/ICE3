@@ -191,9 +191,9 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
         vm.goToToday()
         when (s) {
             com.mrboora.plate.widget.Shortcuts.WATER -> {
-                val c = waterContainers.first()
-                vm.addWater(c.ml)
-                snackbar.showSnackbar("Added ${c.name.lowercase()}: ${c.ml} ml", withDismissAction = true)
+                val b = com.mrboora.plate.data.WaterContainers.buttons(waterContainers).first()
+                vm.addWater(b.ml)
+                snackbar.showSnackbar("Added ${b.ml} ml of water", withDismissAction = true)
             }
             com.mrboora.plate.widget.Shortcuts.FOOD -> nav.navigate("add/${Meal.forNow().name}")
             com.mrboora.plate.widget.Shortcuts.SELFIE -> takers.takePhoto()

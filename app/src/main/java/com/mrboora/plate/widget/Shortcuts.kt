@@ -20,14 +20,14 @@ object Shortcuts {
     const val WEIGHT = "com.mrboora.plate.shortcut.WEIGHT"
 
     fun publish(context: Context) {
-        val first = WaterContainers.load(context).first()
+        val first = WaterContainers.buttons(context).first()
         val icon = IconCompat.createWithResource(context, R.mipmap.ic_launcher)
         fun make(id: String, short: String, long: String) = ShortcutInfoCompat.Builder(context, id)
             .setShortLabel(short).setLongLabel(long).setIcon(icon)
             .setIntent(Intent(context, MainActivity::class.java).setAction(id).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
             .build()
         val list = listOf(
-            make(WATER, "+ ${first.name} ${first.ml} ml", "Add ${first.ml} ml of water"),
+            make(WATER, first.label, "Add ${first.ml} ml of water"),
             make(FOOD, "Add food", "Add food"),
             make(SELFIE, "Selfie of the day", "Take today's selfie"),
             make(WEIGHT, "Log weight", "Log today's weight"),

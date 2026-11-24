@@ -73,7 +73,8 @@ internal data class WidgetState(
     val waterGoal: Int,
     val kcalLeft: Int?,
     val kcalTarget: Int?,
-    val buttons: List<WaterContainers.Container>,
+    /** The first two of the app's own water buttons (the same list as the water card). */
+    val buttons: List<WaterContainers.Button>,
 )
 
 internal suspend fun loadState(context: Context): WidgetState {
@@ -84,14 +85,10 @@ internal suspend fun loadState(context: Context): WidgetState {
     val latest = dao.weights().first().lastOrNull()?.kg
     val targets = profile?.let { Nutrition.targets(if (latest != null) it.copy(weightKg = latest) else it) }
     val eaten = dao.entries(day).first().sumOf { it.kcal.toDouble() }.roundToInt()
-    val containers = WaterContainers.load(context)
-    // The first container, and half of it when it's a bottle; else the first two containers.
-    val first = containers.first()
-    val second = WaterContainers.halves(listOf(first)).firstOrNull() ?: containers.getOrNull(1)
     return WidgetState(
         waterMl = water, waterGoal = profile?.waterGoalMl ?: 2000,
         kcalLeft = targets?.let { it.kcal - eaten }, kcalTarget = targets?.kcal,
-        buttons = listOfNotNull(first, second),
+        buttons = WaterContainers.buttons(context).take(2),
     )
 }
 
@@ -138,7 +135,7 @@ private fun WaterButtons(s: WidgetState, height: Dp) {
     Row(GlanceModifier.fillMaxWidth()) {
         s.buttons.forEachIndexed { i, c ->
             if (i > 0) Spacer(GlanceModifier.width(8.dp))
-            val outlined = i > 0
+            val outlined = !c.whole
             Box(
                 GlanceModifier.defaultWeight().height(height).cornerRadius(height / 2)
                     .background(if (outlined) Card else Track)
@@ -147,7 +144,7 @@ private fun WaterButtons(s: WidgetState, height: Dp) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    if (outlined) c.name else "+ ${c.name} ${c.ml}",
+                    c.label,
                     style = TextStyle(color = if (outlined) Accent else Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold),
                     maxLines = 1,
                 )

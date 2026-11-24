@@ -259,14 +259,13 @@ private fun WaterCard(
         Spacer(Modifier.height(10.dp))
         // One tap per container: your bottle, your glass…
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            containers.forEach { k ->
-                androidx.compose.material3.FilledTonalButton({ add(k.ml) }, contentPadding = PaddingValues(horizontal = 14.dp)) {
-                    Icon(Icons.Rounded.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp))
-                    Text("${k.name} ${k.ml} ml")
+            // The same buttons as the home-screen widgets: one list, saved once (WaterContainers.buttons).
+            com.mrboora.plate.data.WaterContainers.buttons(containers).forEach { b ->
+                if (b.whole) {
+                    androidx.compose.material3.FilledTonalButton({ add(b.ml) }, contentPadding = PaddingValues(horizontal = 14.dp)) { Text(b.label) }
+                } else {
+                    androidx.compose.material3.OutlinedButton({ add(b.ml) }, contentPadding = PaddingValues(horizontal = 12.dp)) { Text(b.label) }
                 }
-            }
-            com.mrboora.plate.data.WaterContainers.halves(containers).forEach { k ->
-                androidx.compose.material3.OutlinedButton({ add(k.ml) }, contentPadding = PaddingValues(horizontal = 12.dp)) { Text(k.name) }
             }
             TextButton({ editing = true }) { Text("Edit") }
         }
