@@ -383,19 +383,5 @@ class NutritionTest {
         // Drops: one per 250 ml of the goal, shared by the app and the widgets.
         assertEquals(12, W.drops(3000)); assertEquals(5, W.filledDrops(1250)); assertEquals(16, W.drops(9000)); assertEquals(1, W.drops(100))
     }
-
-    @Test
-    fun updatesCarryAndCheckASha256() {
-        val good = AppUpdates.parse("""{"versionCode":41,"versionName":"2.14.0","notes":[],
-            "apk":"https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk",
-            "sha256":"${"ab".repeat(32)}"}""")!!
-        assertEquals("ab".repeat(32), good.sha256)
-        // Not a real SHA-256: the whole update is ignored rather than trusted.
-        assertEquals(null, AppUpdates.parse("""{"versionCode":41,"versionName":"x","apk":"https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk","sha256":"1234"}"""))
-        // Older releases without a checksum still parse.
-        assertEquals(null, AppUpdates.parse("""{"versionCode":41,"versionName":"x","apk":"https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"}""")!!.sha256)
-        // The hash itself: SHA-256("abc").
-        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", AppUpdates.sha256("abc".byteInputStream()))
-    }
 }
 

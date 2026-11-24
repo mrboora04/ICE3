@@ -36,14 +36,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Checks a finished update download against its published SHA-256. -->
-        <receiver
-            android:name=".data.AppUpdates$DownloadDone"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
-            </intent-filter>
-        </receiver>
         <!-- Home-screen widgets: water (2 × 1) and today (2 × 2). -->
         <receiver
             android:name=".widget.WaterWidgetReceiver"

@@ -82,17 +82,6 @@ fun UpdateCard(info: UpdateInfo, onLater: () -> Unit, modifier: Modifier = Modif
                     TextButton(onLater) { Text("Later") }
                 }
             }
-            DownloadState.Damaged -> {
-                Text(
-                    "The download didn't match the published checksum, so Plate deleted it before it could be installed. Please try again.",
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error,
-                )
-                Spacer(Modifier.height(8.dp))
-                Row {
-                    Button({ AppUpdates.clearDownload(context); state = AppUpdates.oneTap(context, info) }) { Text("Try again") }
-                    TextButton(onLater) { Text("Later") }
-                }
-            }
             DownloadState.None -> Row {
                 Button({ state = AppUpdates.oneTap(context, info) }) { Text("Update now") }
                 TextButton(onLater) { Text("Later") }
