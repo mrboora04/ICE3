@@ -227,8 +227,9 @@ private fun WaterCard(
     modifier: Modifier,
 ) {
     val c = Plate.colors
-    val cups = (goal / 250).coerceIn(1, 16)
-    val filled = ml / 250
+    // Same drops as the home-screen widgets.
+    val cups = com.mrboora.plate.data.WaterContainers.drops(goal)
+    val filled = com.mrboora.plate.data.WaterContainers.filledDrops(ml)
     // − takes off exactly what was last added (a whole bottle, a glass…).
     var last by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(containers.firstOrNull()?.ml ?: 250) }
     var editing by remember { mutableStateOf(false) }

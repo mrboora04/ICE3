@@ -81,6 +81,12 @@ class WidgetRenderTest {
         fun walk(v: View) { if (v.hasOnClickListeners()) clickable += v; if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i)) }
         walk(view)
         assertTrue("$name: expected the two water buttons (and the numbers) to be clickable, found ${clickable.size}", clickable.size >= 3)
+        // All 12 drops (3,000 ml goal) are there: widgets silently drop children past 10 in a row.
+        val images = mutableListOf<View>()
+        fun imgs(v: View) { if (v is android.widget.ImageView) images += v; if (v is ViewGroup) for (i in 0 until v.childCount) imgs(v.getChildAt(i)) }
+        imgs(view)
+        val drops = images.count { (it.width in 1..((26 * d).toInt())) }
+        assertTrue("$name: expected 12 drops, found $drops", drops >= 12)
     }
 
     // Sizes: smallest allowed, default (from the widget info), largest allowed.

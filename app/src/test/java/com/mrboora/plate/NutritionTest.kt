@@ -380,6 +380,8 @@ class NutritionTest {
         assertEquals(listOf(250, 500), W.defaults.map { it.ml })
         // One list of buttons for the app and the widgets: whole containers, then halves.
         assertEquals(listOf("+ Glass 250 ml", "+ Bottle 500 ml", "½ Bottle"), W.buttons(W.defaults).map { it.label })
+        // Drops: one per 250 ml of the goal, shared by the app and the widgets.
+        assertEquals(12, W.drops(3000)); assertEquals(5, W.filledDrops(1250)); assertEquals(16, W.drops(9000)); assertEquals(1, W.drops(100))
     }
 }
 

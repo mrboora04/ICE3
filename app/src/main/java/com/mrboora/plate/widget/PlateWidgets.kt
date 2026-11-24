@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
+import androidx.glance.ColorFilter
 import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -20,7 +21,6 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.components.FilledButton
@@ -49,6 +49,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.mrboora.plate.MainActivity
+import com.mrboora.plate.R
 import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.PlateDatabase
 import com.mrboora.plate.data.Water
@@ -125,12 +126,28 @@ private fun WaterBlock(s: WidgetState, big: Boolean) {
         Text(n(s.waterMl), style = TextStyle(color = Ink, fontSize = if (big) 30.sp else 20.sp, fontWeight = FontWeight.Bold))
         Text(" / ${n(s.waterGoal)} ml", style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Medium))
     }
-    Spacer(GlanceModifier.height(6.dp))
-    LinearProgressIndicator(
-        progress = if (s.waterGoal > 0) (s.waterMl.toFloat() / s.waterGoal).coerceIn(0f, 1f) else 0f,
-        modifier = GlanceModifier.fillMaxWidth().height(8.dp),
-        color = WaterBlue, backgroundColor = Track,
-    )
+    Spacer(GlanceModifier.height(8.dp))
+    // The app's water drops, not a bar: one per 250 ml of the goal, filled blue as you drink.
+    val total = WaterContainers.drops(s.waterGoal)
+    val filled = WaterContainers.filledDrops(s.waterMl)
+    // Widgets show at most 10 items in one row, so the drops sit in two half-rows side by side
+    // (all of them show: up to 16 for big goals).
+    val firstHalf = (total + 1) / 2
+    Row(GlanceModifier.fillMaxWidth()) {
+        listOf(0 until firstHalf, firstHalf until total).forEach { range ->
+            Row(GlanceModifier.defaultWeight()) {
+                range.forEach { i ->
+                    Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) {
+                        Image(
+                            ImageProvider(R.drawable.ic_water_drop), contentDescription = null,
+                            colorFilter = ColorFilter.tint(if (i < filled) WaterBlue else Track),
+                            modifier = GlanceModifier.size(if (big) 20.dp else 18.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

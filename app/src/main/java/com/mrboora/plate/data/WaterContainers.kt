@@ -56,6 +56,10 @@ object WaterContainers {
         list.map { Button("+ ${it.name} ${it.ml} ml", it.ml, whole = true) } +
             halves(list).map { Button(it.name, it.ml, whole = false) }
 
+    /** Drops on the water card and the widgets: one per 250 ml of the goal (1 to 16), filled as you drink. */
+    fun drops(goalMl: Int): Int = (goalMl / 250).coerceIn(1, 16)
+    fun filledDrops(ml: Int): Int = ml / 250
+
     /** The saved containers' buttons. */
     fun buttons(c: Context): List<Button> = buttons(load(c))
 }
