@@ -43,4 +43,18 @@ class WidgetStateTest {
         assertEquals(WaterContainers.buttons(ctx).take(2), s.buttons)
         assertEquals(listOf("+ Bottle 500 ml" to 500, "½ Bottle" to 250), s.buttons.map { it.label to it.ml })
     }
+
+    @Test
+    fun tappingAWidgetButtonAddsWater() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val dao = PlateDatabase.get(ctx).dao()
+        val day = LocalDate.now().toEpochDay()
+        dao.saveWater(Water(day, 1250))
+        val id = object : androidx.glance.GlanceId {}
+        // "+ Bottle 500 ml", then "½ Bottle": the same action the buttons run.
+        com.mrboora.plate.widget.AddWaterAction().onAction(ctx, id, androidx.glance.action.actionParametersOf(com.mrboora.plate.widget.MlKey to 500))
+        assertEquals(1750, dao.waterNow(day)?.ml)
+        com.mrboora.plate.widget.AddWaterAction().onAction(ctx, id, androidx.glance.action.actionParametersOf(com.mrboora.plate.widget.MlKey to 250))
+        assertEquals(2000, dao.waterNow(day)?.ml)
+    }
 }

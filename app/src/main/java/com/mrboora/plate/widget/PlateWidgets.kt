@@ -23,6 +23,9 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.components.FilledButton
+import androidx.glance.appwidget.components.OutlineButton
+import androidx.glance.ButtonDefaults
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -130,42 +133,46 @@ private fun WaterBlock(s: WidgetState, big: Boolean) {
     )
 }
 
+/**
+ * The water buttons, from the app's one list. Glance's own button components handle their
+ * taps themselves, so a tap always adds water instead of opening the app.
+ */
 @Composable
-private fun WaterButtons(s: WidgetState, height: Dp) {
-    Row(GlanceModifier.fillMaxWidth()) {
-        s.buttons.forEachIndexed { i, c ->
+private fun WaterButtons(s: WidgetState) {
+    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Vertical.CenterVertically) {
+        s.buttons.forEachIndexed { i, b ->
             if (i > 0) Spacer(GlanceModifier.width(8.dp))
-            val outlined = !c.whole
-            Box(
-                GlanceModifier.defaultWeight().height(height).cornerRadius(height / 2)
-                    .background(if (outlined) Card else Track)
-                    .clickable(actionRunCallback<AddWaterAction>(actionParametersOf(MlKey to c.ml)))
-                    .semantics { contentDescription = "Add ${c.ml} ml of water" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    c.label,
-                    style = TextStyle(color = if (outlined) Accent else Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold),
-                    maxLines = 1,
+            val add = actionRunCallback<AddWaterAction>(actionParametersOf(MlKey to b.ml))
+            if (b.whole) {
+                FilledButton(
+                    text = b.label, onClick = add, maxLines = 1,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Track, contentColor = Ink),
+                    modifier = GlanceModifier.defaultWeight(),
                 )
+            } else {
+                // The half button only takes the room it needs, so "+ Bottle 500 ml" is never cut off.
+                OutlineButton(text = b.label, contentColor = Accent, onClick = add, maxLines = 1)
             }
         }
     }
 }
 
-/** A · Plate · Water (2 × 1). */
+/** A · Plate · Water: the app's water card, same layout. */
 class WaterWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val s = loadState(context)
         provideContent {
             Column(
-                GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(14.dp)
-                    .clickable(actionStartActivity<MainActivity>()),
+                GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(16.dp),
+                verticalAlignment = Alignment.Vertical.CenterVertically,
             ) {
-                Text("WATER", style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium))
-                WaterBlock(s, big = true)
-                Spacer(GlanceModifier.defaultWeight())
-                WaterButtons(s, 34.dp)
+                // Only the numbers open the app; the buttons add water.
+                Column(GlanceModifier.fillMaxWidth().clickable(actionStartActivity<MainActivity>())) {
+                    Text("WATER", style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium))
+                    WaterBlock(s, big = true)
+                }
+                Spacer(GlanceModifier.height(12.dp))
+                WaterButtons(s)
             }
         }
     }
@@ -200,11 +207,12 @@ class TodayWidget : GlanceAppWidget() {
         val bmp = ring(progress, (left ?: 0) < 0)
         provideContent {
             Column(
-                GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(14.dp)
-                    .clickable(actionStartActivity<MainActivity>()),
+                GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(16.dp),
                 horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
+                verticalAlignment = Alignment.Vertical.CenterVertically,
             ) {
-                Box(GlanceModifier.size(104.dp), contentAlignment = Alignment.Center) {
+                // The ring and numbers open the app; the buttons add water.
+                Box(GlanceModifier.size(104.dp).clickable(actionStartActivity<MainActivity>()), contentAlignment = Alignment.Center) {
                     Image(ImageProvider(bmp), contentDescription = null, modifier = GlanceModifier.size(104.dp))
                     Column(horizontalAlignment = Alignment.Horizontal.CenterHorizontally) {
                         Text(
@@ -217,13 +225,13 @@ class TodayWidget : GlanceAppWidget() {
                         )
                     }
                 }
-                Spacer(GlanceModifier.defaultWeight())
-                Column(GlanceModifier.fillMaxWidth()) {
+                Spacer(GlanceModifier.height(12.dp))
+                Column(GlanceModifier.fillMaxWidth().clickable(actionStartActivity<MainActivity>())) {
                     Text("WATER", style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium))
                     WaterBlock(s, big = false)
                 }
-                Spacer(GlanceModifier.height(8.dp))
-                WaterButtons(s, 32.dp)
+                Spacer(GlanceModifier.height(10.dp))
+                WaterButtons(s)
             }
         }
     }
