@@ -1,9 +1,10 @@
 {
-  "versionCode": 39,
-  "versionName": "2.13.1",
+  "versionCode": 40,
+  "versionName": "2.13.2",
   "notes": [
-    "Water buttons are now one set shared by the app, the widgets and the long-press shortcut",
-    "Change your bottle or glass once in Edit and every place updates the same way"
+    "Widgets fixed: the water buttons add water instead of opening the app",
+    "Widgets open at a size that shows everything, can't be shrunk below it, and have a maximum size",
+    "\"+ Bottle 500 ml\" is never cut off"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }
