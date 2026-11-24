@@ -21,7 +21,14 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** A newer Plate release, as described by release/latest.json on GitHub. */
-data class UpdateInfo(val versionCode: Long, val versionName: String, val notes: List<String>, val apkUrl: String)
+data class UpdateInfo(
+    val versionCode: Long,
+    val versionName: String,
+    val notes: List<String>,
+    val apkUrl: String,
+    /** SHA-256 of the APK, lowercase hex. The download is checked against it before it can be installed. */
+    val sha256: String? = null,
+)
 
 /**
  * Plate is installed from its website, not a store, so it checks for new versions itself:
@@ -44,8 +51,19 @@ object AppUpdates {
         val apk = o.getString("apk")
         // Only ever download from this repository over HTTPS.
         require(apk.startsWith("https://raw.githubusercontent.com/mrboora04/ICE3/") || apk.startsWith("https://github.com/mrboora04/ICE3/"))
-        UpdateInfo(o.getLong("versionCode"), o.getString("versionName"), notes, apk)
+        // A checksum, when present, must be a real SHA-256 (64 hex characters).
+        val sha = o.optString("sha256", "").trim().lowercase().takeIf { it.isNotEmpty() }
+        if (sha != null) require(sha.matches(Regex("^[0-9a-f]{64}$")))
+        UpdateInfo(o.getLong("versionCode"), o.getString("versionName"), notes, apk, sha)
     }.getOrNull()
+
+    /** SHA-256 of a stream, lowercase hex. */
+    fun sha256(input: java.io.InputStream): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val buf = ByteArray(64 * 1024)
+        while (true) { val n = input.read(buf); if (n < 0) break; md.update(buf, 0, n) }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
 
     /** The newer release, or null if this is the latest (or the check failed). */
     suspend fun check(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
@@ -121,8 +139,13 @@ object AppUpdates {
         data class Running(val progress: Float?) : DownloadState
         data object Ready : DownloadState
         data object Failed : DownloadState
+        /** The download didn't match the published SHA-256, so it was deleted before it could be installed. */
+        data object Damaged : DownloadState
     }
 
+    private const val KEY_SHA = "download_sha256"
+    private const val KEY_CHECKED = "download_checked"
+    private const val KEY_BAD = "download_bad"
     private const val KEY_ID = "download_id"
     private const val KEY_VERSION = "download_version"
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -153,7 +176,8 @@ object AppUpdates {
         val id = dm(context).enqueue(req)
         // Every installer Plate downloads is remembered, so each one is deleted once it's installed.
         val all = p.getStringSet(KEY_ALL, emptySet()).orEmpty() + "$id:${info.versionCode}"
-        p.edit().putLong(KEY_ID, id).putLong(KEY_VERSION, info.versionCode).putStringSet(KEY_ALL, all).apply()
+        p.edit().putLong(KEY_ID, id).putLong(KEY_VERSION, info.versionCode).putStringSet(KEY_ALL, all)
+            .putString(KEY_SHA, info.sha256).remove(KEY_CHECKED).remove(KEY_BAD).apply()
     }
 
     /** Where the current update download stands. */
@@ -167,12 +191,47 @@ object AppUpdates {
             val done = cur.getLong(cur.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
             val total = cur.getLong(cur.getColumnIndexOrThrow(android.app.DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
             return when (status) {
-                android.app.DownloadManager.STATUS_SUCCESSFUL -> DownloadState.Ready
+                android.app.DownloadManager.STATUS_SUCCESSFUL -> if (verify(context)) DownloadState.Ready else DownloadState.Damaged
                 android.app.DownloadManager.STATUS_FAILED -> DownloadState.Failed
                 else -> DownloadState.Running(if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else null)
             }
         }
-        return DownloadState.None
+        return if (prefs(context).getBoolean(KEY_BAD, false)) DownloadState.Damaged else DownloadState.None
+    }
+
+    /**
+     * Checks the finished download against the SHA-256 published in latest.json (once per
+     * download). On a mismatch the file is removed right away, so a damaged or swapped APK can't
+     * be installed from the download notification either. Releases without a checksum pass.
+     */
+    fun verify(context: Context): Boolean {
+        val p = prefs(context)
+        val id = p.getLong(KEY_ID, -1)
+        val expected = p.getString(KEY_SHA, null) ?: return true
+        if (id < 0) return false
+        if (p.getLong(KEY_CHECKED, -1) == id) return true
+        val actual = runCatching {
+            dm(context).openDownloadedFile(id).use { pfd -> java.io.FileInputStream(pfd.fileDescriptor).use { sha256(it) } }
+        }.getOrNull()
+        return if (actual == expected) {
+            p.edit().putLong(KEY_CHECKED, id).apply()
+            true
+        } else {
+            runCatching { dm(context).remove(id) }
+            p.edit().remove(KEY_ID).remove(KEY_VERSION).putBoolean(KEY_BAD, true).apply()
+            false
+        }
+    }
+
+    /** Checks the update as soon as Android finishes downloading it. */
+    class DownloadDone : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+            if (id >= 0 && id == prefs(context).getLong(KEY_ID, -1)) {
+                val pending = goAsync()
+                Thread { try { verify(context) } finally { pending.finish() } }.start()
+            }
+        }
     }
 
     /**
@@ -189,7 +248,7 @@ object AppUpdates {
         val p = prefs(context)
         val id = p.getLong(KEY_ID, -1)
         if (id >= 0) runCatching { dm(context).remove(id) }
-        p.edit().remove(KEY_ID).remove(KEY_VERSION).apply()
+        p.edit().remove(KEY_ID).remove(KEY_VERSION).remove(KEY_BAD).remove(KEY_CHECKED).apply()
     }
 
     private const val KEY_ALL = "download_all"

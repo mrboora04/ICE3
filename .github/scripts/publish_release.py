@@ -2,6 +2,7 @@
 
 Usage: publish_release.py <versionCode> <versionName>
 """
+import hashlib
 import json
 import pathlib
 import re
@@ -26,6 +27,8 @@ latest = {
     "versionName": name,
     "notes": notes or ["Bug fixes and improvements"],
     "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk",
+    # Plate checks the downloaded update against this before it can be installed.
+    "sha256": hashlib.sha256((release / "Plate.apk").read_bytes()).hexdigest(),
 }
 (release / "latest.json").write_text(json.dumps(latest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 notes_file.write_text(
