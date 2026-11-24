@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: Poster; src: url(poster.ttf); font-weight: 800; }
+@font-face { font-family: Bric; src: url(bricolage_700.ttf); font-weight: 700; }
+@font-face { font-family: Bric; src: url(bricolage_800.ttf); font-weight: 800; }
+@font-face { font-family: Inst; src: url(instrument_400.ttf); font-weight: 400; }
+@font-face { font-family: Inst; src: url(instrument_600.ttf); font-weight: 600; }
+:root { --ground:#F7EEEA; --card:#FFF9F6; --ink:#3A2230; --muted:#6E4A5C; --accent:#D2477A; --water:#5C7CE0; --sky:#D9E6FF; --skyDeep:#A9B7F2; --track:#EED6DD; --peach:#FFC9B5; --pink:#F39BB0; --lilac:#C98BD8; --mint:#B4E3C4; }
+html, body { margin: 0; background: var(--ground); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--ground); color: var(--ink); font-family: Inst, sans-serif; }
+.scene { position: absolute; inset: 0; opacity: 0; }
+.poster { font-family: Poster; font-weight: 800; text-transform: uppercase; line-height: .86; letter-spacing: -2px; }
+.head { font-family: Bric; font-weight: 800; letter-spacing: -2px; line-height: 1.02; }
+.body { font-family: Inst; font-size: 40px; line-height: 1.35; color: var(--muted); }
+.eyebrow { font-family: Inst; font-weight: 600; font-size: 26px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent); }
+.left { position: absolute; left: 150px; width: 820px; }
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; }
+.card { position: absolute; background: var(--card); border-radius: 44px; box-shadow: 0 30px 80px rgba(58,34,48,.14); border: 2px solid #EBDAD6; }
+.btn { position: absolute; border-radius: 999px; background: var(--track); font-family: Bric; font-weight: 700; font-size: 38px; color: var(--ink); display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.btn.out { background: transparent; border: 3px solid var(--track); color: var(--accent); }
+.ripple { position: absolute; border-radius: 50%; background: rgba(210,71,122,.25); pointer-events: none; }
+.foot { position: absolute; right: 60px; bottom: 40px; font-family: Inst; font-size: 20px; color: var(--muted); opacity: .8; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1" style="width:700px;height:700px;background:var(--sky);"></div>
+  <div class="blob" id="b2" style="width:520px;height:520px;background:var(--peach);"></div>
+
+  <!-- 1 · WATER. -->
+  <div class="scene" id="s1">
+    <svg id="dropSvg" style="position:absolute;left:1240px;top:0;width:500px;height:1080px" viewBox="0 0 500 1080">
+      <path id="drop" d="M250 0 C250 0 180 90 180 140 A70 70 0 0 0 320 140 C320 90 250 0 250 0Z" fill="#5C7CE0"/>
+      <ellipse id="r1" cx="250" cy="820" rx="0" ry="0" fill="none" stroke="#5C7CE0" stroke-width="10"/>
+      <ellipse id="r2" cx="250" cy="820" rx="0" ry="0" fill="none" stroke="#7D95E8" stroke-width="8"/>
+      <ellipse id="r3" cx="250" cy="820" rx="0" ry="0" fill="none" stroke="#A9B7F2" stroke-width="6"/>
+    </svg>
+    <div class="left" style="top:300px">
+      <div class="poster" id="t1a" style="font-size:300px;">Water.</div>
+      <div class="head" id="t1b" style="font-size:66px;margin-top:30px;">The easiest health habit<br>to forget.</div>
+    </div>
+  </div>
+
+  <!-- 2 · 60% -->
+  <div class="scene" id="s2">
+    <svg style="position:absolute;left:1240px;top:110px;width:520px;height:860px" viewBox="0 0 260 430">
+      <defs>
+        <clipPath id="body"><path d="M130 10 a42 42 0 1 1 -0.1 0Z M78 100 h104 a28 28 0 0 1 28 28 v120 a16 16 0 0 1 -32 0 v-96 h-6 v262 a18 18 0 0 1 -36 0 v-150 h-12 v150 a18 18 0 0 1 -36 0 v-262 h-6 v96 a16 16 0 0 1 -32 0 v-120 a28 28 0 0 1 28 -28Z"/></clipPath>
+      </defs>
+      <rect x="0" y="0" width="260" height="430" fill="#EED6DD" clip-path="url(#body)"/>
+      <rect id="fill2" x="0" y="430" width="260" height="0" fill="#5C7CE0" clip-path="url(#body)"/>
+      <line id="mark60" x1="10" x2="250" y1="172" y2="172" stroke="#3A2230" stroke-width="2" stroke-dasharray="6 6" opacity="0"/>
+    </svg>
+    <div class="left" style="top:300px">
+      <div class="eyebrow" id="t2e">Why it matters</div>
+      <div class="head" style="font-size:92px;margin-top:18px;" id="t2a">Your body is<br>about <span style="color:var(--water)"><span id="pct">0</span>% water.</span></div>
+      <div class="body" id="t2b" style="margin-top:28px;width:720px">It keeps you cool, focused and moving.</div>
+    </div>
+  </div>
+
+  <!-- 3 · mild dehydration -->
+  <div class="scene" id="s3">
+    <svg style="position:absolute;left:1120px;top:250px;width:680px;height:560px" viewBox="0 0 680 560">
+      <line x1="40" y1="480" x2="660" y2="480" stroke="#EBDAD6" stroke-width="3"/>
+      <text x="40" y="530" font-family="Inst" font-size="26" fill="#6E4A5C">9 am</text>
+      <text x="300" y="530" font-family="Inst" font-size="26" fill="#6E4A5C">2 pm</text>
+      <text x="580" y="530" font-family="Inst" font-size="26" fill="#6E4A5C">6 pm</text>
+      <text x="40" y="40" font-family="Inst" font-weight="600" font-size="26" fill="#6E4A5C">ENERGY</text>
+      <path id="energy" d="M40 140 C140 120 220 150 290 260 C330 330 370 360 420 340 C500 300 560 300 660 320" fill="none" stroke="#D2477A" stroke-width="10" stroke-linecap="round"/>
+      <circle id="dip" cx="380" cy="352" r="0" fill="#FFC9B5"/>
+    </svg>
+    <div class="left" style="top:330px">
+      <div class="head" style="font-size:84px" id="t3a">Even <span style="color:var(--accent)">mild</span> dehydration</div>
+      <div class="head" style="font-size:84px" id="t3b">can leave you tired<br>and less focused.</div>
+    </div>
+  </div>
+
+  <!-- 4 · tracking -->
+  <div class="scene" id="s4">
+    <div class="left" style="top:250px;width:1620px">
+      <div class="head" style="font-size:96px" id="t4a"><span style="color:var(--water)">Tracking</span> turns</div>
+      <div class="head" style="font-size:76px;color:var(--muted)" id="t4b">“I think I drank enough”</div>
+      <div class="head" style="font-size:96px" id="t4c">into a number.</div>
+    </div>
+    <div id="drops" style="position:absolute;left:150px;top:720px;display:flex;gap:30px;"></div>
+    <div class="poster" id="count4" style="position:absolute;left:1430px;top:690px;font-size:150px;color:var(--water)">0</div>
+    <div class="poster" style="position:absolute;left:1440px;top:830px;font-size:44px;color:var(--muted)" id="count4u">ML TODAY</div>
+  </div>
+
+  <!-- 5 · Plate water card -->
+  <div class="scene" id="s5">
+    <div class="left" style="top:300px;width:700px">
+      <div class="eyebrow" id="t5e">In Plate</div>
+      <div class="poster" style="font-size:150px;margin-top:14px" id="t5a">Your bottle.<br><span style="color:var(--accent)">One tap.</span></div>
+      <div class="body" style="margin-top:30px" id="t5b">Set your own bottle, glass or cup.<br>Plate adds the right amount.</div>
+    </div>
+    <div class="card" id="wcard" style="left:1000px;top:220px;width:780px;height:640px;">
+      <div style="position:absolute;left:56px;top:56px" class="eyebrow">Water</div>
+      <div style="position:absolute;left:56px;top:100px;display:flex;align-items:baseline;gap:10px">
+        <span class="poster" id="wml" style="font-size:120px;letter-spacing:-1px">1,250</span>
+        <span class="poster" style="font-size:40px;color:var(--muted)">/ 3,000 ML</span>
+      </div>
+      <div id="wminus" style="position:absolute;right:60px;top:126px;font-family:Bric;font-weight:700;font-size:38px;color:var(--accent)">−500 ml</div>
+      <div id="wdrops" style="position:absolute;left:56px;top:290px;display:flex;gap:16px"></div>
+      <div class="btn" id="bBottle" style="left:56px;top:430px;width:340px;height:110px;">+ Bottle 500 ml</div>
+      <div class="btn out" id="bHalf" style="left:420px;top:430px;width:220px;height:110px;">½ Bottle</div>
+      <div id="rip" class="ripple"></div>
+    </div>
+  </div>
+
+  <!-- 6 · end card -->
+  <div class="scene" id="s6">
+    <div class="blob" style="left:1180px;top:120px;width:620px;height:620px;background:radial-gradient(circle,#FFC9B5,#F39BB0);opacity:.7"></div>
+    <div class="blob" style="left:1500px;top:560px;width:300px;height:300px;background:var(--skyDeep);opacity:.6"></div>
+    <div class="left" style="top:250px;width:1300px">
+      <div class="poster" id="t6a" style="font-size:330px;">Plate</div>
+      <div class="head" id="t6b" style="font-size:62px;margin-top:20px">Free calorie &amp; water tracker for Android.</div>
+      <div class="body" id="t6c" style="margin-top:18px;font-size:42px">No account · Works offline · Made for Canada</div>
+      <div class="head" id="t6d" style="font-size:46px;margin-top:44px;color:var(--accent)">mrboora04.github.io/ICE3</div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot">Not medical advice. Needs vary by person, activity and weather.</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ease = x => { x = clamp(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; };
+const out = x => 1 - Math.pow(1 - clamp(x), 3);
+const span = (t, a, b) => clamp((t - a) / (b - a));
+const fmt = n => Math.round(n).toLocaleString('en-US');
+
+// Scene windows (seconds) with 0.45 s cross-fades.
+const S = [[0, 3.6], [3.6, 7.6], [7.6, 11.6], [11.6, 15.8], [15.8, 21.0], [21.0, 25.5]];
+const FADE = .45;
+function vis(i, t) {
+  const [a, b] = S[i];
+  const inn = i === 0 ? 1 : span(t, a, a + FADE);
+  const o = i === S.length - 1 ? 1 : 1 - span(t, b - FADE, b);
+  return Math.min(inn, o);
+}
+function rise(el, p, dy = 40) { el.style.opacity = out(p); el.style.transform = `translateY(${(1 - out(p)) * dy}px)`; }
+
+// Build drops.
+const dropSvg = '<svg width="70" height="90" viewBox="0 0 70 90"><path d="M35 4 C35 4 8 42 8 60 A27 27 0 0 0 62 60 C62 42 35 4 35 4Z" fill="currentColor"/></svg>';
+for (let i = 0; i < 12; i++) { const d = document.createElement('div'); d.innerHTML = dropSvg; d.className = 'd4'; d.style.color = '#EED6DD'; $('drops').appendChild(d); }
+for (let i = 0; i < 12; i++) { const d = document.createElement('div'); d.innerHTML = dropSvg.replace('width="70" height="90"', 'width="42" height="54"'); d.className = 'd5'; d.style.color = '#EED6DD'; $('wdrops').appendChild(d); }
+const d4 = [...document.querySelectorAll('.d4')], d5 = [...document.querySelectorAll('.d5')];
+
+window.render = function (t) {
+  S.forEach((_, i) => $('s' + (i + 1)).style.opacity = vis(i, t));
+  // Drifting blobs.
+  $('b1').style.left = (1150 + Math.sin(t * .4) * 60) + 'px'; $('b1').style.top = (-120 + Math.cos(t * .3) * 50) + 'px';
+  $('b2').style.left = (-160 + Math.cos(t * .35) * 50) + 'px'; $('b2').style.top = (680 + Math.sin(t * .45) * 40) + 'px';
+
+  // 1 · a drop falls and ripples, WATER.
+  const fall = out(span(t, .1, .9));
+  $('drop').setAttribute('transform', `translate(0 ${-200 + fall * 880}) scale(1)`);
+  $('drop').style.opacity = t < .95 ? 1 : 1 - span(t, .95, 1.1);
+  [['r1', .95], ['r2', 1.15], ['r3', 1.35]].forEach(([id, s0]) => {
+    const p = span(t, s0, s0 + 1.6);
+    $(id).setAttribute('rx', 20 + p * 200); $(id).setAttribute('ry', 6 + p * 50); $(id).style.opacity = p > 0 ? Math.pow(1 - p, .6) : 0;
+  });
+  rise($('t1a'), span(t, .5, 1.2), 80); rise($('t1b'), span(t, 1.2, 1.9));
+
+  // 2 · body fills to 60%.
+  rise($('t2e'), span(t, 3.8, 4.3)); rise($('t2a'), span(t, 4.0, 4.6)); rise($('t2b'), span(t, 5.6, 6.2));
+  const f = ease(span(t, 4.1, 6.0)) * .6;
+  $('fill2').setAttribute('y', 430 - 430 * f); $('fill2').setAttribute('height', 430 * f);
+  $('pct').textContent = Math.round(f * 100);
+  $('mark60').setAttribute('opacity', span(t, 5.9, 6.2));
+
+  // 3 · energy dips in the afternoon.
+  const len = 760, p3 = ease(span(t, 7.9, 9.6));
+  $('energy').style.strokeDasharray = len; $('energy').style.strokeDashoffset = len * (1 - p3);
+  $('dip').setAttribute('r', 26 * out(span(t, 9.4, 9.8)));
+  rise($('t3a'), span(t, 7.9, 8.5)); rise($('t3b'), span(t, 8.6, 9.2));
+
+  // 4 · drops fill, counter to 3,000 ml.
+  rise($('t4a'), span(t, 11.8, 12.3)); rise($('t4b'), span(t, 12.3, 12.8)); rise($('t4c'), span(t, 12.9, 13.4));
+  const fill4 = ease(span(t, 12.4, 15.0)) * 12;
+  d4.forEach((d, i) => { d.style.color = i < Math.floor(fill4 + .001) ? '#5C7CE0' : '#EED6DD'; d.style.transform = `scale(${i < fill4 && i > fill4 - 1 ? 1.15 : 1})`; });
+  $('count4').textContent = fmt(Math.min(12, fill4) * 250);
+  $('count4').style.opacity = span(t, 12.3, 12.6); $('count4u').style.opacity = span(t, 12.3, 12.6);
+
+  // 5 · the water card: tap Bottle, then ½ Bottle.
+  rise($('t5e'), span(t, 16.0, 16.5)); rise($('t5a'), span(t, 16.2, 16.8), 60); rise($('t5b'), span(t, 17.0, 17.6));
+  rise($('wcard'), span(t, 16.0, 16.7), 60);
+  const tap1 = 17.6, tap2 = 19.3;
+  let ml = 1250;
+  if (t > tap1) ml += 500 * out(span(t, tap1, tap1 + .5));
+  if (t > tap2) ml += 250 * out(span(t, tap2, tap2 + .5));
+  $('wml').textContent = fmt(ml);
+  $('wminus').textContent = t > tap2 ? '−250 ml' : '−500 ml';
+  d5.forEach((d, i) => d.style.color = i < Math.floor(ml / 250 + .001) ? '#5C7CE0' : '#EED6DD');
+  const press = (el, at) => { const k = 1 - .06 * Math.sin(Math.PI * span(t, at - .12, at + .12)); el.style.transform = `scale(${k})`; };
+  press($('bBottle'), tap1); press($('bHalf'), tap2);
+  const rp = (at, cx, cy) => { const p = span(t, at, at + .6); return p > 0 && p < 1 ? { p, cx, cy } : null; };
+  const r = rp(tap1, 226, 485) || rp(tap2, 530, 485);
+  if (r) { const s = 40 + r.p * 260; Object.assign($('rip').style, { left: (r.cx - s / 2) + 'px', top: (r.cy - s / 2) + 'px', width: s + 'px', height: s + 'px', opacity: 1 - r.p }); }
+  else $('rip').style.opacity = 0;
+
+  // 6 · end card.
+  rise($('t6a'), span(t, 21.2, 21.9), 80); rise($('t6b'), span(t, 21.8, 22.4)); rise($('t6c'), span(t, 22.3, 22.9)); rise($('t6d'), span(t, 22.8, 23.4));
+
+  $('foot').style.opacity = .8 * Math.max(vis(1, t), vis(2, t));
+};
+window.render(0);
+</script>
+</body>
+</html>
