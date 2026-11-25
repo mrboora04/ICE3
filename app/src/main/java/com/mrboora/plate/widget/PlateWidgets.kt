@@ -54,7 +54,13 @@ import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.PlateDatabase
 import com.mrboora.plate.data.Water
 import com.mrboora.plate.data.WaterContainers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
@@ -81,20 +87,26 @@ internal data class WidgetState(
     val buttons: List<WaterContainers.Button>,
 )
 
-internal suspend fun loadState(context: Context): WidgetState {
+/**
+ * Today's numbers, live: a new value every time water, food, the profile or a weigh-in changes,
+ * whether from the app or from a widget button. The widgets draw from this, so they follow at once.
+ */
+internal fun stateFlow(context: Context): Flow<WidgetState> {
     val dao = PlateDatabase.get(context).dao()
     val day = LocalDate.now().toEpochDay()
-    val water = dao.water(day).first()?.ml ?: 0
-    val profile = dao.profile().first()
-    val latest = dao.weights().first().lastOrNull()?.kg
-    val targets = profile?.let { Nutrition.targets(if (latest != null) it.copy(weightKg = latest) else it) }
-    val eaten = dao.entries(day).first().sumOf { it.kcal.toDouble() }.roundToInt()
-    return WidgetState(
-        waterMl = water, waterGoal = profile?.waterGoalMl ?: 2000,
-        kcalLeft = targets?.let { it.kcal - eaten }, kcalTarget = targets?.kcal,
-        buttons = WaterContainers.buttons(context).take(2),
-    )
+    return combine(dao.water(day), dao.profile(), dao.weights(), dao.entries(day)) { water, profile, weights, entries ->
+        val latest = weights.lastOrNull()?.kg
+        val targets = profile?.let { Nutrition.targets(if (latest != null) it.copy(weightKg = latest) else it) }
+        val eaten = entries.sumOf { it.kcal.toDouble() }.roundToInt()
+        WidgetState(
+            waterMl = water?.ml ?: 0, waterGoal = profile?.waterGoalMl ?: 2000,
+            kcalLeft = targets?.let { it.kcal - eaten }, kcalTarget = targets?.kcal,
+            buttons = WaterContainers.buttons(context).take(2),
+        )
+    }.distinctUntilChanged()
 }
+
+internal suspend fun loadState(context: Context): WidgetState = stateFlow(context).first()
 
 // ---- Colours: Plate's palette, light and dark ----------------------------------------------
 private val Card = ColorProvider(day = Color(0xFFFFF9F6), night = Color(0xFF261B21))
@@ -177,8 +189,10 @@ private fun WaterButtons(s: WidgetState) {
 /** A · Plate · Water: the app's water card, same layout. */
 class WaterWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val s = loadState(context)
+        val start = loadState(context)
+        val live = stateFlow(context)
         provideContent {
+            val s by live.collectAsState(start)
             Column(
                 GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(16.dp),
                 verticalAlignment = Alignment.Vertical.CenterVertically,
@@ -217,12 +231,14 @@ private fun ring(progress: Float, over: Boolean): Bitmap {
 /** B · Plate · Today (2 × 2). */
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val s = loadState(context)
-        val left = s.kcalLeft
-        val target = s.kcalTarget
-        val progress = if (left != null && target != null && target > 0) (target - left).toFloat() / target else 0f
-        val bmp = ring(progress, (left ?: 0) < 0)
+        val start = loadState(context)
+        val live = stateFlow(context)
         provideContent {
+            val s by live.collectAsState(start)
+            val left = s.kcalLeft
+            val target = s.kcalTarget
+            val progress = if (left != null && target != null && target > 0) (target - left).toFloat() / target else 0f
+            val bmp = remember(progress, left) { ring(progress, (left ?: 0) < 0) }
             Column(
                 GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(Card).padding(16.dp),
                 horizontalAlignment = Alignment.Horizontal.CenterHorizontally,

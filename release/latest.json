@@ -1,10 +1,10 @@
 {
-  "versionCode": 42,
-  "versionName": "2.14.1",
+  "versionCode": 43,
+  "versionName": "2.14.2",
   "notes": [
-    "Type a food with an amount (\"peanut butter two spoon\", \"4 boiled eggs\") and add it in one tap",
-    "Eggs, rotis, slices: just say how many; no cups or hand guide for foods you count",
-    "Builders: Looks good at the top, and tap a reading to change and remember it (milk → 3.25%)"
+    "Eggs, rotis, spoons: pick Small · Regular · Large and how many; eggs can be whole or white",
+    "Widgets update live, right when you tap a button, and show the app's water drops",
+    "Forecast uses your average over every logged day, not just today"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

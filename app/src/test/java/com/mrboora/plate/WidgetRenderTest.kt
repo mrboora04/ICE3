@@ -55,7 +55,7 @@ class WidgetRenderTest {
         WaterContainers.save(ctx, listOf(WaterContainers.Container("Bottle", 500)))
     }
 
-    private fun draw(widget: GlanceAppWidget, w: Int, h: Int, name: String, dark: Boolean) = runBlocking {
+    private fun draw(widget: GlanceAppWidget, w: Int, h: Int, name: String, dark: Boolean, preview: String? = null) = runBlocking {
         if (dark) RuntimeEnvironment.setQualifiers("+night")
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         seed(ctx)
@@ -73,6 +73,12 @@ class WidgetRenderTest {
         view.draw(c)
         val dir = File(System.getProperty("screenshots.dir") ?: "build/screenshots").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // The widget picker's preview is this same drawing (no backdrop), so it always matches the widget.
+        preview?.let { file ->
+            val clean = Bitmap.createBitmap(pw, ph, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(clean))
+            File("src/main/res/drawable-nodpi/$file.png").outputStream().use { clean.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
 
         // Taps: the water buttons have their own click, and the whole widget does not
         // (so a tap on a button can never open the app instead).
@@ -93,14 +99,14 @@ class WidgetRenderTest {
     @Test fun water() {
         // Must match water_widget_info.xml: min 290 × 170, max 420 × 200.
         draw(WaterWidget(), 290, 170, "widget_water_min", false)
-        draw(WaterWidget(), 340, 180, "widget_water_default", false)
+        draw(WaterWidget(), 340, 180, "widget_water_default", false, preview = "widget_water_preview")
         draw(WaterWidget(), 420, 200, "widget_water_max", false)
     }
     @Test fun waterDark() = draw(WaterWidget(), 340, 180, "widget_water_default_dark", true)
     @Test fun today() {
         // Must match today_widget_info.xml: min 290 × 300, max 420 × 400.
         draw(TodayWidget(), 290, 300, "widget_today_min", false)
-        draw(TodayWidget(), 340, 340, "widget_today_default", false)
+        draw(TodayWidget(), 340, 340, "widget_today_default", false, preview = "widget_today_preview")
         draw(TodayWidget(), 420, 400, "widget_today_max", false)
     }
     @Test fun todayDark() = draw(TodayWidget(), 340, 340, "widget_today_default_dark", true)

@@ -13,6 +13,7 @@ import com.mrboora.plate.data.Sex
 import com.mrboora.plate.data.Water
 import com.mrboora.plate.data.WaterContainers
 import com.mrboora.plate.widget.loadState
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -56,6 +57,22 @@ class WidgetStateTest {
         assertEquals(1750, dao.waterNow(day)?.ml)
         com.mrboora.plate.widget.AddWaterAction().onAction(ctx, id, androidx.glance.action.actionParametersOf(com.mrboora.plate.widget.MlKey to 250))
         assertEquals(2000, dao.waterNow(day)?.ml)
+    }
+
+    @Test
+    fun widgetNumbersFollowEveryChangeLive() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val dao = PlateDatabase.get(ctx).dao()
+        val day = LocalDate.now().toEpochDay()
+        dao.saveWater(Water(day, 1000))
+        val seen = mutableListOf<Int>()
+        // What the widget draws from: it must change on its own, without the app open.
+        val job = launch(kotlinx.coroutines.Dispatchers.IO) { com.mrboora.plate.widget.stateFlow(ctx).collect { seen += it.waterMl } }
+        kotlinx.coroutines.withTimeout(5000) { while (seen.isEmpty()) kotlinx.coroutines.delay(20) }
+        com.mrboora.plate.widget.AddWaterAction().onAction(ctx, object : androidx.glance.GlanceId {}, androidx.glance.action.actionParametersOf(com.mrboora.plate.widget.MlKey to 500))
+        kotlinx.coroutines.withTimeout(5000) { while (1500 !in seen) { org.robolectric.shadows.ShadowLooper.idleMainLooper(); kotlinx.coroutines.delay(20) } }
+        job.cancel()
+        assertEquals(listOf(1000, 1500), seen.distinct())
     }
 
     @Test
