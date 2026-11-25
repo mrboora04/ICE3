@@ -1,10 +1,10 @@
 {
-  "versionCode": 44,
-  "versionName": "2.15.0",
+  "versionCode": 45,
+  "versionName": "2.15.1",
   "notes": [
     "Units: kg or lb, cm or ft in, ml or fl oz, each on its own (Profile → Units)",
-    "Starts from your phone's region; Plate still keeps everything metric inside",
-    "Widgets, water buttons and the forecast all follow your units"
+    "Progress: each day's card is lightly green, red or blue, and the calendar matches",
+    "Today's calorie card turns light red when you go over"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

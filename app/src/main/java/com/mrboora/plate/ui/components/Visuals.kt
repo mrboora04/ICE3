@@ -108,14 +108,20 @@ fun ProgressRing(
 }
 
 @Composable
-fun PlateCard(modifier: Modifier = Modifier, padding: Dp = 18.dp, content: @Composable ColumnScope.() -> Unit) {
+fun PlateCard(
+    modifier: Modifier = Modifier,
+    padding: Dp = 18.dp,
+    /** The card's fill: Plate's card colour, or a day's status colour. */
+    color: Color = Plate.colors.card,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val c = Plate.colors
     Column(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(c.card)
-            .border(1.dp, c.line, RoundedCornerShape(24.dp))
+            .background(color)
+            .border(1.dp, if (color == c.card) c.line else color, RoundedCornerShape(24.dp))
             .padding(padding),
         content = content,
     )

@@ -109,6 +109,30 @@ class ScreenshotTest {
         )
         ProgressScreen(profile, targets, weights, history, pad, {}, {})
     }
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressDays() = shot("progress_days") {
+        // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
+        val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
+        val sample = kcals.mapIndexed { i, k -> entries.map { it.copy(day = today - i) }.let { list ->
+            val f = if (k == 0f) 0f else k / list.sumOf { it.kcal.toDouble() }.toFloat()
+            list.map { it.copy(kcal = it.kcal * f, protein = it.protein * f, carbs = it.carbs * f, fat = it.fat * f) }.filter { k > 0f }
+        } }.flatten()
+        val history = com.mrboora.plate.data.History.summarise(
+            sample, listOf(com.mrboora.plate.data.Water(today, 1750)), weights, targets.kcal,
+        )
+        ProgressScreen(profile, targets, weights, history, pad, {}, {})
+    }
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressDaysDark() = shot("progress_days_dark", dark = true) {
+        // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
+        val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
+        val sample = kcals.mapIndexed { i, k -> entries.map { it.copy(day = today - i) }.let { list ->
+            val f = if (k == 0f) 0f else k / list.sumOf { it.kcal.toDouble() }.toFloat()
+            list.map { it.copy(kcal = it.kcal * f, protein = it.protein * f, carbs = it.carbs * f, fat = it.fat * f) }.filter { k > 0f }
+        } }.flatten()
+        val history = com.mrboora.plate.data.History.summarise(
+            sample, listOf(com.mrboora.plate.data.Water(today, 1750)), weights, targets.kcal,
+        )
+        ProgressScreen(profile, targets, weights, history, pad, {}, {})
+    }
 
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressTall() = shot("progress_tall") {
         // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
@@ -247,6 +271,11 @@ class ScreenshotTest {
                 )
             },
         )
+    }
+
+    /** A day gone past the target: the calorie card turns light red, like an over day on Progress. */
+    @Test fun todayOver() = shot("today_over") {
+        TodayScreen(profile, targets, today, entries + entry(Meal.DINNER, "Poha", 600f) + entry(Meal.DINNER, "Banana", 400f), 1250, pad, {}, {}, {}, {}, {})
     }
 
     @Test fun todayImperial() = imperialShot("today_imperial") {

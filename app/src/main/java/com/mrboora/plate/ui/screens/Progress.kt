@@ -1,5 +1,6 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.ui.components.StatusColors
 import com.mrboora.plate.ui.components.LocalUnits
 import com.mrboora.plate.data.weightValue
 import com.mrboora.plate.data.kgFrom
@@ -91,13 +92,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val tab = TextStyle(fontFeatureSettings = TABULAR)
-
-private fun statusColor(s: DayStatus, c: PlateColors): Color = when (s) {
-    DayStatus.ON_TARGET -> c.dayOn
-    DayStatus.OVER -> c.dayOver
-    DayStatus.UNDER -> c.dayUnder
-    DayStatus.NOT_LOGGED -> c.track
-}
 
 @Composable
 fun ProgressScreen(
@@ -245,7 +239,7 @@ private fun MonthCalendar(byDay: Map<Long, DaySummary>, onOpenDay: (Long) -> Uni
                             }
                             Box(
                                 Modifier.size(34.dp).clip(CircleShape)
-                                    .background(if (future) Color.Transparent else statusColor(status, c).copy(alpha = if (sum == null) 0.35f else 1f))
+                                    .background(if (future || sum == null) Color.Transparent else StatusColors.soft(status, c))
                                     .let { if (date == today) it.border(2.dp, c.ink, CircleShape) else it }
                                     .let { if (!future) it.clickable { onOpenDay(date.toEpochDay()) } else it }
                                     .semantics { contentDescription = "${date.format(DateTimeFormatter.ofPattern("MMMM d"))}, $label" },
@@ -256,7 +250,7 @@ private fun MonthCalendar(byDay: Map<Long, DaySummary>, onOpenDay: (Long) -> Uni
                                     color = when {
                                         future -> c.muted.copy(alpha = 0.5f)
                                         sum == null -> c.muted
-                                        else -> c.onDay
+                                        else -> StatusColors.strong(status, c)
                                     },
                                     fontWeight = if (date == today) FontWeight.Bold else FontWeight.Medium,
                                 )
@@ -270,7 +264,7 @@ private fun MonthCalendar(byDay: Map<Long, DaySummary>, onOpenDay: (Long) -> Uni
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             listOf(DayStatus.ON_TARGET to "On target", DayStatus.OVER to "Over", DayStatus.UNDER to "Under").forEach { (s, l) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(statusColor(s, c)))
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(StatusColors.strong(s, c)))
                     Text(" $l", style = MaterialTheme.typography.labelSmall, color = c.muted)
                 }
             }
@@ -328,7 +322,7 @@ private fun WeightCard(
 private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Modifier) {
     val c = Plate.colors
     val u = LocalUnits.current
-    val color = statusColor(d.status, c)
+    val strong = StatusColors.strong(d.status, c)
     val diff = (d.kcal - target).roundToInt()
     val badge = when (d.status) {
         DayStatus.ON_TARGET -> "✓ On target"
@@ -342,12 +336,14 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
         LocalDate.now().toEpochDay() - 1 -> "Yesterday"
         else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
     }
-    PlateCard(modifier.clickable(onClick = onOpen), padding = 16.dp) {
+    // The whole card takes the day's colour, lightly; the badge and bar carry it strong.
+    PlateCard(modifier.clickable(onClick = onOpen), padding = 16.dp, color = StatusColors.soft(d.status, c)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
             Text(
-                badge, style = MaterialTheme.typography.labelLarge, color = c.onDay,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(color).padding(horizontal = 12.dp, vertical = 4.dp),
+                badge, style = MaterialTheme.typography.labelLarge, color = strong,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (d.status == DayStatus.NOT_LOGGED) c.track else c.card)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -361,8 +357,8 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
         }
         Spacer(Modifier.height(6.dp))
         // Bar: filled to eaten / target, capped at 125% with the target marked.
-        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(c.track)) {
-            Box(Modifier.fillMaxWidth((d.kcal / (target * 1.25f)).coerceIn(0f, 1f)).height(10.dp).clip(CircleShape).background(color))
+        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(c.card.copy(alpha = 0.7f))) {
+            Box(Modifier.fillMaxWidth((d.kcal / (target * 1.25f)).coerceIn(0f, 1f)).height(10.dp).clip(CircleShape).background(strong))
             Box(Modifier.fillMaxWidth(0.8f).height(10.dp)) {
                 Box(Modifier.align(Alignment.CenterEnd).width(2.dp).height(10.dp).background(c.ink.copy(alpha = 0.6f)))
             }

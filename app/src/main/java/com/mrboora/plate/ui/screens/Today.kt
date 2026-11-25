@@ -161,7 +161,11 @@ private fun Hero(eaten: Float, t: Targets, entries: List<FoodEntry>, modifier: M
     val c = Plate.colors
     val left = t.kcal - eaten.roundToInt()
     val over = left < 0
-    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(c.card)) {
+    // Past the line the Progress cards call "over", the card turns the same light red. Under
+    // isn't shown here: the day isn't over yet.
+    val status = com.mrboora.plate.data.History.status(eaten, t.kcal)
+    val fill = if (status == com.mrboora.plate.data.DayStatus.OVER) com.mrboora.plate.ui.components.StatusColors.soft(status, c) else c.card
+    Box(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(fill)) {
         MorphBlob(listOf(c.peach, c.pink, c.lilac), Modifier.size(190.dp).align(Alignment.TopEnd).offset(95.dp, (-70).dp).alpha(0.8f))
         MorphBlob(listOf(c.sky, c.skyDeep), Modifier.size(90.dp).align(Alignment.CenterEnd).offset(50.dp, (-10).dp).alpha(0.7f), periodMs = 12000, seed = 1.7f, reverse = true)
         Column {
