@@ -82,6 +82,8 @@ fun ShakeBuilder(
     preview: Map<String, FoodItem>? = null,
     /** What the user typed, already read into ingredients and amounts. */
     draft: com.mrboora.plate.data.MixParser.Draft? = null,
+    /** Remember (label) or forget (null) the user's own reading of a word, e.g. "milk" → "Milk 3.25%". */
+    onRemember: (word: String, label: String?) -> Unit = { _, _ -> },
 ) {
     val c = Plate.colors
     val foods = preview ?: produceState<Map<String, FoodItem>?>(null) { value = ingredients() }.value
@@ -143,7 +145,41 @@ fun ShakeBuilder(
     val t = Mix.totals(parts)
     val n = (if (dishMode) slices else glasses).coerceAtLeast(1)
     val one = when { dishMode -> "slice"; tpl != null -> tpl.unit; else -> "glass" }
+    // One save, used by "Looks good" at the top and the button at the bottom.
+    val canSave = parts.isNotEmpty() && rows.isNotEmpty() && rows.all { it.value != null } && ml != null
+    val count = if (dishMode) ate else 1
+    val saveLabel = "$count ${if (count > 1) (if (one.endsWith("ch") || one.endsWith("ss")) "${one}es" else "${one}s") else one} · ≈ %,d kcal".format((t.kcal / ((if (dishMode) slices else glasses).coerceAtLeast(1)) * count).roundToInt())
+    fun save() = onSave(Mix.build(shownName.ifBlank { auto }, parts, (if (dishMode) slices else glasses).coerceAtLeast(1), unit = one), count.toFloat())
+    // Lines under "How I read it", corrected by tapping.
+    val readLabels = remember { androidx.compose.runtime.mutableStateListOf(*(draft?.items?.map { it.label } ?: emptyList()).toTypedArray()) }
+    var fixing by remember { mutableStateOf<Int?>(null) }
     fun plural(u: String) = if (u.endsWith("ch") || u.endsWith("ss")) "${u}es" else "${u}s"
+
+    // Tapped a reading line: pick what it should be, and optionally remember it.
+    fixing?.let { idx ->
+        val item = draft?.items?.getOrNull(idx)
+        if (item != null && foods != null) {
+            val options = if (item.isBase) Mix.BASES else tpl?.chips ?: if (dishMode) Mix.TOPPINGS else Mix.FRUITS + Mix.EXTRAS
+            FixDialog(
+                word = item.said, current = readLabels[idx], usual = item.usual,
+                options = options.filter { foods[it.second] != null }.map { it.first },
+                onDismiss = { fixing = null },
+                onForget = { onRemember(item.said, null); fixing = null },
+            ) { newLabel, keep ->
+                val old = readLabels[idx]
+                if (item.isBase && Mix.BASES.any { it.first == newLabel }) base = newLabel
+                else {
+                    val key = options.firstOrNull { it.first == newLabel }?.second
+                    val food = key?.let { foods[it] }
+                    val i = rows.indexOfFirst { it.label == old }
+                    if (food != null && i >= 0) rows[i] = MixRow(newLabel, food, rows[i].grams)
+                }
+                readLabels[idx] = newLabel
+                if (keep && item.said.isNotBlank()) onRemember(item.said, newLabel)
+                fixing = null
+            }
+        }
+    }
 
     val content = @Composable {
         Column(
@@ -174,19 +210,30 @@ fun ShakeBuilder(
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     draft.unknown.forEach { u -> Text("“$u”: not found", style = MaterialTheme.typography.bodySmall, color = c.over) }
+                    if (draft.unknown.isEmpty() && canSave) {
+                        Button(::save, Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp)) { Text("Looks good · add $saveLabel") }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
             } else if (draft != null) {
                 PlateCard(padding = 14.dp) {
-                    Eyebrow("How I read it")
+                    Eyebrow("How I read it · tap a line to change it")
                     Spacer(Modifier.height(6.dp))
-                    draft.items.forEach { i ->
-                        Text("${i.label}: ${i.how}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 2.dp))
+                    draft.items.forEachIndexed { idx, i ->
+                        Text(
+                            "${readLabels.getOrElse(idx) { i.label }}: ${i.how}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Change ${i.label}") { fixing = idx }.padding(vertical = 4.dp),
+                        )
                     }
                     draft.unknown.forEach { u ->
                         Text("“$u”: not found, add it with the search below", style = MaterialTheme.typography.bodyMedium, color = c.over, modifier = Modifier.padding(vertical = 2.dp))
                     }
                     Text("Change any amount below; the math updates.", style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp))
+                    // Right after the reading: when it's right, one tap and done.
+                    if (draft.unknown.isEmpty() && canSave) {
+                        Button(::save, Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp)) { Text("Looks good · add $saveLabel") }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
             }
@@ -388,8 +435,8 @@ fun ShakeBuilder(
                 }
             }
             Button(
-                { onSave(Mix.build(shownName.ifBlank { auto }, parts, n, unit = one), (if (dishMode) ate else 1).toFloat()) },
-                enabled = parts.isNotEmpty() && rows.isNotEmpty() && rows.all { it.value != null } && ml != null,
+                ::save,
+                enabled = canSave,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 Text(
@@ -420,4 +467,42 @@ private fun Stepper(value: Int, range: IntRange, onChange: (Int) -> Unit) {
             Icon(androidx.compose.material.icons.Icons.Rounded.Add, "More", Modifier.size(18.dp))
         }
     }
+}
+
+/** Change what a word was read as; "Remember" makes it this user's usual from now on. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FixDialog(
+    word: String,
+    current: String,
+    usual: Boolean,
+    options: List<String>,
+    onDismiss: () -> Unit,
+    onForget: () -> Unit,
+    onPick: (String, Boolean) -> Unit,
+) {
+    var picked by remember { mutableStateOf(current) }
+    var keep by remember { mutableStateOf(true) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (word.isNotBlank()) "\u201c$word\u201d means…" else "Change to…") },
+        text = {
+            Column {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    options.forEach { o -> FilterChip(picked == o, { picked = o }, label = { Text(o) }) }
+                }
+                if (word.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp).clickable { keep = !keep }) {
+                        androidx.compose.material3.Checkbox(keep, { keep = it })
+                        Text("Remember for next time", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                if (usual) {
+                    TextButton(onForget) { Text("Forget my usual for \u201c$word\u201d") }
+                }
+            }
+        },
+        confirmButton = { TextButton({ onPick(picked, keep) }) { Text("Use it") } },
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
 }

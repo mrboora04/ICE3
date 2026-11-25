@@ -33,6 +33,10 @@ object MixParser {
         val isBase: Boolean,
         /** The reasoning, in English: "1 regular spoon = 15 ml × 1.08 g/ml = 16 g". */
         val how: String,
+        /** The word it was read from ("milk"), so a correction can be remembered for it. */
+        val said: String = "",
+        /** True when the user's own remembered reading was used. */
+        val usual: Boolean = false,
     )
 
     /** A dish such as a pizza: its size, and how many slices it's cut into. */
@@ -162,7 +166,13 @@ object MixParser {
      * Reads [text]. [foods] maps builder ingredient keys (as in [Mix]) to foods; [search] looks up
      * anything else in Health Canada's file.
      */
-    fun parse(text: String, foods: Map<String, FoodItem>, search: (String) -> FoodItem?): Draft {
+    fun parse(
+        text: String,
+        foods: Map<String, FoodItem>,
+        search: (String) -> FoodItem?,
+        /** The user's own readings (UserAliases): word → ingredient. */
+        usual: Map<String, String> = emptyMap(),
+    ): Draft {
         val pizza = pizzaSize(text)
         // A template (chai, roti meal, sandwich, eggs, rice bowl) brings its own words and amounts.
         val tpl = if (pizza == null && !Mix.isShake(text)) Templates.forText(text) else null
@@ -214,13 +224,19 @@ object MixParser {
             if (name.isBlank()) continue
 
             // Which food.
-            var label = tplAliases.firstOrNull { (alias, _) -> Regex("""\b${Regex.escape(alias)}\b""").containsMatchIn(name) }?.second
-                ?: ALIASES.firstOrNull { (alias, _) -> Regex("""\b$alias\b""").containsMatchIn(name) }?.second
+            val matched = tplAliases.firstOrNull { (alias, _) -> Regex("""\b${Regex.escape(alias)}\b""").containsMatchIn(name) }
+                ?: ALIASES.firstOrNull { (alias, _) -> Regex("""\b$alias\b""").containsMatchIn(name) }
+            var label = matched?.second
+            val said = matched?.first ?: name
             if (label == "Milk") label = when {
                 fat == null -> "Milk 2%"
                 fat >= 3f -> "Milk 3.25%"
                 else -> "Milk 2%"
             }
+            // The user's usual wins, unless they typed something more specific ("2% milk").
+            val mine = usual[said] ?: usual[name]
+            val isUsual = mine != null && labels[mine] != null && !(label?.startsWith("Milk") == true && fat != null)
+            if (isUsual) label = mine
             val food = label?.let { labels[it] }?.let { foods[it] } ?: search(name)?.also { label = it.name.substringBefore(',').trim() }
             if (food == null || label == null) {
                 unknown += raw.trim()
@@ -279,7 +295,7 @@ object MixParser {
                 }
             }
             val ml = if (isBase) grams / density else null
-            items += Item(label!!, food, grams, ml, isBase, how)
+            items += Item(label!!, food, grams, ml, isBase, if (isUsual) "your usual · $how" else how, said, isUsual)
         }
         // A bare "chai" or "omelette": start from the template's usual recipe.
         if (tpl != null) {

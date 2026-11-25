@@ -1,10 +1,10 @@
 {
-  "versionCode": 40,
-  "versionName": "2.13.2",
+  "versionCode": 41,
+  "versionName": "2.14.0",
   "notes": [
-    "Widgets fixed: the water buttons add water instead of opening the app",
-    "Widgets open at a size that shows everything, can't be shrunk below it, and have a maximum size",
-    "\"+ Bottle 500 ml\" is never cut off"
+    "Looks good: when Plate reads your shake, chai or pizza right, one tap at the top adds it",
+    "Tap any line under \"How I read it\" to change it, and Plate remembers it (milk → 3.25%)",
+    "Widgets: water buttons add water, sizes always fit, and the same drops as the app"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

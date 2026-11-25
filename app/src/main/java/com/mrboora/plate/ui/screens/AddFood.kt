@@ -115,6 +115,7 @@ fun AddFoodScreen(
     /** A homemade shake was built: save it and log one glass. */
     onSaveMix: (FoodItem, Float) -> Unit = { _, _ -> },
     parseMix: suspend (String) -> com.mrboora.plate.data.MixParser.Draft? = { null },
+    onRemember: (word: String, label: String?) -> Unit = { _, _ -> },
 ) {
     val c = Plate.colors
     val scope = rememberCoroutineScope()
@@ -145,6 +146,7 @@ fun AddFoodScreen(
                 onBack()
             },
             draft = if (useDraft) chipDraft ?: mixDraft else null,
+            onRemember = onRemember,
         )
     }
     var local by remember { mutableStateOf<List<FoodItem>>(emptyList()) }

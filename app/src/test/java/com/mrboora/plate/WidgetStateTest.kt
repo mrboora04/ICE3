@@ -57,4 +57,15 @@ class WidgetStateTest {
         com.mrboora.plate.widget.AddWaterAction().onAction(ctx, id, androidx.glance.action.actionParametersOf(com.mrboora.plate.widget.MlKey to 250))
         assertEquals(2000, dao.waterNow(day)?.ml)
     }
+
+    @Test
+    fun rememberedReadingsSaveAndForget() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        com.mrboora.plate.data.UserAliases.remember(ctx, "Milk", "Milk 3.25%")
+        com.mrboora.plate.data.UserAliases.remember(ctx, "scoop\tthing", "Oats")
+        assertEquals("Milk 3.25%", com.mrboora.plate.data.UserAliases.load(ctx)["milk"])
+        assertEquals(2, com.mrboora.plate.data.UserAliases.load(ctx).size)
+        com.mrboora.plate.data.UserAliases.forget(ctx, "milk")
+        assertEquals(null, com.mrboora.plate.data.UserAliases.load(ctx)["milk"])
+    }
 }

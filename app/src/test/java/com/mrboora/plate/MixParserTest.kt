@@ -114,6 +114,19 @@ class MixParserTest {
         val black = com.mrboora.plate.data.MixParser.parse("black coffee", foods, search)
         assertEquals(listOf("Coffee"), black.items.map { it.label })
 
+        // Remembered readings: "milk" is this user's 3.25%; a typed "2%" still wins.
+        val mine = mapOf("milk" to "Milk 3.25%")
+        val usualChai = com.mrboora.plate.data.MixParser.parse("chai with milk", foods, search, mine)
+        assertEquals("Milk 3.25%", usualChai.base!!.label)
+        assertTrue(usualChai.base!!.usual && usualChai.base!!.how.startsWith("your usual"))
+        assertEquals("milk", usualChai.base!!.said)
+        assertEquals("Milk 2%", com.mrboora.plate.data.MixParser.parse("chai with 2% milk", foods, search, mine).base!!.label)
+        // Without a remembered reading, plain milk is still 2%.
+        assertEquals("Milk 2%", com.mrboora.plate.data.MixParser.parse("chai with milk", foods, search).base!!.label)
+        // Works for ingredients too: "berries" → Strawberries for this user.
+        val berries = com.mrboora.plate.data.MixParser.parse("1 banana with 30 g berries and 250 ml milk", foods, search, mapOf("berries" to "Strawberries"))
+        assertEquals("Strawberries", berries.items.first { it.said == "berries" }.label)
+
         // Shakes and pizza keep their own builders.
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("mango lassi", foods, search).template)
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("pizza with corn", foods, search).template)

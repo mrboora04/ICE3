@@ -221,8 +221,14 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun parseMix(text: String): com.mrboora.plate.data.MixParser.Draft {
         val foods = mixIngredients()
         return withContext(Dispatchers.Default) {
-            com.mrboora.plate.data.MixParser.parse(text, foods) { name -> canadian.search(name, 1).firstOrNull() }
+            com.mrboora.plate.data.MixParser.parse(text, foods, { name -> canadian.search(name, 1).firstOrNull() }, com.mrboora.plate.data.UserAliases.load(getApplication()))
         }
+    }
+
+    /** Remember (or forget, with null) what a word means for this user, e.g. "milk" → "Milk 3.25%". */
+    fun rememberReading(word: String, label: String?) {
+        if (label == null) com.mrboora.plate.data.UserAliases.forget(getApplication(), word)
+        else com.mrboora.plate.data.UserAliases.remember(getApplication(), word, label)
     }
 
     /** Saves the mix as one of your foods and logs one glass of it. */

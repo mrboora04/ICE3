@@ -376,6 +376,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     searchIngredients = vm::searchIngredients,
                     onSaveMix = { food, count -> vm.saveMix(meal, food, count) },
                     parseMix = vm::parseMix,
+                    onRemember = vm::rememberReading,
                 )
             }
             composable("edit") {
