@@ -127,6 +127,18 @@ class MixParserTest {
         val berries = com.mrboora.plate.data.MixParser.parse("1 banana with 30 g berries and 250 ml milk", foods, search, mapOf("berries" to "Strawberries"))
         assertEquals("Strawberries", berries.items.first { it.said == "berries" }.label)
 
+        // One food with an amount, typed into search.
+        assertEquals("peanut butter", com.mrboora.plate.data.MixParser.foodWords("peanut butter two spoon"))
+        assertTrue(com.mrboora.plate.data.MixParser.hasAmount("peanut butter two spoon"))
+        assertFalse(com.mrboora.plate.data.MixParser.hasAmount("2% milk"))
+        val pb = foods.getValue("Peanut butter, smooth type, fat and sugar added")
+        val (g, how) = com.mrboora.plate.data.MixParser.amountFor("peanut butter two spoon", pb)!!
+        assertEquals(30f * 272.6f / 250f, g, 0.5f)
+        assertTrue(how.startsWith("2 spoons"))
+        val egg = FoodItem("Egg, boiled", kcal100 = 155f, protein100 = 13f, carbs100 = 1f, fat100 = 11f, servingG = 50f, servingLabel = "1 large")
+        assertEquals(200f, com.mrboora.plate.data.MixParser.amountFor("4 boiled eggs", egg)!!.first, 0.01f)
+        assertEquals("boiled eggs", com.mrboora.plate.data.MixParser.foodWords("4 boiled eggs"))
+
         // Shakes and pizza keep their own builders.
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("mango lassi", foods, search).template)
         assertEquals(null, com.mrboora.plate.data.MixParser.parse("pizza with corn", foods, search).template)

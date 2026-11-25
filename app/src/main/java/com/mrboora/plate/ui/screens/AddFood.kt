@@ -1,5 +1,6 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.ui.unit.sp
 import com.mrboora.plate.ui.components.MenuLine
@@ -116,10 +117,12 @@ fun AddFoodScreen(
     onSaveMix: (FoodItem, Float) -> Unit = { _, _ -> },
     parseMix: suspend (String) -> com.mrboora.plate.data.MixParser.Draft? = { null },
     onRemember: (word: String, label: String?) -> Unit = { _, _ -> },
+    /** Text to start the search with (screenshots and shortcuts). */
+    startQuery: String = "",
 ) {
     val c = Plate.colors
     val scope = rememberCoroutineScope()
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(startQuery) }
     var showShake by rememberSaveable { mutableStateOf(false) }
     // Typed a description like "1 banana with 30 g berries and 400 ml milk": read it into a mix.
     val isMix = com.mrboora.plate.data.MixParser.looksLikeMix(query)
@@ -153,6 +156,8 @@ fun AddFoodScreen(
     var online by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     var onlineState by remember { mutableStateOf<String?>(null) } // null idle, "loading", or a message
     var picked by remember { mutableStateOf<FoodItem?>(null) }
+    /** An amount read from the search ("two spoon"), to start the amount sheet with. */
+    var pickedAmount by remember { mutableStateOf<Float?>(null) }
     var showBarcode by remember { mutableStateOf(false) }
     var showCreate by remember { mutableStateOf(false) }
     var browseExpanded by rememberSaveable { mutableStateOf(false) }
@@ -214,6 +219,11 @@ fun AddFoodScreen(
         if (browsing) return@LaunchedEffect
         delay(150)
         local = searchLocal(query)
+        // "peanut butter two spoon": search the food words too, not just the whole sentence.
+        val words = com.mrboora.plate.data.MixParser.foodWords(query)
+        if (local.size < 3 && words.isNotBlank() && words != query.trim().lowercase()) {
+            local = (local + searchLocal(words)).distinctBy { it.key }
+        }
         online = emptyList()
         onlineState = null
         // A description of a homemade mix isn't a typo: don't "correct" it.
@@ -388,6 +398,22 @@ fun AddFoodScreen(
                     items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
                 }
             } else {
+                // Typed a food with an amount ("peanut butter two spoon", "4 eggs"): add it in one tap.
+                val quick = if (!isMix && com.mrboora.plate.data.MixParser.hasAmount(query)) local.firstOrNull()?.let { f ->
+                    com.mrboora.plate.data.MixParser.amountFor(query, f)?.let { f to it }
+                } else null
+                if (quick != null) item(key = "quick") {
+                    val (food, amt) = quick
+                    val (grams, how) = amt
+                    PlateCard(Modifier.padding(top = 8.dp), padding = 14.dp) {
+                        Text(food.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(how, style = MaterialTheme.typography.bodySmall, color = c.muted)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                            Button({ onAdd(food, grams); onBack() }) { Text("Add · ≈ %,d kcal".format(food.kcalFor(grams).roundToInt())) }
+                            TextButton({ pickedAmount = grams; picked = food }) { Text("Change") }
+                        }
+                    }
+                }
                 item {
                     // Typed what's in it: show how it was read and open the builder filled in.
                 if (mixDraft != null) {
@@ -465,7 +491,8 @@ fun AddFoodScreen(
     }
 
     picked?.let { food ->
-        AmountSheet(food, onDismiss = { picked = null }) { grams ->
+        AmountSheet(food, initial = pickedAmount, onDismiss = { picked = null; pickedAmount = null }) { grams ->
+            pickedAmount = null
             onAdd(food, grams)
             picked = null
             onBack()
@@ -524,9 +551,9 @@ private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float) -> Unit) {
+private fun AmountSheet(food: FoodItem, initial: Float? = null, onDismiss: () -> Unit, onConfirm: (Float) -> Unit) {
     val c = Plate.colors
-    var text by remember(food) { mutableStateOf(if (food.perItem) "1" else food.servingG.clean()) }
+    var text by remember(food) { mutableStateOf(initial?.clean() ?: if (food.perItem) "1" else food.servingG.clean()) }
     val g = text.toNumber()?.takeIf { it > 0f && it <= (if (food.perItem) 50f else 5000f) }
     ModalBottomSheet(onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = c.card) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().imePadding().padding(bottom = 16.dp)) {
@@ -544,6 +571,24 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
                 listOf(0.5f, 1f, 2f, 3f).forEach { v ->
                     FilterChip(g == v, { text = v.clean() }, label = { Text("${v.clean()} ×") })
                 }
+            } else if (Portions.countUnit(food) != null) {
+                // Counted foods (eggs, rotis, slices…): how many, with the grams worked out.
+                val unit = Portions.countUnit(food)!!
+                val serving = food.servingG
+                val count = g?.let { (it / serving) }?.takeIf { kotlin.math.abs(it - kotlin.math.round(it)) < 0.01f }?.let { kotlin.math.round(it).toInt() }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("How many?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    FilledTonalIconButton({ text = (serving * ((count ?: 1) - 1).coerceAtLeast(1)).clean() }, enabled = (count ?: 1) > 1) {
+                        Icon(Icons.Rounded.Remove, "One less")
+                    }
+                    Text("${count ?: "–"}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 16.dp))
+                    FilledTonalIconButton({ text = (serving * ((count ?: 0) + 1)).clean() }) { Icon(Icons.Rounded.Add, "One more") }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..4).forEach { n ->
+                        FilterChip(count == n, { text = (serving * n).clean() }, label = { Text("$n $unit · ${(serving * n).clean()} g") })
+                    }
+                }
             } else FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val serving = food.servingG
                 val label = food.servingLabel.ifBlank { "serving" }
@@ -553,7 +598,8 @@ private fun AmountSheet(food: FoodItem, onDismiss: () -> Unit, onConfirm: (Float
                     FilterChip(g == v, { text = v.clean() }, label = { Text("${v.clean()} g") })
                 }
             }
-            PortionHelper(food, g) { text = it.clean() }
+            // Cups, spoons and the hand guide are for foods you measure, not ones you count.
+            if (Portions.countUnit(food) == null) PortionHelper(food, g) { text = it.clean() }
             Spacer(Modifier.height(16.dp))
             val gg = g ?: 0f
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

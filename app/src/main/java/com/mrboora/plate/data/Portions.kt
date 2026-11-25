@@ -35,15 +35,30 @@ object Portions {
                 val d = food.servingG / ml
                 if (d in 0.03f..2.5f) return d to true
             }
+            // Kitchen labels count too: "2 tbsp" = 30 ml, "1 tsp" = 5 ml, "1 cup" = 250 ml.
+            kitchenRegex.find(food.servingLabel.lowercase())?.let { m ->
+                val n = m.groupValues[1].replace(',', '.').toFloatOrNull() ?: return@let
+                val per = when {
+                    m.groupValues[2].startsWith("tbsp") || m.groupValues[2].startsWith("tablespoon") -> 15f
+                    m.groupValues[2].startsWith("tsp") || m.groupValues[2].startsWith("teaspoon") -> 5f
+                    else -> 250f
+                }
+                val d = food.servingG / (n * per)
+                if (d in 0.03f..2.5f) return d to true
+            }
         }
         return typical(food.name.lowercase()) to false
     }
+
+    private val kitchenRegex = Regex("""(\d+(?:[.,]\d+)?)\s*(tbsp|tablespoons?|tsp|teaspoons?|cups?)\b""")
 
     private fun has(name: String, vararg words: String) =
         words.any { Regex("""\b${Regex.escape(it)}(e?s)?\b""").containsMatchIn(name) }
 
     private fun typical(n: String): Float = when {
         has(n, "oil", "ghee") -> 0.92f
+        // Nut butters are dense pastes, not loose nuts: about 1.08 g/ml.
+        has(n, "peanut butter", "almond butter", "cashew butter", "nut butter", "tahini") -> 1.08f
         has(n, "butter", "margarine", "shortening") && !has(n, "peanut butter", "nut butter") -> 0.95f
         has(n, "honey", "syrup", "molasses", "jam", "jelly", "marmalade") -> 1.4f
         has(n, "sugar") -> 0.85f
@@ -94,6 +109,28 @@ object Portions {
         } else listOf("1 tsp" to 5f, "1 tbsp" to 15f, "¼ cup" to 62.5f, "½ cup" to 125f, "1 cup" to 250f)
         if (isDrink(food)) return list.map { (name, ml) -> Portion(name, "", ml, true, "ml") }
         return list.map { (name, ml) -> Portion(name, "", grams(ml, d), exact) }
+    }
+
+    private val MEASURES = setOf(
+        "ml", "l", "cup", "cups", "tbsp", "tsp", "tablespoon", "teaspoon", "g", "kg", "oz", "bowl", "katori",
+        "glass", "serving", "portion", "handful", "scoop", "can", "bottle", "container", "small container",
+        "packet", "package", "pouch", "food guide serving", "order", "plate",
+    )
+
+    /**
+     * The unit a food is counted in, from its own serving ("1 large" → "large", "1 roti" → "roti"),
+     * or null when it's measured (cups, ml, grams, a bowl). Counted foods get "How many?" instead of
+     * cups and the hand guide: 4 eggs are 4 eggs.
+     */
+    fun countUnit(food: FoodItem): String? {
+        if (food.perItem || food.servingG <= 0f) return null
+        val l = food.servingLabel.trim().lowercase()
+        val m = Regex("""^(1|one|a)\s+(.+)$""").find(l) ?: return null
+        val unit = m.groupValues[2].substringBefore('(').substringBefore('=').substringBefore(',').trim()
+        if (unit.isBlank() || unit in MEASURES || MEASURES.any { unit.startsWith("$it ") } ||
+            Regex("""\b(ml|cups?|tbsp|tsp|g|oz|bowl|serving)\b""").containsMatchIn(unit)
+        ) return null
+        return unit
     }
 
     /** Hand guide: no scales or cups needed. Empty for drinks and per-item foods. */

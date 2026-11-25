@@ -1,10 +1,10 @@
 {
-  "versionCode": 41,
-  "versionName": "2.14.0",
+  "versionCode": 42,
+  "versionName": "2.14.1",
   "notes": [
-    "Looks good: when Plate reads your shake, chai or pizza right, one tap at the top adds it",
-    "Tap any line under \"How I read it\" to change it, and Plate remembers it (milk → 3.25%)",
-    "Widgets: water buttons add water, sizes always fit, and the same drops as the app"
+    "Type a food with an amount (\"peanut butter two spoon\", \"4 boiled eggs\") and add it in one tap",
+    "Eggs, rotis, slices: just say how many; no cups or hand guide for foods you count",
+    "Builders: Looks good at the top, and tap a reading to change and remember it (milk → 3.25%)"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

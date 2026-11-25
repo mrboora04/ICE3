@@ -142,6 +142,62 @@ object MixParser {
         "fresh", "frozen", "cold", "in", "on", "it", "my", "regular", "normal", "little", "bit", "plain", "fat",
     )
 
+    /** The food words of a search, without the amount: "peanut butter two spoon" → "peanut butter". */
+    fun foodWords(text: String): String {
+        var t = clean(text)
+        t = WITH_UNIT.replace(t, " ")
+        t = BARE.replace(t, " ")
+        return t.split(' ').filter { it.isNotBlank() && it !in STOP && it.toFloatOrNull() == null && it !in setOf("of", "x", "×") }
+            .joinToString(" ")
+    }
+
+    /** True when a search also says how much ("two spoon", "4 eggs", "100 g"). */
+    fun hasAmount(text: String): Boolean {
+        val t = clean(text)
+        return WITH_UNIT.containsMatchIn(t) || Regex("""(?<![\w.%])(\d+(?:[.,]\d+)?|half|one|two|three|four|five|six|seven|eight|nine|ten)\b(?!\s*%)""").containsMatchIn(t)
+    }
+
+    /**
+     * How much of [food] a search asks for, in grams (or a count for per-item foods), with the
+     * reasoning: "2 spoons = 30 ml × 1.09 g/ml = 33 g", "4 × large (50 g each) = 200 g".
+     */
+    fun amountFor(text: String, food: FoodItem): Pair<Float, String>? {
+        val t = clean(text)
+        val m = WITH_UNIT.find(t)
+        if (m != null) {
+            val qty = number(m.groupValues[1]) ?: return null
+            val size = m.groupValues[2]
+            val unit = m.groupValues[3]
+            if (food.perItem) return null
+            val d = Mix.mlToGrams(food, 1f)
+            fun ml(v: Float, said: String) = (v * d) to "$said = ${fmt(v)} ml × ${"%.2f".format(d)} g/ml = ${fmt((v * d).roundToInt().toFloat())} g"
+            val big = size in setOf("big", "large", "heaped", "heaping", "full")
+            val small = size in setOf("small", "little")
+            val n = fmt(qty)
+            return when {
+                unit.startsWith("k") -> (qty * 1000f) to "$n kg = ${fmt(qty * 1000f)} g"
+                unit == "g" || unit.startsWith("gm") || unit.startsWith("gram") -> qty to "$n g"
+                unit.startsWith("ml") || unit.startsWith("milli") -> ml(qty, "$n ml")
+                unit == "l" || unit.startsWith("lit") -> ml(qty * 1000f, "$n L")
+                unit.startsWith("cup") -> ml(qty * 250f, "$n cup (250 ml)")
+                unit.startsWith("glass") -> ml(qty * 250f, "$n glass (250 ml)")
+                unit == "tsp" || unit.startsWith("teaspoon") || (unit.startsWith("spoon") && small) -> ml(qty * 5f, "$n teaspoon (5 ml)")
+                unit == "tbsp" || unit.startsWith("tablespoon") || unit.startsWith("spoon") ->
+                    ml(qty * 15f * (if (big) 1.5f else 1f), "$n ${if (big) "heaped " else ""}spoon${if (qty != 1f) "s" else ""} (tablespoon, 15 ml)")
+                unit.startsWith("scoop") -> ml(qty * 30f * (if (big) 1.5f else if (small) .75f else 1f), "$n scoop (≈ 2 tbsp; scoops vary)")
+                unit.startsWith("handful") -> ml(qty * 125f, "$n handful (≈ ½ cup)")
+                else -> null
+            }
+        }
+        val b = Regex("""(?<![\w.%])(\d+(?:[.,]\d+)?|½|¼|¾|half|one|two|three|four|five|six|seven|eight|nine|ten)\b(?!\s*%)""").find(t) ?: return null
+        val count = number(b.groupValues[1]) ?: return null
+        if (food.perItem) return count to "${fmt(count)} ×"
+        if (food.servingG <= 0f) return null
+        val unit = Portions.countUnit(food) ?: food.servingLabel.removePrefix("1 ").ifBlank { "serving" }
+        val g = count * food.servingG
+        return g to "${fmt(count)} × $unit (${fmt(food.servingG.roundToInt().toFloat())} g each) = ${fmt(g.roundToInt().toFloat())} g"
+    }
+
     /** True when the text reads like something made from ingredients, not one food's name. */
     fun looksLikeMix(text: String): Boolean {
         val t = clean(text)

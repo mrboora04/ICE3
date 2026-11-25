@@ -339,7 +339,7 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun FoodItem.toSaved(custom: Boolean) = SavedFood(
         key, name.trim(), brand.trim(), kcal100, protein100, carbs100, fat100, servingG, custom,
-        System.currentTimeMillis(), perItem, estimated,
+        System.currentTimeMillis(), perItem, estimated, servingLabel,
     )
 
     companion object {

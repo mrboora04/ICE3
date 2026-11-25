@@ -20,6 +20,7 @@ import com.mrboora.plate.data.OpenFoodFacts
 import com.mrboora.plate.data.Goal
 import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.Profile
+import com.mrboora.plate.data.toItem
 import com.mrboora.plate.data.Portions
 import com.mrboora.plate.data.Sex
 import com.mrboora.plate.ui.screens.clean
@@ -382,6 +383,35 @@ class NutritionTest {
         assertEquals(listOf("+ Glass 250 ml", "+ Bottle 500 ml", "½ Bottle"), W.buttons(W.defaults).map { it.label })
         // Drops: one per 250 ml of the goal, shared by the app and the widgets.
         assertEquals(12, W.drops(3000)); assertEquals(5, W.filledDrops(1250)); assertEquals(16, W.drops(9000)); assertEquals(1, W.drops(100))
+    }
+
+    @Test
+    fun countedFoodsAreCountedNotMeasured() {
+        fun f(label: String, g: Float = 50f) = FoodItem("x", kcal100 = 100f, protein100 = 0f, carbs100 = 0f, fat100 = 0f, servingG = g, servingLabel = label)
+        assertEquals("large", Portions.countUnit(f("1 large")))                          // a boiled egg
+        assertEquals("roti", Portions.countUnit(f("1 roti", 40f)))
+        assertEquals("medium", Portions.countUnit(f("1 medium (18cm to 20cm long)", 118f)))  // a banana
+        assertEquals("slice", Portions.countUnit(f("1 slice", 28f)))
+        assertEquals(null, Portions.countUnit(f("1 cup", 160f)))                          // rice is measured
+        assertEquals(null, Portions.countUnit(f("1 bowl", 200f)))                         // dal is measured
+        assertEquals(null, Portions.countUnit(f("250 ml", 250f)))
+        assertEquals(null, Portions.countUnit(f("")))
+        // A saved egg without a serving name gets "1 large" back from Plate's list.
+        val saved = com.mrboora.plate.data.SavedFood("egg, boiled|", "Egg, boiled", "", 155f, 13f, 1f, 11f, 50f, false, 0L)
+        assertEquals("large", Portions.countUnit(saved.toItem()))
+    }
+
+    @Test
+    fun densityReadsKitchenLabelsAndNutButters() {
+        // Plate's own peanut butter: "2 tbsp" = 32 g, so 32 g / 30 ml.
+        val pb = FoodItem("Peanut butter", kcal100 = 588f, protein100 = 25f, carbs100 = 20f, fat100 = 50f, servingG = 32f, servingLabel = "2 tbsp")
+        val (d, exact) = Portions.density(pb)
+        assertEquals(32f / 30f, d, 0.001f); assertTrue(exact)
+        // No label: a nut butter is a paste (1.08), not loose nuts (0.6).
+        assertEquals(1.08f, Portions.density(FoodItem("Almond butter", kcal100 = 600f, protein100 = 20f, carbs100 = 20f, fat100 = 55f)).first, 0.001f)
+        assertEquals(0.6f, Portions.density(FoodItem("Almonds", kcal100 = 579f, protein100 = 21f, carbs100 = 22f, fat100 = 50f)).first, 0.001f)
+        // A cup label: rice "1 cup" = 160 g → 0.64 g/ml.
+        assertEquals(0.64f, Portions.density(FoodItem("Basmati rice, cooked", kcal100 = 121f, protein100 = 3f, carbs100 = 25f, fat100 = 0f, servingG = 160f, servingLabel = "1 cup")).first, 0.001f)
     }
 }
 

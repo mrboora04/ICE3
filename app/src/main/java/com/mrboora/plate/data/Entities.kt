@@ -98,6 +98,8 @@ data class SavedFood(
     @ColumnInfo(defaultValue = "0") val perItem: Boolean = false,
     /** Same as [FoodItem.estimated]: "k" for homemade mixes, shown with ≈. */
     @ColumnInfo(defaultValue = "") val estimated: String = "",
+    /** The food's own serving ("1 large", "1 roti"), so counted foods stay counted. */
+    @ColumnInfo(defaultValue = "") val servingLabel: String = "",
 )
 
 @Entity(tableName = "weight")
@@ -158,4 +160,6 @@ fun SavedFood.toItem() = FoodItem(
     source = if (custom) FoodItem.Source.CUSTOM else FoodItem.Source.SAVED,
     perItem = perItem,
     estimated = estimated,
+    // Older saved foods have no serving name: borrow it from Plate's list when the name matches.
+    servingLabel = servingLabel.ifBlank { FoodCatalog.foods.firstOrNull { it.name == name }?.servingLabel.orEmpty() },
 )

@@ -284,6 +284,17 @@ class ScreenshotTest {
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
     }
 
+    @Test fun addFoodWithAmount() = shot("add_food_amount") {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
+        AddFoodScreen(
+            Meal.SNACK, "Today", emptyList(),
+            { q -> FoodCatalog.search(q) + cnf.search(q, 5) }, { Result.success(emptyList()) }, { Result.success(null) },
+            { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _ -> }, {}, {}, { _, _ -> }, {},
+            startQuery = "peanut butter two spoon",
+        )
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 
