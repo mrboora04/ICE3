@@ -66,12 +66,15 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 @Composable
 fun PlateApp(vm: PlateViewModel = viewModel()) {
     val state by vm.profileState.collectAsStateWithLifecycle()
-    Box(Modifier.fillMaxSize().background(Plate.colors.ground)) {
-        when (val s = state) {
-            ProfileState.Loading -> Unit
-            is ProfileState.Ready ->
-                if (s.profile == null) OnboardingScreen { vm.saveProfile(it, logWeight = true) }
-                else Main(vm, s.profile)
+    val units by vm.units.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(com.mrboora.plate.ui.components.LocalUnits provides units) {
+        Box(Modifier.fillMaxSize().background(Plate.colors.ground)) {
+            when (val s = state) {
+                ProfileState.Loading -> Unit
+                is ProfileState.Ready ->
+                    if (s.profile == null) OnboardingScreen(onUnits = vm::setUnits) { vm.saveProfile(it, logWeight = true) }
+                    else Main(vm, s.profile)
+            }
         }
     }
 }
@@ -96,6 +99,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val updateCardHidden by vm.updateCardHidden.collectAsStateWithLifecycle()
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
     val waterContainers by vm.waterContainers.collectAsStateWithLifecycle()
+    val units by vm.units.collectAsStateWithLifecycle()
     val todayMeals by vm.todayEntries.collectAsStateWithLifecycle()
     val workoutsByDay by vm.workoutsByDay.collectAsStateWithLifecycle()
     val todayWater by vm.todayWaterMl.collectAsStateWithLifecycle()
@@ -192,7 +196,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
         vm.goToToday()
         when (s) {
             com.mrboora.plate.widget.Shortcuts.WATER -> {
-                val b = com.mrboora.plate.data.WaterContainers.buttons(waterContainers).first()
+                val b = com.mrboora.plate.data.WaterContainers.buttons(waterContainers, units).first()
                 vm.addWater(b.ml)
                 snackbar.showSnackbar("Added ${b.ml} ml of water", withDismissAction = true)
             }
@@ -320,6 +324,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     profile, targets, currentKg, weights.firstOrNull()?.kg ?: profile.weightKg, content,
                     onEdit = { nav.navigate("edit") },
                     onReset = vm::resetAll,
+                    onUnits = vm::setUnits,
                     onCleanInstallers = {
                         runCatching { pickInstallers.launch(arrayOf("application/vnd.android.package-archive")) }
                             .onFailure { scope.launch { snackbar.showSnackbar("No file manager found to pick the files.") } }
@@ -394,7 +399,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     },
                 ) { p ->
                     Column(Modifier.padding(p).imePadding().verticalScroll(rememberScrollState()).padding(20.dp)) {
-                        ProfileForm(profile.copy(weightKg = currentKg), "Save changes") { updated ->
+                        ProfileForm(profile.copy(weightKg = currentKg), "Save changes", onUnits = vm::setUnits) { updated ->
                             // A changed weight on this form counts as today's weigh-in.
                             vm.saveProfile(updated, logWeight = updated.weightKg != currentKg)
                             nav.popBackStack()

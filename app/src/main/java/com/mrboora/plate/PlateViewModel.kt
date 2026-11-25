@@ -256,6 +256,17 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
     /** Redraws the home-screen widgets. */
     private fun refreshWidgets() = viewModelScope.launch { com.mrboora.plate.widget.PlateWidgets.updateAll(getApplication()) }
 
+    /** kg or lb, cm or ft in, ml or fl oz: the phone's default until the user picks. */
+    private val _units = MutableStateFlow(com.mrboora.plate.data.Units.load(app))
+    val units: StateFlow<com.mrboora.plate.data.Units.Prefs> = _units
+    fun setUnits(p: com.mrboora.plate.data.Units.Prefs) {
+        com.mrboora.plate.data.Units.save(getApplication(), p)
+        _units.value = p
+        // The widgets and the shortcut say "+ Bottle 500 ml" or "+ Bottle 16.9 fl oz" too.
+        com.mrboora.plate.widget.Shortcuts.publish(getApplication())
+        refreshWidgets()
+    }
+
     private val _waterContainers = MutableStateFlow(com.mrboora.plate.data.WaterContainers.load(app))
     val waterContainers: StateFlow<List<com.mrboora.plate.data.WaterContainers.Container>> = _waterContainers
     fun saveWaterContainers(list: List<com.mrboora.plate.data.WaterContainers.Container>) {

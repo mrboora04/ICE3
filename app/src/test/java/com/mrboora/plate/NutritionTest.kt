@@ -3,6 +3,13 @@ package com.mrboora.plate
 import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.WeightEntry
 import com.mrboora.plate.data.DaySummary
+import com.mrboora.plate.data.weightValue
+import com.mrboora.plate.data.kgFrom
+import com.mrboora.plate.data.weight
+import com.mrboora.plate.data.height
+import com.mrboora.plate.data.volume
+import com.mrboora.plate.data.mlFrom
+import com.mrboora.plate.data.kcalPerWeightUnit
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -476,5 +483,31 @@ class NutritionTest {
         assertEquals(listOf("Whole", "White"), t.map { it.first })
         assertSame(white, t[1].second)
         assertNull(Portions.types(FoodItem("Banana", kcal100 = 89f, protein100 = 1f, carbs100 = 23f, fat100 = 0f)) { file })
+    }
+
+    @Test
+    fun unitsConvertBothWaysWithoutDrift() {
+        val lb = com.mrboora.plate.data.Units.Prefs(com.mrboora.plate.data.Units.Weight.LB, com.mrboora.plate.data.Units.Height.FT_IN, com.mrboora.plate.data.Units.Volume.FL_OZ)
+        val metric = com.mrboora.plate.data.Units.Prefs()
+        // 110 kg = 242.5 lb; typing 242.5 back gives 110 kg (to 0.1).
+        assertEquals(242.5f, lb.weightValue(110f), 0.001f)
+        assertEquals(110f, lb.kgFrom(lb.weightValue(110f)), 0.05f)
+        assertEquals("242.5 lb", lb.weight(110f))
+        assertEquals("110 kg", metric.weight(110f))
+        // 180 cm = 5′ 11″, and back within an inch.
+        assertEquals("5′ 11″", lb.height(180f))
+        assertEquals(180.3f, com.mrboora.plate.data.cmFrom(5f, 11f), 0.1f)
+        // 500 ml bottle = 16.9 fl oz; typing 16.9 back = 500 ml.
+        assertEquals("16.9 fl oz", lb.volume(500))
+        assertEquals(500, lb.mlFrom(16.9f))
+        assertEquals("1,250 ml", metric.volume(1250))
+        // 7,700 kcal per kg is about 3,500 per lb, worked out, not typed in.
+        assertEquals(3500f, lb.kcalPerWeightUnit(), 0.1f)
+        // The widget and water card buttons say fl oz too.
+        assertEquals("+ Bottle 16.9 fl oz", com.mrboora.plate.data.WaterContainers.buttons(listOf(com.mrboora.plate.data.WaterContainers.Container("Bottle", 500)), lb).first().label)
+        // The US uses lb, Canada and India metric (from the phone's region).
+        assertEquals(com.mrboora.plate.data.Units.Weight.LB, com.mrboora.plate.data.Units.phoneDefault(java.util.Locale.US).weight)
+        assertEquals(com.mrboora.plate.data.Units.Weight.KG, com.mrboora.plate.data.Units.phoneDefault(java.util.Locale.CANADA).weight)
+        assertEquals(com.mrboora.plate.data.Units.Weight.KG, com.mrboora.plate.data.Units.phoneDefault(java.util.Locale("en", "IN")).weight)
     }
 }

@@ -1,5 +1,7 @@
 package com.mrboora.plate
 
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.foundation.layout.padding
 import com.mrboora.plate.data.FoodItem
 import android.graphics.Bitmap
@@ -222,6 +224,47 @@ class ScreenshotTest {
                 )
             },
         )
+    }
+
+    private val imperial = com.mrboora.plate.data.Units.Prefs(
+        com.mrboora.plate.data.Units.Weight.LB, com.mrboora.plate.data.Units.Height.FT_IN, com.mrboora.plate.data.Units.Volume.FL_OZ,
+    )
+
+    /** The same screen with lb, ft in and fl oz. */
+    private fun imperialShot(name: String, content: @Composable () -> Unit) = shot(name) {
+        androidx.compose.runtime.CompositionLocalProvider(com.mrboora.plate.ui.components.LocalUnits provides imperial) { content() }
+    }
+
+    @Test @Config(qualifiers = "w411dp-h3200dp-xxhdpi") fun profileImperial() = imperialShot("profile_imperial") {
+        ProfileScreen(
+            profile, targets, current, weights.first().kg, pad, {}, {},
+            forecast = {
+                com.mrboora.plate.ui.screens.ForecastCard(
+                    profile, current, entries, 1250,
+                    listOf(com.mrboora.plate.data.Workout(1, today, "Brisk walk", 40, 220)), weights, today,
+                    onAddWorkout = { _, _, _ -> }, onDeleteWorkout = {},
+                    modifier = Modifier.padding(horizontal = 16.dp_),
+                )
+            },
+        )
+    }
+
+    @Test fun todayImperial() = imperialShot("today_imperial") {
+        TodayScreen(profile, targets, today, entries, 1250, pad, {}, {}, {}, {}, {})
+    }
+
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun formImperial() {
+        var saved: com.mrboora.plate.data.Profile? = null
+        val start = profile.copy(waterGoalMl = 2500)
+        imperialShot("profile_form_imperial") {
+            androidx.compose.foundation.layout.Column(Modifier.padding(16.dp_)) {
+                com.mrboora.plate.ui.screens.ProfileForm(start, "Save changes") { saved = it }
+            }
+        }
+        // Saving without changing anything keeps every number exactly (no lb / fl oz rounding).
+        rule.onNodeWithText("Save changes").performClick()
+        rule.mainClock.advanceTimeBy(100)
+        org.junit.Assert.assertEquals(start, saved)
     }
 
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun shakeBuilder() = shot("shake_builder") {

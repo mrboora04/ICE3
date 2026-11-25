@@ -1,5 +1,12 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.material3.SegmentedButton
+import com.mrboora.plate.ui.components.LocalUnits
+import com.mrboora.plate.data.Units
+import com.mrboora.plate.data.weight
+import com.mrboora.plate.data.weightRaw
+import com.mrboora.plate.data.height
+import com.mrboora.plate.data.volume
 import com.mrboora.plate.ui.theme.PosterType
 import com.mrboora.plate.ui.components.MenuLine
 import androidx.compose.animation.core.Animatable
@@ -92,8 +99,11 @@ fun ProfileScreen(
     forecast: @Composable () -> Unit = {},
     /** Opens the file picker to delete old Plate….apk installers from Downloads. */
     onCleanInstallers: (() -> Unit)? = null,
+    /** Change kg/lb, cm/ft in, ml/fl oz. */
+    onUnits: (Units.Prefs) -> Unit = {},
 ) {
     val c = Plate.colors
+    val u = LocalUnits.current
     var confirmReset by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val bmi = Nutrition.bmi(currentKg, profile.heightCm)
@@ -113,7 +123,7 @@ fun ProfileScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PulseDot(c.good)
                         Spacer(Modifier.width(8.dp))
-                        Text(goalLine(profile, targets), style = MaterialTheme.typography.labelMedium.merge(tab), color = c.ink)
+                        Text(goalLine(profile, targets, u), style = MaterialTheme.typography.labelMedium.merge(tab), color = c.ink)
                     }
                 }
             }
@@ -132,7 +142,7 @@ fun ProfileScreen(
                     Spacer(Modifier.width(18.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Eyebrow("Goal weight")
-                        Text("${profile.goalWeightKg.clean()} kg", style = MaterialTheme.typography.headlineMedium.merge(tab))
+                        Text(u.weight(profile.goalWeightKg), style = MaterialTheme.typography.headlineMedium.merge(tab))
                         Text(
                             when {
                                 profile.goal == Goal.MAINTAIN -> "Holding steady around here"
@@ -152,12 +162,12 @@ fun ProfileScreen(
         item {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Tile("Weight", "${currentKg.clean()} kg", "started at ${startKg.clean()}", Modifier.weight(1f))
-                    Tile("Height", "${profile.heightCm.clean()} cm", "${profile.age} years · ${profile.sex.label.lowercase()}", Modifier.weight(1f))
+                    Tile("Weight", u.weight(currentKg), "started at ${u.weight(startKg)}", Modifier.weight(1f))
+                    Tile("Height", u.height(profile.heightCm), "${profile.age} years · ${profile.sex.label.lowercase()}", Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Tile("BMI", "%.1f".format(bmi), Nutrition.bmiLabel(bmi), Modifier.weight(1f))
-                    Tile("Water", "%,d ml".format(profile.waterGoalMl), "daily goal", Modifier.weight(1f))
+                    Tile("Water", u.volume(profile.waterGoalMl), "daily goal", Modifier.weight(1f))
                 }
             }
         }
@@ -170,7 +180,7 @@ fun ProfileScreen(
                 Line("× ${profile.activity.label.lowercase()}", "%,d kcal".format(targets.tdee))
                 val adj = targets.kcal - targets.tdee
                 Line(
-                    if (profile.goal == Goal.MAINTAIN) "No adjustment" else "${profile.goal.label} ${profile.paceKgPerWeek.clean()} kg / week",
+                    if (profile.goal == Goal.MAINTAIN) "No adjustment" else "${profile.goal.label} ${num2(u.weightRaw(profile.paceKgPerWeek))} ${u.weight.label} / week",
                     (if (adj > 0) "+" else if (adj < 0) "−" else "") + "%,d kcal".format(abs(adj)),
                 )
                 Spacer(Modifier.height(6.dp))
@@ -189,6 +199,8 @@ fun ProfileScreen(
                 )
             }
         }
+
+        item { UnitsCard(u, onUnits, Modifier.padding(horizontal = 16.dp)) }
 
         item { extra() }
 
@@ -224,9 +236,41 @@ fun ProfileScreen(
     }
 }
 
-private fun goalLine(p: Profile, t: Targets): String = when (p.goal) {
+private fun goalLine(p: Profile, t: Targets, u: Units.Prefs): String = when (p.goal) {
     Goal.MAINTAIN -> "Maintaining · %,d kcal a day".format(t.kcal)
-    else -> "${p.goal.label} ${p.paceKgPerWeek.clean()} kg/week · %,d kcal a day".format(t.kcal)
+    else -> "${p.goal.label} ${num2(u.weightRaw(p.paceKgPerWeek))} ${u.weight.label}/week · %,d kcal a day".format(t.kcal)
+}
+
+/** Up to two decimals: 0.5 kg, 1.1 lb, 0.25 kg. */
+internal fun num2(v: Float): String = ((v * 100f).roundToInt() / 100f).clean()
+
+/** kg or lb, cm or ft in, ml or fl oz: each on its own, saved at once. */
+@Composable
+fun UnitsCard(u: Units.Prefs, onUnits: (Units.Prefs) -> Unit, modifier: Modifier = Modifier) {
+    PlateCard(modifier) {
+        Eyebrow("Units")
+        Spacer(Modifier.height(4.dp))
+        Text("Plate keeps kg, cm and ml inside; this only changes what you see and type.", style = MaterialTheme.typography.bodySmall, color = Plate.colors.muted)
+        UnitRow("Body weight", Units.Weight.entries, u.weight, { it.label }) { onUnits(u.copy(weight = it)) }
+        UnitRow("Height", Units.Height.entries, u.height, { it.label }) { onUnits(u.copy(height = it)) }
+        UnitRow("Drinks", Units.Volume.entries, u.volume, { it.label }) { onUnits(u.copy(volume = it)) }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> UnitRow(label: String, options: List<T>, chosen: T, name: (T) -> String, onPick: (T) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+        androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.width(170.dp)) {
+            options.forEachIndexed { i, o ->
+                SegmentedButton(
+                    chosen == o, { onPick(o) }, androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
+                    icon = {},
+                ) { Text(name(o), maxLines = 1) }
+            }
+        }
+    }
 }
 
 fun goalProgress(goal: Goal, start: Float, now: Float, target: Float): Float {

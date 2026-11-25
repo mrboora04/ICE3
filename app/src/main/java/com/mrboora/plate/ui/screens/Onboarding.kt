@@ -26,7 +26,7 @@ import com.mrboora.plate.ui.components.MorphBlob
 import com.mrboora.plate.ui.theme.Plate
 
 @Composable
-fun OnboardingScreen(onDone: (Profile) -> Unit) {
+fun OnboardingScreen(onUnits: (com.mrboora.plate.data.Units.Prefs) -> Unit = {}, onDone: (Profile) -> Unit) {
     val c = Plate.colors
     Box(Modifier.fillMaxSize()) {
         MorphBlob(listOf(c.peach, c.pink, c.lilac), Modifier.size(260.dp).align(Alignment.TopEnd).offset(130.dp, (-80).dp).alpha(0.75f))
@@ -45,7 +45,7 @@ fun OnboardingScreen(onDone: (Profile) -> Unit) {
                 style = MaterialTheme.typography.bodyLarge, color = c.muted,
             )
             Spacer(Modifier.height(28.dp))
-            ProfileForm(initial = null, saveLabel = "Start tracking", onSave = onDone)
+            ProfileForm(initial = null, saveLabel = "Start tracking", onUnits = onUnits, onSave = onDone)
             Spacer(Modifier.height(24.dp))
         }
     }

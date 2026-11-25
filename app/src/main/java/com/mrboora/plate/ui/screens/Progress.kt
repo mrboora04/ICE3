@@ -1,5 +1,11 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.ui.components.LocalUnits
+import com.mrboora.plate.data.weightValue
+import com.mrboora.plate.data.kgFrom
+import com.mrboora.plate.data.weight
+import com.mrboora.plate.data.volume
+import com.mrboora.plate.data.num1
 import com.mrboora.plate.ui.components.MenuLine
 import androidx.compose.ui.unit.sp
 import com.mrboora.plate.ui.theme.PosterType
@@ -171,14 +177,15 @@ fun ProgressScreen(
     }
 
     if (logging) {
-        var text by remember { mutableStateOf(current.clean()) }
-        val kg = text.toNumber()?.takeIf { it in 30f..350f }
+        val u = LocalUnits.current
+        var text by remember { mutableStateOf(u.weightValue(current).clean()) }
+        val kg = text.toNumber()?.let(u::kgFrom)?.takeIf { it in 30f..350f }
         AlertDialog(
             onDismissRequest = { logging = false },
             title = { Text("Today's weight") },
             text = {
                 OutlinedTextField(
-                    text, { text = it }, label = { Text("Weight (kg)") }, singleLine = true, isError = kg == null,
+                    text, { text = it }, label = { Text("Weight (${u.weight.label})") }, singleLine = true, isError = kg == null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 )
             },
@@ -278,17 +285,18 @@ private fun WeightCard(
     onToggle: () -> Unit, onLog: () -> Unit, onDelete: (WeightEntry) -> Unit, modifier: Modifier,
 ) {
     val c = Plate.colors
+    val u = LocalUnits.current
     val change = current - start
     PlateCard(modifier.animateContentSize()) {
         Row(Modifier.clickable(onClick = onToggle), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Eyebrow("Weight")
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(current.clean(), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
-                    Text(" KG", style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
+                    Text(num1(u.weightValue(current)), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
+                    Text(" ${u.weight.label.uppercase()}", style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
                 }
                 val sign = if (change > 0) "+" else if (change < 0) "−" else "±"
-                Text("$sign${abs(change).clean()} kg since you started · goal ${goal.clean()} kg", style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
+                Text("$sign${u.weight(abs(change))} since you started · goal ${u.weight(goal)}", style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
             }
             Icon(
                 Icons.AutoMirrored.Rounded.KeyboardArrowRight,
@@ -307,7 +315,7 @@ private fun WeightCard(
                 HorizontalDivider(color = c.line)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(LocalDate.ofEpochDay(w.day).format(DateTimeFormatter.ofPattern("EEE, MMM d")), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                    Text("${w.kg.clean()} kg", style = MaterialTheme.typography.titleSmall.merge(tab))
+                    Text(u.weight(w.kg), style = MaterialTheme.typography.titleSmall.merge(tab))
                     IconButton({ onDelete(w) }) { Icon(Icons.Rounded.Close, "Delete weigh-in", tint = c.muted) }
                 }
             }
@@ -319,6 +327,7 @@ private fun WeightCard(
 @Composable
 private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Modifier) {
     val c = Plate.colors
+    val u = LocalUnits.current
     val color = statusColor(d.status, c)
     val diff = (d.kcal - target).roundToInt()
     val badge = when (d.status) {
@@ -361,8 +370,8 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
         Spacer(Modifier.height(10.dp))
         val bits = buildList {
             add("P ${d.protein.roundToInt()} g · C ${d.carbs.roundToInt()} g · F ${d.fat.roundToInt()} g")
-            if (d.waterMl > 0) add("💧 %,d ml".format(d.waterMl))
-            d.weightKg?.let { add("⚖ ${it.clean()} kg") }
+            if (d.waterMl > 0) add("💧 ${u.volume(d.waterMl)}")
+            d.weightKg?.let { add("⚖ ${u.weight(it)}") }
         }
         Text(bits.joinToString("   "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
         if (d.foods.isNotEmpty()) {

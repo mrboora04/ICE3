@@ -53,7 +53,10 @@ class WidgetRenderTest {
         dao.saveWater(Water(day, 1250))
         dao.addEntry(FoodEntry(day = day, meal = Meal.LUNCH, name = "Poha", brand = "", grams = 200f, kcal = 426f, protein = 8f, carbs = 70f, fat = 9f))
         WaterContainers.save(ctx, listOf(WaterContainers.Container("Bottle", 500)))
+        com.mrboora.plate.data.Units.save(ctx, units)
     }
+
+    private var units = com.mrboora.plate.data.Units.Prefs()
 
     private fun draw(widget: GlanceAppWidget, w: Int, h: Int, name: String, dark: Boolean, preview: String? = null) = runBlocking {
         if (dark) RuntimeEnvironment.setQualifiers("+night")
@@ -101,6 +104,11 @@ class WidgetRenderTest {
         draw(WaterWidget(), 290, 170, "widget_water_min", false)
         draw(WaterWidget(), 340, 180, "widget_water_default", false, preview = "widget_water_preview")
         draw(WaterWidget(), 420, 200, "widget_water_max", false)
+    }
+    /** lb, ft in, fl oz: the drinks read "/ 101.4 fl oz" and "+ Bottle 16.9 fl oz". */
+    @Test fun waterImperial() {
+        units = com.mrboora.plate.data.Units.Prefs(com.mrboora.plate.data.Units.Weight.LB, com.mrboora.plate.data.Units.Height.FT_IN, com.mrboora.plate.data.Units.Volume.FL_OZ)
+        draw(WaterWidget(), 340, 180, "widget_water_imperial", false)
     }
     @Test fun waterDark() = draw(WaterWidget(), 340, 180, "widget_water_default_dark", true)
     @Test fun today() {

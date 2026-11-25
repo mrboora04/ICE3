@@ -37,6 +37,20 @@ import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.Profile
 import com.mrboora.plate.data.Sex
 import com.mrboora.plate.ui.components.Eyebrow
+import com.mrboora.plate.ui.components.LocalUnits
+import com.mrboora.plate.data.Units
+import com.mrboora.plate.data.cmFrom
+import com.mrboora.plate.data.feetInches
+import com.mrboora.plate.data.height
+import com.mrboora.plate.data.kgFrom
+import com.mrboora.plate.data.mlFrom
+import com.mrboora.plate.data.paceSteps
+import com.mrboora.plate.data.volume
+import com.mrboora.plate.data.volumeValue
+import com.mrboora.plate.data.weight
+import com.mrboora.plate.data.weightValue
+import com.mrboora.plate.data.weightRaw
+import kotlin.math.roundToInt
 import com.mrboora.plate.ui.components.PlateCard
 import com.mrboora.plate.ui.components.TABULAR
 import com.mrboora.plate.ui.theme.Plate
@@ -46,36 +60,61 @@ fun String.toNumber(): Float? = trim().replace(',', '.').toFloatOrNull()
 /** Up to two decimals, trailing zeros dropped: 80 → "80", 0.25 → "0.25", 79.9 → "79.9". */
 fun Float.clean(): String = "%.2f".format(java.util.Locale.US, this).trimEnd('0').trimEnd('.')
 
-/** Shared by onboarding and "Edit profile". Calls [onSave] only with valid values. */
+/**
+ * Shared by onboarding and "Edit profile". Calls [onSave] only with valid values. Weight, height
+ * and water are typed in the user's units ([onUnits] changes them right here) and saved metric.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ProfileForm(initial: Profile?, saveLabel: String, onSave: (Profile) -> Unit) {
+fun ProfileForm(initial: Profile?, saveLabel: String, onUnits: (Units.Prefs) -> Unit = {}, onSave: (Profile) -> Unit) {
+    val u = LocalUnits.current
     var name by rememberSaveable { mutableStateOf(initial?.name ?: "") }
     var sex by rememberSaveable { mutableStateOf(initial?.sex ?: Sex.FEMALE) }
     var age by rememberSaveable { mutableStateOf(initial?.age?.toString() ?: "") }
-    var height by rememberSaveable { mutableStateOf(initial?.heightCm?.clean() ?: "") }
-    var weight by rememberSaveable { mutableStateOf(initial?.weightKg?.clean() ?: "") }
-    var goalWeight by rememberSaveable { mutableStateOf(initial?.goalWeightKg?.clean() ?: "") }
+    // Height: cm, or feet and inches in two boxes.
+    var height by rememberSaveable { mutableStateOf(initial?.heightCm?.roundToInt()?.toString() ?: "") }
+    var feet by rememberSaveable { mutableStateOf(initial?.heightCm?.let { feetInches(it).first.toString() } ?: "") }
+    var inches by rememberSaveable { mutableStateOf(initial?.heightCm?.let { feetInches(it).second.toString() } ?: "") }
+    var weight by rememberSaveable { mutableStateOf(initial?.weightKg?.let { u.weightValue(it).clean() } ?: "") }
+    var goalWeight by rememberSaveable { mutableStateOf(initial?.goalWeightKg?.let { u.weightValue(it).clean() } ?: "") }
     var activity by rememberSaveable { mutableStateOf(initial?.activity ?: Activity.LIGHT) }
     var goal by rememberSaveable { mutableStateOf(initial?.goal ?: Goal.LOSE) }
     var pace by rememberSaveable { mutableStateOf(initial?.paceKgPerWeek ?: 0.5f) }
-    var water by rememberSaveable { mutableStateOf((initial?.waterGoalMl ?: 2000).toString()) }
+    var water by rememberSaveable { mutableStateOf(u.volumeValue(initial?.waterGoalMl ?: 2000).clean()) }
 
+    // Switching units converts what's already typed, so nothing has to be typed again.
+    fun switch(to: Units.Prefs) {
+        if (to.weight != u.weight) {
+            fun conv(t: String) = t.toNumber()?.let { to.weightValue(u.kgFrom(it)).clean() } ?: t
+            weight = conv(weight); goalWeight = conv(goalWeight)
+        }
+        if (to.volume != u.volume) water = water.toNumber()?.let { to.volumeValue(u.mlFrom(it)).clean() } ?: water
+        onUnits(to)
+    }
+
+    // A box left as it was keeps its exact saved value: 2,500 ml shows as 84.5 fl oz, which
+    // would come back as 2,499 ml.
+    fun <T> same(shown: String, metric: T?, show: (T) -> String): T? = metric?.takeIf { shown == show(it) }
     val ageN = age.trim().toIntOrNull()
-    val heightN = height.toNumber()
-    val weightN = weight.toNumber()
-    val goalN = if (goal == Goal.MAINTAIN && goalWeight.isBlank()) weightN else goalWeight.toNumber()
-    val waterN = water.trim().toIntOrNull()
+    val heightN = if (u.height == Units.Height.CM) same(height, initial?.heightCm) { it.roundToInt().toString() } ?: height.toNumber()
+    else same("$feet $inches", initial?.heightCm) { feetInches(it).let { (f, i) -> "$f $i" } }
+        ?: feet.toNumber()?.let { f -> cmFrom(f, inches.toNumber() ?: 0f) }
+    val weightN = same(weight, initial?.weightKg) { u.weightValue(it).clean() } ?: weight.toNumber()?.let(u::kgFrom)
+    val goalN = if (goal == Goal.MAINTAIN && goalWeight.isBlank()) weightN
+    else same(goalWeight, initial?.goalWeightKg) { u.weightValue(it).clean() } ?: goalWeight.toNumber()?.let(u::kgFrom)
+    val waterN = same(water, initial?.waterGoalMl) { u.volumeValue(it).clean() } ?: water.toNumber()?.let(u::mlFrom)
 
+    // The same limits whatever the units, said in the user's units.
+    val weightRange = "${u.weight(30f)}–${u.weight(350f)}"
     val errors = buildMap {
         if (name.isBlank()) put("name", "Tell us what to call you")
         if (ageN == null || ageN !in 13..100) put("age", "Age 13–100")
-        if (heightN == null || heightN !in 100f..250f) put("height", "100–250 cm")
-        if (weightN == null || weightN !in 30f..350f) put("weight", "30–350 kg")
-        if (goalN == null || goalN !in 30f..350f) put("goal", "30–350 kg")
+        if (heightN == null || heightN !in 100f..250f) put("height", "${u.height(100f)}–${u.height(250f)}")
+        if (weightN == null || weightN !in 30f..350f) put("weight", weightRange)
+        if (goalN == null || goalN !in 30f..350f) put("goal", weightRange)
         else if (weightN != null && goal == Goal.LOSE && goalN >= weightN) put("goal", "Should be below your current weight")
         else if (weightN != null && goal == Goal.GAIN && goalN <= weightN) put("goal", "Should be above your current weight")
-        if (waterN == null || waterN !in 500..6000) put("water", "500–6000 ml")
+        if (waterN == null || waterN !in 500..6000) put("water", "${u.volume(500)}–${u.volume(6000)}")
     }
     var tried by rememberSaveable { mutableStateOf(false) }
     fun err(k: String) = if (tried) errors[k] else null
@@ -89,6 +128,8 @@ fun ProfileForm(initial: Profile?, saveLabel: String, onSave: (Profile) -> Unit)
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Field("Your name", name, { name = it }, err("name"), KeyboardType.Text)
 
+        UnitsCard(u, ::switch)
+
         Eyebrow("Sex (for the energy formula)")
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             Sex.entries.forEachIndexed { i, s ->
@@ -98,11 +139,16 @@ fun ProfileForm(initial: Profile?, saveLabel: String, onSave: (Profile) -> Unit)
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Field("Age", age, { age = it }, err("age"), KeyboardType.Number, Modifier.weight(1f))
-            Field("Height (cm)", height, { height = it }, err("height"), KeyboardType.Decimal, Modifier.weight(1f))
+            if (u.height == Units.Height.CM) {
+                Field("Height (cm)", height, { height = it }, err("height"), KeyboardType.Decimal, Modifier.weight(1f))
+            } else {
+                Field("Feet", feet, { feet = it }, err("height"), KeyboardType.Number, Modifier.weight(0.5f))
+                Field("Inches", inches, { inches = it }, null, KeyboardType.Decimal, Modifier.weight(0.5f))
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Field("Weight (kg)", weight, { weight = it }, err("weight"), KeyboardType.Decimal, Modifier.weight(1f))
-            Field("Goal weight (kg)", goalWeight, { goalWeight = it }, err("goal"), KeyboardType.Decimal, Modifier.weight(1f))
+            Field("Weight (${u.weight.label})", weight, { weight = it }, err("weight"), KeyboardType.Decimal, Modifier.weight(1f))
+            Field("Goal weight (${u.weight.label})", goalWeight, { goalWeight = it }, err("goal"), KeyboardType.Decimal, Modifier.weight(1f))
         }
 
         Eyebrow("Goal")
@@ -114,8 +160,13 @@ fun ProfileForm(initial: Profile?, saveLabel: String, onSave: (Profile) -> Unit)
         if (goal != Goal.MAINTAIN) {
             Eyebrow("Pace per week")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(0.25f, 0.5f, 0.75f, 1f).forEach { v ->
-                    FilterChip(pace == v, { pace = v }, label = { Text("${v.clean()} kg") })
+                // Round steps in the user's unit: ¼ to 1 kg, or ½ to 2 lb, a week.
+                val steps = u.paceSteps().map(u::kgFrom)
+                // A pace set in the other unit (0.5 kg = 1.1 lb) stays as its own chip, chosen.
+                val all = if (steps.none { kotlin.math.abs(it - pace) < 0.01f }) (steps + pace).sorted() else steps
+                all.forEach { kg ->
+                    val v = ((u.weightRaw(kg) * 100f).roundToInt() / 100f).clean()
+                    FilterChip(kotlin.math.abs(pace - kg) < 0.01f, { pace = kg }, label = { Text("$v ${u.weight.label}") })
                 }
             }
         }
@@ -137,7 +188,7 @@ fun ProfileForm(initial: Profile?, saveLabel: String, onSave: (Profile) -> Unit)
             }
         }
 
-        Field("Daily water goal (ml)", water, { water = it }, err("water"), KeyboardType.Number)
+        Field("Daily water goal (${u.volume.label})", water, { water = it }, err("water"), KeyboardType.Number)
 
         if (preview != null) {
             val t = Nutrition.targets(preview)

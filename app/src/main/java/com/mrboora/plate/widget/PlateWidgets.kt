@@ -54,6 +54,8 @@ import com.mrboora.plate.data.Nutrition
 import com.mrboora.plate.data.PlateDatabase
 import com.mrboora.plate.data.Water
 import com.mrboora.plate.data.WaterContainers
+import com.mrboora.plate.data.volume
+import com.mrboora.plate.data.volumeNumber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -85,6 +87,8 @@ internal data class WidgetState(
     val kcalTarget: Int?,
     /** The first two of the app's own water buttons (the same list as the water card). */
     val buttons: List<WaterContainers.Button>,
+    /** ml or fl oz, as in the app. */
+    val units: com.mrboora.plate.data.Units.Prefs = com.mrboora.plate.data.Units.Prefs(),
 )
 
 /**
@@ -102,6 +106,7 @@ internal fun stateFlow(context: Context): Flow<WidgetState> {
             waterMl = water?.ml ?: 0, waterGoal = profile?.waterGoalMl ?: 2000,
             kcalLeft = targets?.let { it.kcal - eaten }, kcalTarget = targets?.kcal,
             buttons = WaterContainers.buttons(context).take(2),
+            units = com.mrboora.plate.data.Units.load(context),
         )
     }.distinctUntilChanged()
 }
@@ -135,8 +140,8 @@ class AddWaterAction : ActionCallback {
 @Composable
 private fun WaterBlock(s: WidgetState, big: Boolean) {
     Row(verticalAlignment = Alignment.Vertical.Bottom) {
-        Text(n(s.waterMl), style = TextStyle(color = Ink, fontSize = if (big) 30.sp else 20.sp, fontWeight = FontWeight.Bold))
-        Text(" / ${n(s.waterGoal)} ml", style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Medium))
+        Text(s.units.volumeNumber(s.waterMl), style = TextStyle(color = Ink, fontSize = if (big) 30.sp else 20.sp, fontWeight = FontWeight.Bold))
+        Text(" / ${s.units.volume(s.waterGoal)}", style = TextStyle(color = Muted, fontSize = 13.sp, fontWeight = FontWeight.Medium))
     }
     Spacer(GlanceModifier.height(8.dp))
     // The app's water drops, not a bar: one per 250 ml of the goal, filled blue as you drink.

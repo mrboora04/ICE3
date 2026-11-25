@@ -35,6 +35,7 @@ class WidgetStateTest {
         dao.saveWater(Water(day, 1250))
         dao.addEntry(FoodEntry(day = day, meal = Meal.LUNCH, name = "Poha", brand = "", grams = 200f, kcal = 260f, protein = 5f, carbs = 46f, fat = 6f))
         WaterContainers.save(ctx, listOf(WaterContainers.Container("Bottle", 500)))
+        com.mrboora.plate.data.Units.save(ctx, com.mrboora.plate.data.Units.Prefs())
 
         val s = loadState(ctx)
         assertEquals(1250, s.waterMl)

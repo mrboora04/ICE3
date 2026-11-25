@@ -1,5 +1,12 @@
 package com.mrboora.plate.ui.screens
 
+import com.mrboora.plate.ui.components.LocalUnits
+import com.mrboora.plate.data.weightValue
+import com.mrboora.plate.data.weightRaw
+import com.mrboora.plate.data.weight
+import com.mrboora.plate.data.num1
+import com.mrboora.plate.data.volumeNumber
+import com.mrboora.plate.data.kcalPerWeightUnit
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -60,7 +67,6 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private fun kg(v: Float) = "%.1f".format(v)
 private fun signed(v: Float, fmt: String) = (if (v > 0) "+" else if (v < 0) "−" else "±") + fmt.format(abs(v))
 private fun date(day: Long) = LocalDate.ofEpochDay(day).format(DateTimeFormatter.ofPattern("MMM d"))
 
@@ -87,6 +93,9 @@ fun ForecastCard(
     workoutsByDay: Map<Long, Int> = emptyMap(),
 ) {
     val c = Plate.colors
+    val u = LocalUnits.current
+    fun kg(v: Float) = num1(u.weightValue(v))
+    val wu = u.weight.label
     var adding by remember { mutableStateOf(false) }
     if (adding) WorkoutDialog(currentKg, onDismiss = { adding = false }) { k, m, kcal -> onAddWorkout(k, m, kcal); adding = false }
 
@@ -119,10 +128,10 @@ fun ForecastCard(
         } else {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(kg(f.in12Weeks), style = PosterType.hero.copy(fontSize = 56.sp, lineHeight = 52.sp), color = c.accent)
-                Text(" KG", style = PosterType.section, modifier = Modifier.padding(bottom = 4.dp))
+                Text(" ${wu.uppercase()}", style = PosterType.section, modifier = Modifier.padding(bottom = 4.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "in 12 weeks, ${date(today + 84)}\n${kg(f.in4Weeks)} kg in 4 weeks",
+                    "in 12 weeks, ${date(today + 84)}\n${kg(f.in4Weeks)} $wu in 4 weeks",
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(bottom = 4.dp),
                 )
             }
@@ -144,7 +153,7 @@ fun ForecastCard(
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(start = 16.dp),
                 )
             }
-            MenuLine("2. Water, no calories", "%,d".format(waterMl), unit = "ML", nameStyle = label, numberStyle = num, numberColor = c.water)
+            MenuLine("2. Water, no calories", u.volumeNumber(waterMl), unit = u.volume.label.uppercase(), nameStyle = label, numberStyle = num, numberColor = c.water)
             MenuLine("3. Resting + daily life", "%,d".format(daily.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num)
             MenuLine(
                 if (b.todayOnly) "4. Workouts" else "4. Workouts, a day on average",
@@ -162,16 +171,16 @@ fun ForecastCard(
             if (!(b.todayOnly && meals.isEmpty())) {
                 MenuLine("5. Eaten − burned", signed(f.balance, "%,.0f"), unit = "KCAL", nameStyle = label, numberStyle = num,
                     numberColor = if (f.balance < 0) c.good else if (f.balance > 0) c.over else c.ink)
-                MenuLine("6. ÷ 7,700 kcal per kg", signed(f.kgPerWeek, "%.2f"), unit = "KG/WK", nameStyle = label, numberStyle = num)
+                MenuLine("6. ÷ ${"%,d".format(u.kcalPerWeightUnit().roundToInt())} kcal per $wu", signed(f.balance * 7f / u.kcalPerWeightUnit(), "%.2f"), unit = "${wu.uppercase()}/WK", nameStyle = label, numberStyle = num)
                 if (profile.goal != Goal.MAINTAIN) {
                     MenuLine(
-                        "7. Goal ${kg(profile.goalWeightKg)} kg", f.goalDay?.let { date(it).uppercase() } ?: "NOT AT THIS RATE",
+                        "7. Goal ${kg(profile.goalWeightKg)} $wu", f.goalDay?.let { date(it).uppercase() } ?: "NOT AT THIS RATE",
                         nameStyle = label, numberStyle = num, numberColor = if (f.goalDay != null) c.accent else c.muted,
                     )
                 }
                 val holdKg = if (profile.goal == Goal.MAINTAIN) currentKg else profile.goalWeightKg
                 MenuLine(
-                    "${if (profile.goal != Goal.MAINTAIN) 8 else 7}. To stay at ${kg(holdKg)} kg, eat",
+                    "${if (profile.goal != Goal.MAINTAIN) 8 else 7}. To stay at ${kg(holdKg)} $wu, eat",
                     "%,d".format(((Forecast.dailyLife(profile, holdKg) + workoutKcal) / 10f).roundToInt() * 10),
                     unit = "KCAL", nameStyle = label, numberStyle = num,
                 )
@@ -192,7 +201,7 @@ fun ForecastCard(
         }
         if (scale != null) {
             Text(
-                "Your scale says ${signed(scale, "%.2f")} kg a week over your recent weigh-ins.",
+                "Your scale says ${signed(u.weightRaw(scale), "%.2f")} $wu a week over your recent weigh-ins.",
                 style = MaterialTheme.typography.bodySmall, color = c.ink, modifier = Modifier.padding(top = 6.dp),
             )
         }
@@ -203,6 +212,7 @@ fun ForecastCard(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WorkoutDialog(weightKg: Float, onDismiss: () -> Unit, onSave: (String, Int, Int) -> Unit) {
+    val u = LocalUnits.current
     var kind by remember { mutableStateOf(Workouts.kinds.first()) }
     var minutes by remember { mutableStateOf("30") }
     var fromWatch by remember { mutableStateOf(false) }
@@ -234,7 +244,7 @@ private fun WorkoutDialog(weightKg: Float, onDismiss: () -> Unit, onSave: (Strin
                 }
                 if (kcal != null) {
                     Text(
-                        if (fromWatch) "$kcal kcal from your watch" else "≈ $kcal kcal extra burned (${kind.name}, $m min at ${kg(weightKg)} kg)",
+                        if (fromWatch) "$kcal kcal from your watch" else "≈ $kcal kcal extra burned (${kind.name}, $m min at ${u.weight(weightKg)})",
                         style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 10.dp),
                     )
                 }

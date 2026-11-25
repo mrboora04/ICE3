@@ -1,10 +1,10 @@
 {
-  "versionCode": 43,
-  "versionName": "2.14.2",
+  "versionCode": 44,
+  "versionName": "2.15.0",
   "notes": [
-    "Eggs, rotis, spoons: pick Small · Regular · Large and how many; eggs can be whole or white",
-    "Widgets update live, right when you tap a button, and show the app's water drops",
-    "Forecast uses your average over every logged day, not just today"
+    "Units: kg or lb, cm or ft in, ml or fl oz, each on its own (Profile → Units)",
+    "Starts from your phone's region; Plate still keeps everything metric inside",
+    "Widgets, water buttons and the forecast all follow your units"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }
