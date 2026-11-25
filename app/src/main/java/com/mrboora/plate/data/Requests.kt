@@ -14,7 +14,7 @@ data class FoodRequest(val id: Long, val restaurant: String, val item: String, v
 
 object Requests {
     /** Where requests are emailed. */
-    const val EMAIL = "justhinkingroup@gmail.com"
+    const val EMAIL = "booraparth@muse.ai"
 
     private const val KEY = "requests"
     private fun prefs(c: Context) = c.getSharedPreferences("plate_requests", Context.MODE_PRIVATE)
