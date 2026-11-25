@@ -4,6 +4,8 @@ import com.mrboora.plate.data.Activity
 import com.mrboora.plate.data.WeightEntry
 import com.mrboora.plate.data.DaySummary
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import com.mrboora.plate.data.AppUpdates
 import com.mrboora.plate.data.CanadianFoods
 import com.mrboora.plate.data.DayStatus
@@ -413,5 +415,66 @@ class NutritionTest {
         // A cup label: rice "1 cup" = 160 g → 0.64 g/ml.
         assertEquals(0.64f, Portions.density(FoodItem("Basmati rice, cooked", kcal100 = 121f, protein100 = 3f, carbs100 = 25f, fat100 = 0f, servingG = 160f, servingLabel = "1 cup")).first, 0.001f)
     }
-}
 
+    @Test
+    fun forecastUsesTheAverageOfFinishedDays() {
+        val today = 20_000L
+        fun d(day: Long, kcal: Float) = DaySummary(day, kcal, 0f, 0f, 0f, 0, null, emptyList(), DayStatus.ON_TARGET)
+        val hist = listOf(d(today, 233f), d(today - 1, 2000f), d(today - 2, 1600f), d(today - 3, 0f))
+        val b = com.mrboora.plate.data.Forecast.basis(hist, mapOf(today - 1 to 300), today, todayEaten = 233f, todayWorkout = 0f)
+        // Today (unfinished) and the unlogged day aren't counted: (2000 + 1600) / 2.
+        assertEquals(1800f, b.intake, 0.01f)
+        assertEquals(150f, b.workout, 0.01f)
+        assertEquals(2, b.days)
+        // First day ever: today so far.
+        val first = com.mrboora.plate.data.Forecast.basis(listOf(d(today, 233f)), emptyMap(), today, 233f, 0f)
+        assertTrue(first.todayOnly); assertEquals(233f, first.intake, 0.01f)
+    }
+
+    @Test
+    fun spoonFoodsGetASpoonPicker() {
+        val pb = FoodItem("Peanut butter", kcal100 = 588f, protein100 = 25f, carbs100 = 20f, fat100 = 50f, servingG = 32f, servingLabel = "2 tbsp")
+        assertTrue(Portions.spoonFood(pb))
+        assertTrue(Portions.spoonFood(FoodItem("Ghee", kcal100 = 900f, protein100 = 0f, carbs100 = 0f, fat100 = 100f, servingG = 5f, servingLabel = "1 tsp")))
+        assertTrue(Portions.spoonFood(FoodItem("Honey", kcal100 = 304f, protein100 = 0f, carbs100 = 82f, fat100 = 0f)))
+        assertFalse(Portions.spoonFood(FoodItem("Basmati rice, cooked", kcal100 = 121f, protein100 = 3f, carbs100 = 25f, fat100 = 0f, servingG = 160f, servingLabel = "1 cup")))
+        assertFalse(Portions.spoonFood(FoodItem("Egg, boiled", kcal100 = 155f, protein100 = 13f, carbs100 = 1f, fat100 = 11f, servingG = 50f, servingLabel = "1 large")))
+        assertFalse(Portions.spoonFood(FoodItem("Milk, 2%", kcal100 = 50f, protein100 = 3f, carbs100 = 5f, fat100 = 2f, servingG = 250f, servingLabel = "1 cup")))
+        // 2 tablespoons of peanut butter: 2 × 15 ml × (32 g / 30 ml) = 32 g.
+        assertEquals(32f, Portions.spoonGrams(pb, 15f, 2), 0.01f)
+    }
+
+    @Test
+    fun sizesAndCountsComeFromTheFood() {
+        // A medium egg (Health Canada: 45.6 g) is Regular; Small and Large are a step either side.
+        val egg = FoodItem("Egg, chicken, whole, fresh or frozen, raw", kcal100 = 152f, protein100 = 12.3f, carbs100 = 0.8f, fat100 = 10.6f, servingG = 45.6f, servingLabel = "1 medium egg")
+        val p = Portions.picks(egg)!!
+        assertEquals(listOf("Small", "Regular", "Large"), p.map { it.label })
+        assertEquals(45.6f, p[1].each, 0.01f)
+        assertTrue(p[0].each < p[1].each && p[1].each < p[2].each)
+        assertEquals("egg", Portions.noun(egg))
+        // 4 regular eggs back from their grams.
+        assertEquals(1 to 4, Portions.nearest(p, 45.6f * 4))
+        // A "1 large" listing is the Large one.
+        val large = FoodItem("Egg, boiled", kcal100 = 155f, protein100 = 13f, carbs100 = 1f, fat100 = 11f, servingG = 50f, servingLabel = "1 large")
+        assertEquals(50f, Portions.picks(large)!![2].each, 0.01f)
+        // Spoon foods: teaspoon · tablespoon · heaped, from the food's own density (32 g per 2 tbsp).
+        val pb = FoodItem("Peanut butter", kcal100 = 588f, protein100 = 25f, carbs100 = 20f, fat100 = 50f, servingG = 32f, servingLabel = "2 tbsp")
+        Portions.picks(pb)!!.map { it.each }.zip(listOf(16f / 3f, 16f, 24f)).forEach { (a, b) -> assertEquals(b, a, 0.01f) }
+        // Measured foods keep grams.
+        assertNull(Portions.picks(FoodItem("Basmati rice, cooked", kcal100 = 121f, protein100 = 3f, carbs100 = 25f, fat100 = 0f, servingG = 160f, servingLabel = "250 ml")))
+    }
+
+    @Test
+    fun eggTypesComeFromTheFoodFile() {
+        val whole = FoodItem("Egg, chicken, whole, fresh or frozen, raw", kcal100 = 152f, protein100 = 12.3f, carbs100 = 0.8f, fat100 = 10.6f, servingG = 45.6f, servingLabel = "1 medium egg")
+        val white = FoodItem("Egg, chicken, white, fresh or frozen, raw", kcal100 = 46f, protein100 = 10f, carbs100 = 0.6f, fat100 = 0f, servingG = 31.5f, servingLabel = "1 medium egg")
+        val dried = FoodItem("Egg, chicken, white, dried", kcal100 = 382f, protein100 = 81f, carbs100 = 7.8f, fat100 = 0f, servingG = 100f, servingLabel = "")
+        val cooked = FoodItem("Egg, chicken, white, fresh or frozen, cooked", kcal100 = 48f, protein100 = 10f, carbs100 = 1.2f, fat100 = 0f, servingG = 33f, servingLabel = "1 large egg white")
+        val file = listOf(whole, white, dried, cooked)
+        val t = Portions.types(whole) { pre -> file.filter { it.name.startsWith(pre) } }!!
+        assertEquals(listOf("Whole", "White"), t.map { it.first })
+        assertSame(white, t[1].second)
+        assertNull(Portions.types(FoodItem("Banana", kcal100 = 89f, protein100 = 1f, carbs100 = 23f, fat100 = 0f)) { file })
+    }
+}

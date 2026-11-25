@@ -81,13 +81,23 @@ fun ForecastCard(
     onAddWorkout: (kind: String, minutes: Int, kcal: Int) -> Unit,
     onDeleteWorkout: (Workout) -> Unit,
     modifier: Modifier = Modifier,
+    /** Every logged day (newest first): the forecast uses their average, not just today. */
+    history: List<com.mrboora.plate.data.DaySummary> = emptyList(),
+    /** Workout kcal per day, for the same average. */
+    workoutsByDay: Map<Long, Int> = emptyMap(),
 ) {
     val c = Plate.colors
     var adding by remember { mutableStateOf(false) }
     if (adding) WorkoutDialog(currentKg, onDismiss = { adding = false }) { k, m, kcal -> onAddWorkout(k, m, kcal); adding = false }
 
-    val eaten = meals.sumOf { it.kcal.toDouble() }.toFloat()
-    val workoutKcal = workouts.sumOf { it.kcal }.toFloat()
+    val eatenToday = meals.sumOf { it.kcal.toDouble() }.toFloat()
+    val workoutToday = workouts.sumOf { it.kcal }.toFloat()
+    // Based on the average of every finished logged day; today only until there is one.
+    val b = remember(history, workoutsByDay, today, eatenToday, workoutToday) {
+        Forecast.basis(history, workoutsByDay, today, eatenToday, workoutToday)
+    }
+    val eaten = b.intake
+    val workoutKcal = b.workout
     val f = remember(profile, currentKg, eaten, workoutKcal, today) { Forecast.today(profile, currentKg, eaten, workoutKcal, today) }
     val daily = Forecast.dailyLife(profile, currentKg)
     val scale = remember(weights, today) { Forecast.scaleTrend(weights, today) }
@@ -96,10 +106,14 @@ fun ForecastCard(
 
     PlateCard(modifier.animateContentSize()) {
         Text("FORECAST", style = PosterType.section)
-        Text("If every day were like today · your real numbers", style = MaterialTheme.typography.bodySmall, color = c.muted)
+        Text(
+            if (b.todayOnly) "From today so far · your average takes over after your first full day"
+            else "Your average of ${b.days} logged day${if (b.days == 1) "" else "s"} · today counts once it's over",
+            style = MaterialTheme.typography.bodySmall, color = c.muted,
+        )
         Spacer(Modifier.height(12.dp))
 
-        if (meals.isEmpty()) {
+        if ((b.todayOnly && meals.isEmpty())) {
             Text("Log today's meals and the forecast appears here.", style = MaterialTheme.typography.titleSmall)
             Spacer(Modifier.height(8.dp))
         } else {
@@ -120,10 +134,22 @@ fun ForecastCard(
         Eyebrow("Today, step by step")
         Spacer(Modifier.height(6.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            MenuLine("1. Meals (${meals.size} logged)", "%,d".format(eaten.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num)
+            MenuLine(
+                if (b.todayOnly) "1. Meals today (${meals.size} logged)" else "1. Eaten, a day on average",
+                "%,d".format(eaten.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num,
+            )
+            if (!b.todayOnly) {
+                Text(
+                    "Today so far: %,d kcal from ${meals.size} food${if (meals.size == 1) "" else "s"}".format(eatenToday.roundToInt()),
+                    style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(start = 16.dp),
+                )
+            }
             MenuLine("2. Water, no calories", "%,d".format(waterMl), unit = "ML", nameStyle = label, numberStyle = num, numberColor = c.water)
             MenuLine("3. Resting + daily life", "%,d".format(daily.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num)
-            MenuLine("4. Workouts", "+%,d".format(workoutKcal.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num)
+            MenuLine(
+                if (b.todayOnly) "4. Workouts" else "4. Workouts, a day on average",
+                "+%,d".format(workoutKcal.roundToInt()), unit = "KCAL", nameStyle = label, numberStyle = num,
+            )
             workouts.forEach { w ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 16.dp)) {
                     Text("${w.kind} · ${w.minutes} min · ${w.kcal} kcal", style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.weight(1f))
@@ -133,7 +159,7 @@ fun ForecastCard(
             OutlinedButton({ adding = true }, Modifier.padding(start = 16.dp)) {
                 Icon(Icons.Rounded.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Add workout")
             }
-            if (meals.isNotEmpty()) {
+            if (!(b.todayOnly && meals.isEmpty())) {
                 MenuLine("5. Eaten − burned", signed(f.balance, "%,.0f"), unit = "KCAL", nameStyle = label, numberStyle = num,
                     numberColor = if (f.balance < 0) c.good else if (f.balance > 0) c.over else c.ink)
                 MenuLine("6. ÷ 7,700 kcal per kg", signed(f.kgPerWeek, "%.2f"), unit = "KG/WK", nameStyle = label, numberStyle = num)
@@ -157,7 +183,7 @@ fun ForecastCard(
                 "a lighter body burns a little less.",
             style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 8.dp),
         )
-        if (meals.isNotEmpty() && Nutrition.bmi(f.in12Weeks, profile.heightCm) < 18.5f) {
+        if (!(b.todayOnly && meals.isEmpty()) && Nutrition.bmi(f.in12Weeks, profile.heightCm) < 18.5f) {
             Text(
                 "Every day like today would take you below a healthy weight (BMI 18.5) within 12 weeks. Eat more, " +
                     "and talk to a doctor before eating this little.",

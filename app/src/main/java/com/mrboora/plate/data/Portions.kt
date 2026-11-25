@@ -133,6 +133,85 @@ object Portions {
         return unit
     }
 
+    /**
+     * Foods people take by the spoon: spreads, oils, ghee, honey, jam, sugar, sauces. They get a
+     * simple spoon picker (size + how many) instead of cups and the hand guide.
+     */
+    fun spoonFood(food: FoodItem): Boolean {
+        if (food.perItem || countUnit(food) != null || isDrink(food)) return false
+        if (Regex("""\b(tbsp|tsp|tablespoons?|teaspoons?)\b""").containsMatchIn(food.servingLabel.lowercase())) return true
+        val n = food.name.lowercase()
+        return has(n, "peanut butter", "almond butter", "nut butter", "tahini", "nutella", "butter", "ghee", "oil", "honey",
+            "jam", "jelly", "marmalade", "syrup", "sugar", "mayonnaise", "mayo", "ketchup", "chutney", "pickle", "cream cheese",
+            "hummus", "dressing")
+    }
+
+    /** Grams in [count] spoons of [spoonMl] of [food], from its own density. */
+    fun spoonGrams(food: FoodItem, spoonMl: Float, count: Int): Float = count * spoonMl * density(food).first
+
+    /** A size choice: "Small", what it means ("teaspoon", "38 g"), and grams for one. */
+    data class Pick(val label: String, val hint: String, val each: Float)
+
+    /**
+     * The simple picker for foods you count or spoon: Small · Regular · Large, then how many.
+     * Counted foods size around their own serving (an egg: 38 / 44 / 50 g); spoon foods are a
+     * teaspoon, a tablespoon or a heaped tablespoon. Null for foods you measure (rice, milk…).
+     */
+    fun picks(food: FoodItem): List<Pick>? {
+        if (spoonFood(food)) return SPOONS.map { (l, h, ml) -> Pick(l, h, ml * density(food).first) }
+        val unit = countUnit(food) ?: return null
+        // The food's own listed size is one of the three; the others are a step either side.
+        val listed = when { has(unit, "small") -> 0; has(unit, "large") -> 2; else -> 1 }
+        return SIZES.mapIndexed { i, l ->
+            val each = food.servingG * (1f + SIZE_STEP * (i - listed))
+            Pick(l, "${each.roundToInt()} g", each)
+        }
+    }
+
+    /** The user's words: Small · Regular · Large (a "medium egg" is Regular). */
+    val SIZES = listOf("Small", "Regular", "Large")
+    private val SIZE_WORDS = setOf("small", "medium", "regular", "large")
+    /** How much a size step changes the weight: eggs are about 38 / 44 / 50 g, about 15% apart. */
+    private const val SIZE_STEP = 0.15f
+    /** Small · Medium · Large for spoon foods: teaspoon 5 ml, tablespoon 15 ml, heaped ≈ 22.5 ml. */
+    private val SPOONS = listOf(Triple("Small", "teaspoon", 5f), Triple("Regular", "tablespoon", 15f), Triple("Large", "heaped", 22.5f))
+
+    /** What you count it in, without the size: "medium egg" → "egg". */
+    fun noun(food: FoodItem): String? = countUnit(food)?.split(' ')?.filterNot { it in SIZE_WORDS }?.joinToString(" ")?.ifBlank { null }
+
+    /** For "How many …?": "eggs", "slices", or "spoons" for spoon foods. */
+    fun things(food: FoodItem): String? =
+        if (spoonFood(food)) "spoons" else noun(food)?.let { if (it.endsWith("s")) it else "${it}s" }
+
+    /** The size and count that best match [grams]: 200 g of 50 g eggs → Large × 4. */
+    fun nearest(picks: List<Pick>, grams: Float): Pair<Int, Int> {
+        var best = 1 to 1
+        var err = Float.MAX_VALUE
+        // Regular first, so a tie keeps the everyday size.
+        (listOf(1) + picks.indices.filter { it != 1 }).forEach { i ->
+            val n = (grams / picks[i].each).roundToInt().coerceIn(1, 20)
+            val e = kotlin.math.abs(n * picks[i].each - grams)
+            if (e < err - 0.5f) { err = e; best = i to n }
+        }
+        return best
+    }
+
+    /**
+     * Kinds worth choosing between, read from the food file itself: for "Egg, chicken, whole, …"
+     * the file also lists "Egg, chicken, white, …", so the choice is Whole or White. [family]
+     * returns foods whose names start with the given text.
+     */
+    fun types(food: FoodItem, family: (String) -> List<FoodItem>): List<Pair<String, FoodItem>>? {
+        val m = Regex("""^(.+?), whole, (.+)$""").find(food.name) ?: return null
+        val (prefix, rest) = m.destructured
+        val words = rest.split(", ", " ").toSet()
+        val other = family(prefix)
+            .filter { it.name.startsWith("$prefix, white, ") && countUnit(it) != null }
+            .maxByOrNull { f -> f.name.substringAfter("white, ").split(", ", " ").count { it in words } }
+            ?: return null
+        return listOf("Whole" to food, "White" to other)
+    }
+
     /** Hand guide: no scales or cups needed. Empty for drinks and per-item foods. */
     fun hand(food: FoodItem): List<Portion> {
         if (food.perItem || isDrink(food)) return emptyList()

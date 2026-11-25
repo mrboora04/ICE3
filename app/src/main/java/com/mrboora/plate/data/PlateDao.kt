@@ -69,6 +69,9 @@ interface PlateDao {
     @Query("SELECT * FROM workout WHERE day = :day ORDER BY id")
     fun workouts(day: Long): Flow<List<Workout>>
 
+    @Query("SELECT * FROM workout WHERE day BETWEEN :from AND :to")
+    fun workoutsBetween(from: Long, to: Long): Flow<List<Workout>>
+
     @Insert
     suspend fun addWorkout(workout: Workout)
 

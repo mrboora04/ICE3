@@ -54,6 +54,9 @@ import com.mrboora.plate.data.Mix
 import com.mrboora.plate.ui.components.Eyebrow
 import com.mrboora.plate.ui.components.MenuLine
 import com.mrboora.plate.ui.components.PlateCard
+import com.mrboora.plate.ui.components.SizeCountPicker
+import com.mrboora.plate.data.Portions
+import androidx.compose.foundation.layout.PaddingValues
 import com.mrboora.plate.ui.theme.Plate
 import com.mrboora.plate.ui.theme.PosterType
 import kotlin.math.roundToInt
@@ -62,8 +65,13 @@ import kotlin.math.roundToInt
 private fun g(v: Float) = if (v < 10f) "%.1f".format(java.util.Locale.ROOT, v) else "${v.roundToInt()}"
 
 /** One editable ingredient row's state. */
-private class MixRow(val label: String, val food: FoodItem, grams: String) {
+private class MixRow(val label: String, food: FoodItem, grams: String) {
+    /** Can change kind (an egg: whole or white). */
+    var food by mutableStateOf(food)
     var grams by mutableStateOf(grams)
+    /** Typing grams instead of Size · How many. */
+    var exact by mutableStateOf(false)
+    var types by mutableStateOf<List<Pair<String, FoodItem>>?>(null)
     val value get() = grams.replace(',', '.').toFloatOrNull()?.takeIf { it > 0f && it <= 3000f }
 }
 
@@ -84,6 +92,7 @@ fun ShakeBuilder(
     draft: com.mrboora.plate.data.MixParser.Draft? = null,
     /** Remember (label) or forget (null) the user's own reading of a word, e.g. "milk" → "Milk 3.25%". */
     onRemember: (word: String, label: String?) -> Unit = { _, _ -> },
+    foodTypes: suspend (FoodItem) -> List<Pair<String, FoodItem>>? = { null },
 ) {
     val c = Plate.colors
     val foods = preview ?: produceState<Map<String, FoodItem>?>(null) { value = ingredients() }.value
@@ -341,9 +350,14 @@ fun ShakeBuilder(
                     // The pizza row always follows the size picked above, and says what its grams mean.
                     val isPizza = dishMode && r.food.name in Mix.CRUST_FOODS
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
+                    // Eggs, roti, a spoon of sugar: Size · How many, the same as in Add food.
+                    val picks = if (isPizza) null else Portions.picks(r.food)
+                    LaunchedEffect(r) { if (r.types == null) r.types = foodTypes(r.food) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (isPizza) "Whole ${size.label.lowercase()} pizza (crust, sauce, cheese)" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        OutlinedTextField(
+                        if (picks != null && !r.exact) {
+                            Text("${r.value?.let(::g) ?: "–"} g", style = MaterialTheme.typography.titleSmall, color = c.muted)
+                        } else OutlinedTextField(
                             r.grams, { r.grams = it }, singleLine = true, suffix = { Text("g") }, isError = r.value == null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(110.dp),
                         )
@@ -355,7 +369,17 @@ fun ShakeBuilder(
                             style = MaterialTheme.typography.bodySmall, color = c.muted,
                         )
                     }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (picks != null && !r.exact) {
+                        val (si, n) = Portions.nearest(picks, r.value ?: picks[1].each)
+                        val types = r.types
+                        SizeCountPicker(
+                            picks, si, n, onChange = { i, k -> r.grams = g(picks[i].each * k.coerceIn(1, 20)) },
+                            types = types?.map { it.first }, type = types?.indexOfFirst { it.second === r.food }?.coerceAtLeast(0) ?: 0,
+                            things = Portions.things(r.food),
+                            onType = { t -> types?.get(t)?.second?.let { f -> r.food = f; Portions.picks(f)?.let { r.grams = g(it[si].each * n) } } },
+                        )
+                        TextButton({ r.exact = true }, contentPadding = PaddingValues(0.dp)) { Text("Exact grams") }
+                    } else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         // Plain words where the template has them: Small · Regular · Big, 1 tsp · 2 tsp.
                         val plain = tpl?.quick?.get(r.label)
                         val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"

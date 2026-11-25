@@ -238,6 +238,7 @@ object MixParser {
         val toppingLabels = Mix.TOPPINGS.map { it.first }.toSet()
         val baseLabels = Mix.BASES.map { it.first }.toSet()
         val items = mutableListOf<Item>()
+        val guessed = mutableListOf<Item>()
         val unknown = mutableListOf<String>()
 
         for (raw in clean(text).split(SPLIT)) {
@@ -352,7 +353,10 @@ object MixParser {
             }
             val ml = if (isBase) grams / density else null
             items += Item(label!!, food, grams, ml, isBase, if (isUsual) "your usual · $how" else how, said, isUsual)
+                .also { if (how.startsWith("no amount given")) guessed += it }
         }
+        // "omelette with 3 eggs": the dish word and "3 eggs" both mean eggs; keep the one with the amount.
+        items.removeAll { a -> guessed.any { it === a } && items.any { b -> b !== a && b.label == a.label && guessed.none { it === b } } }
         // A bare "chai" or "omelette": start from the template's usual recipe.
         if (tpl != null) {
             // Nothing but a base named: the whole usual recipe. Otherwise only the main thing if it's

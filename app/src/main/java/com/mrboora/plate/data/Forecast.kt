@@ -53,6 +53,26 @@ object Forecast {
         return (intake / p.activity.factor - 6.25f * p.heightCm + 5f * p.age - s) / 10f
     }
 
+    /** What the forecast is based on: average kcal eaten and workout kcal per logged day, and how many days. */
+    data class Basis(val intake: Float, val workout: Float, val days: Int) {
+        /** No finished day logged yet, so it's today so far. */
+        val todayOnly: Boolean get() = days == 0
+    }
+
+    /**
+     * The average of every finished day logged so far (today isn't counted until it's over: an
+     * unfinished day always looks too low). With no finished day yet, today so far.
+     */
+    fun basis(history: List<DaySummary>, workoutsByDay: Map<Long, Int>, today: Long, todayEaten: Float, todayWorkout: Float): Basis {
+        val past = history.filter { it.day < today && it.kcal > 0f }
+        if (past.isEmpty()) return Basis(todayEaten, todayWorkout, 0)
+        return Basis(
+            intake = past.map { it.kcal }.average().toFloat(),
+            workout = past.sumOf { workoutsByDay[it.day] ?: 0 }.toFloat() / past.size,
+            days = past.size,
+        )
+    }
+
     /** Everyday movement without exercise: resting energy × 1.2. Workouts are added on top from the log. */
     const val DAILY_LIFE = 1.2f
     fun dailyLife(p: Profile, kg: Float): Float = Nutrition.bmr(p.sex, kg, p.heightCm, p.age) * DAILY_LIFE

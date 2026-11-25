@@ -295,6 +295,25 @@ class ScreenshotTest {
         )
     }
 
+    @Test fun eggSheet() = shot("egg_sheet") {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val cnf = com.mrboora.plate.data.CanadianFoods(ctx)
+        val egg = cnf.byName("Egg, chicken, whole, fresh or frozen, raw")!!
+        com.mrboora.plate.ui.screens.AmountSheet(egg, initial = 182f, onDismiss = {}, foodTypes = { f -> com.mrboora.plate.data.Portions.types(f, cnf::startingWith) }, inline = true) { _, _ -> }
+    }
+
+    @Test fun spoonSheet() = shot("spoon_sheet") {
+        val pb = com.mrboora.plate.data.FoodItem("Peanut butter, smooth", kcal100 = 588f, protein100 = 25f, carbs100 = 20f, fat100 = 50f, servingG = 32f, servingLabel = "2 tbsp")
+        com.mrboora.plate.ui.screens.AmountSheet(pb, initial = 32f, onDismiss = {}, inline = true) { _, _ -> }
+    }
+
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun eggsFromText() = shot("eggs_from_text") {
+        val (foods, cnf) = mixFoods()
+        val draft = com.mrboora.plate.data.MixParser.parse("omelette with 3 eggs and onion", foods, search = { cnf.search(it, 1).firstOrNull() })
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft,
+            foodTypes = { f -> com.mrboora.plate.data.Portions.types(f, cnf::startingWith) })
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 

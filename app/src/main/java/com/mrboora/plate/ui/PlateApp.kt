@@ -97,6 +97,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     val currentKg = vm.currentWeight.collectAsStateWithLifecycle().value ?: profile.weightKg
     val waterContainers by vm.waterContainers.collectAsStateWithLifecycle()
     val todayMeals by vm.todayEntries.collectAsStateWithLifecycle()
+    val workoutsByDay by vm.workoutsByDay.collectAsStateWithLifecycle()
     val todayWater by vm.todayWaterMl.collectAsStateWithLifecycle()
     val todayWorkouts by vm.todayWorkouts.collectAsStateWithLifecycle()
     val selfieDays by vm.selfieDays.collectAsStateWithLifecycle()
@@ -328,6 +329,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                             profile, currentKg, todayMeals, todayWater, todayWorkouts, weights, PlateViewModel.today(),
                             onAddWorkout = vm::addWorkout, onDeleteWorkout = vm::deleteWorkout,
                             modifier = Modifier.padding(horizontal = 16.dp),
+                            history = history, workoutsByDay = workoutsByDay,
                         )
                     },
                     extra = {
@@ -366,6 +368,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     restaurantChains = vm::restaurantChains,
                     restaurantMenu = vm::restaurantMenu,
                     shelfFoods = vm::shelfFoods,
+                    foodTypes = vm::foodTypes,
                     didYouMean = vm::didYouMean,
                     onRequest = { restaurant, item -> sendRequest(restaurant, item) },
                     onCreate = { vm.createFood(it) },

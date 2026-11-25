@@ -23,6 +23,9 @@ class CanadianFoods(private val context: Context) {
     /** The food with exactly this Health Canada name. */
     fun byName(name: String): FoodItem? = load().firstOrNull { it.first.name == name }?.first
 
+    /** Foods whose names start with [prefix], e.g. every "Egg, chicken" entry. */
+    fun startingWith(prefix: String): List<FoodItem> = load().map { it.first }.filter { it.name.startsWith(prefix) }
+
     /** All foods in the given food groups, alphabetically. */
     fun inGroups(groups: Set<String>): List<FoodItem> =
         load().filter { it.second in groups }.map { it.first }.sortedBy { it.name }

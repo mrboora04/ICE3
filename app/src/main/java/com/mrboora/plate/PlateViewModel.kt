@@ -84,6 +84,10 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun restaurantMenu(chain: String): List<FoodItem> = withContext(Dispatchers.Default) { restaurants.menu(chain) }
 
+    /** Kinds to choose between for a food, from the food file itself (an egg: whole or white). */
+    suspend fun foodTypes(food: FoodItem): List<Pair<String, FoodItem>>? =
+        withContext(Dispatchers.Default) { com.mrboora.plate.data.Portions.types(food, canadian::startingWith) }
+
     suspend fun shelfFoods(groups: Set<String>): List<FoodItem> = withContext(Dispatchers.Default) { canadian.inGroups(groups) }
 
     val profileState: StateFlow<ProfileState> = dao.profile()
@@ -106,6 +110,11 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
     val todayWorkouts: StateFlow<List<com.mrboora.plate.data.Workout>> = dao.workouts(today())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Workout kcal per day for the last 120 days, for the forecast's average. */
+    val workoutsByDay: StateFlow<Map<Long, Int>> = dao.workoutsBetween(today() - 120, today())
+        .map { list -> list.groupBy { it.day }.mapValues { (_, w) -> w.sumOf { it.kcal } } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun addWorkout(kind: String, minutes: Int, kcal: Int) = viewModelScope.launch {
         dao.addWorkout(com.mrboora.plate.data.Workout(day = today(), kind = kind, minutes = minutes, kcal = kcal))
