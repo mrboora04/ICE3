@@ -1,11 +1,10 @@
 {
-  "versionCode": 50,
-  "versionName": "2.15.6",
+  "versionCode": 51,
+  "versionName": "2.15.7",
   "notes": [
-    "Updates install from inside Plate: one tap, then Android's Install screen",
-    "Progress: days coloured by how they went, with that day's selfie; Compare lines selfies up",
-    "Units: kg or lb, cm or ft in, ml or fl oz (Profile → Units)"
+    "Test: this update installed from inside Plate",
+    "Updates now download inside the app and open Android's Install screen"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate-test.apk",
-  "sha256": "8fe5ff4ba983d7c88dc808328efc71918c45a631427da41c6653d2753b859a37"
+  "sha256": "d7637c3dac152f9fc0b77c91f207ea7775fdbe45717787d2c310621ceb82b645"
 }
