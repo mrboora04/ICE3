@@ -404,20 +404,39 @@ object HomeDish {
         return found.distinct().filter { it !in BASE }
     }
 
-    /** "aloo gajar ki sabji" → "aloo, gajar, sabji": vegetables side by side become separate items. */
+    /** Words that join other words and are never food: "aloo ki sabji", "aloo or gajar", "aloo aur matar". */
+    val HELPERS = setOf("ki", "ka", "ke", "wali", "wala", "vali", "or", "aur", "ya", "and", "n", "with", "plus", "of", "the", "some", "my")
+
+    /** Words that are part of an amount: numbers, units and sizes, kept with the ingredient after them. */
+    private val AMOUNT = Regex("""^(\d+(?:[.,]\d+)?|a|an|one|two|three|four|five|half|quarter|g|gm|gms|gram|grams|kg|ml|l|cups?|tbsp|tsp|spoons?|tablespoons?|teaspoons?|pieces?|pcs|small|big|large|medium|little|heaped|handful|\d+(?:[.,]\d+)?(g|ml|kg))$""")
+
+    /**
+     * Reads a dish word by word: each ingredient starts its own item (with any amount just before
+     * it), helper words are dropped, and an unknown word stands alone, so it's reported instead of
+     * swallowing the next ingredient: "aloo gandola gajar or matar ki sabji" → "aloo, gandola, gajar,
+     * matar, sabji".
+     */
     fun separate(text: String, aliases: List<String>): String {
-        val words = aliases.sortedByDescending { it.length }
-        // "1 katori", "2 bowls of", "a cup": how much sabji was eaten, not an amount of one vegetable.
+        // "1 katori", "2 bowls of", "a cup": how much of the dish was eaten, not an amount of one ingredient.
         val serving = Regex("""\b(\d+(?:[.,]\d+)?|a|an|one|half|1/2)\s*(katoris?|bowls?|cups?|plates?)\s*(of\s+)?""")
-        var t = " " + serving.replace(text.lowercase(), " ").replace(Regex("""\b(ki|ka|ke|wali|wala|vali)\b"""), " ").replace(Regex("""\s+"""), " ").trim() + " "
-        // Put a comma after each vegetable word that's followed straight by another one.
-        val alt = words.joinToString("|") { Regex.escape(it) }
-        val pair = Regex("""\b($alt)\s+(?=($alt)\b)""")
-        while (true) {
-            val m = pair.find(t) ?: break
-            t = t.replaceRange(m.range, m.groupValues[1] + ", ")
+        val tokens = serving.replace(text.lowercase().replace(Regex("""[,;&+]"""), " "), " ").split(' ').filter { it.isNotBlank() }
+        val names = aliases.map { it.split(' ') }.sortedByDescending { it.size }
+        val groups = mutableListOf<MutableList<String>>()
+        val pending = mutableListOf<String>()
+        var i = 0
+        while (i < tokens.size) {
+            val name = names.firstOrNull { n -> n.size <= tokens.size - i && n.indices.all { tokens[i + it] == n[it] } }
+            when {
+                name != null -> { groups += (pending + name).toMutableList(); pending.clear(); i += name.size; continue }
+                AMOUNT.matches(tokens[i]) -> pending += tokens[i]
+                tokens[i] in HELPERS -> Unit
+                else -> { groups += (pending + tokens[i]).toMutableList(); pending.clear() }
+            }
+            i++
         }
-        return t.trim()
+        // An amount after the last ingredient ("aloo 200 g") belongs to it.
+        if (pending.isNotEmpty()) groups.lastOrNull()?.addAll(pending) ?: groups.add(pending)
+        return groups.joinToString(", ") { it.joinToString(" ") }
     }
 }
 

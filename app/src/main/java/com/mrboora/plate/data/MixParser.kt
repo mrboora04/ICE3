@@ -37,6 +37,8 @@ object MixParser {
         val said: String = "",
         /** True when the user's own remembered reading was used. */
         val usual: Boolean = false,
+        /** The app worked out this amount (a share of the dish); the user didn't give it. */
+        val reasoned: Boolean = false,
     )
 
     /** A dish such as a pizza: its size, and how many slices it's cut into. */
@@ -106,7 +108,7 @@ object MixParser {
         "½" to 0.5f, "¼" to 0.25f, "¾" to 0.75f,
     )
 
-    private val SPLIT = Regex("""\s*(?:,|\+|&|;|\bwith\b|\band\b|\bover\b|\bplus\b|\bthen\b|\btopped\b)\s*""")
+    private val SPLIT = Regex("""\s*(?:,|\+|&|;|\bwith\b|\band\b|\baur\b|\bor\b|\bover\b|\bplus\b|\bthen\b|\btopped\b)\s*""")
     private const val NUM = """(\d+(?:[.,]\d+)?|½|¼|¾|half|an|a|one|two|three|four|five|six|seven|eight|nine|ten)"""
     private const val SIZE = """(?:(small|little|regular|normal|medium|big|large|heaped|heaping|level|full)\s+)?"""
     private const val UNIT =
@@ -240,7 +242,7 @@ object MixParser {
         for (o in open) {
             val g = split[o.label] ?: continue
             val idx = items.indexOf(o)
-            items[idx] = o.copy(grams = g, how = "${(g / room * 100).roundToInt()}% of the ${fmt(room.roundToInt().toFloat())} g left in a cup ≈ ${fmt(g.roundToInt().toFloat())} g")
+            items[idx] = o.copy(grams = g, reasoned = true, how = "${(g / room * 100).roundToInt()}% of the ${fmt(room.roundToInt().toFloat())} g left in a cup ≈ ${fmt(g.roundToInt().toFloat())} g")
         }
     }
 
@@ -279,7 +281,7 @@ object MixParser {
         val unknown = mutableListOf<String>()
 
         // "aloo gajar ki sabji", "carrot potato stew": the vegetables are separate items; the dish word is just the dish.
-        val source = if (tpl?.reasoned == true) HomeDish.separate(clean(text), tpl.aliases.map { it.first }) else clean(text)
+        val source = if (tpl?.reasoned == true) HomeDish.separate(clean(text), tpl.aliases.map { it.first } + tpl.triggers) else clean(text)
         for (raw in source.split(SPLIT)) {
             var piece = raw.trim()
             if (piece.isBlank()) continue
@@ -319,7 +321,8 @@ object MixParser {
             val name = words.joinToString(" ")
             if (name.isBlank()) continue
             // Just the dish's own word ("sabji", "chai" when it isn't an ingredient): nothing to add.
-            if (tpl != null && words.all { w -> tpl.triggers.any { w == it || w == it + "s" } } && tplAliases.none { (a, _) -> a == name }) continue
+            if (tpl != null && (tpl.triggers.any { name == it || name == it + "s" } || words.all { w -> tpl.triggers.any { w == it || w == it + "s" } }) &&
+                tplAliases.none { (a, _) -> a == name }) continue
 
             // Which food.
             val matched = tplAliases.firstOrNull { (alias, _) -> Regex("""\b${Regex.escape(alias)}\b""").containsMatchIn(name) }

@@ -65,7 +65,9 @@ import kotlin.math.roundToInt
 private fun g(v: Float) = if (v < 10f) "%.1f".format(java.util.Locale.ROOT, v) else "${v.roundToInt()}"
 
 /** One editable ingredient row's state. */
-private class MixRow(val label: String, food: FoodItem, grams: String, val said: String = "") {
+private class MixRow(val label: String, food: FoodItem, grams: String, val said: String = "", reasoned: Boolean = false) {
+    /** The amount is the app's share of the dish, not one the user set; it's re-shared when ingredients change. */
+    var reasoned by mutableStateOf(reasoned)
     /** Can change kind (an egg: whole or white). */
     var food by mutableStateOf(food)
     var grams by mutableStateOf(grams)
@@ -120,7 +122,7 @@ fun ShakeBuilder(
     var started by remember { mutableStateOf(false) }
     if (!started && draft != null) {
         started = true
-        draft.parts.forEach { rows += MixRow(it.label, it.food, g(it.grams), it.said) }
+        draft.parts.forEach { rows += MixRow(it.label, it.food, g(it.grams), it.said, it.reasoned) }
         draft.base?.let { b ->
             if (Mix.BASES.any { it.first == b.label }) { base = b.label; baseMl = "${(b.ml ?: 250f).roundToInt()}" }
             else rows += MixRow(b.label, b.food, g(b.grams))
@@ -243,13 +245,17 @@ fun ShakeBuilder(
                             modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Change ${i.label}") { fixing = idx }.padding(vertical = 4.dp),
                         )
                     }
-                    draft.unknown.forEach { u ->
-                        Text("“$u”: not found, add it with the search below", style = MaterialTheme.typography.bodyMedium, color = c.over, modifier = Modifier.padding(vertical = 2.dp))
-                    }
+                    // Words that aren't a food Plate knows: said plainly, and left out (not guessed at).
+                    if (draft.unknown.isNotEmpty()) Text(
+                        "Didn't use: " + draft.unknown.joinToString(", ") { "“$it”" } + ". Not a food Plate knows; add it with the search below if it's in the dish.",
+                        style = MaterialTheme.typography.bodyMedium, color = c.over, modifier = Modifier.padding(vertical = 2.dp),
+                    )
                     Text("Change any amount below; the math updates.", style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 4.dp))
-                    // Right after the reading: when it's right, one tap and done.
-                    if (draft.unknown.isEmpty() && canSave) {
-                        Button(::save, Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp)) { Text("Looks good · add $saveLabel") }
+                    // Right after the reading: when it's right, one tap and done (unknown words are left out).
+                    if (canSave) {
+                        Button(::save, Modifier.fillMaxWidth().padding(top = 10.dp).height(52.dp)) {
+                            Text(if (draft.unknown.isEmpty()) "Looks good · add $saveLabel" else "Add without ${if (draft.unknown.size == 1) "it" else "them"} · $saveLabel")
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -326,7 +332,9 @@ fun ShakeBuilder(
                                 dishMode -> Mix.toppingGrams(label, size)
                                 tpl != null -> tpl.usual[label] ?: tpl.starts.firstOrNull { it.first == label }?.second ?: Mix.quickAmounts(food).first().second
                                 else -> Mix.quickAmounts(food).first().second
-                            }))
+                            }), reasoned = tpl?.reasoned == true && label !in com.mrboora.plate.data.HomeDish.BASE)
+                            // A reasoned dish: adding or removing an ingredient re-shares the cup.
+                            if (tpl?.reasoned == true) reshare(rows, tpl)
                         }, label = { Text(label) })
                     }
                 }
@@ -368,7 +376,7 @@ fun ShakeBuilder(
                         if (picks != null && !r.exact) {
                             Text("${r.value?.let(::g) ?: "–"} g", style = MaterialTheme.typography.titleSmall, color = c.muted)
                         } else OutlinedTextField(
-                            r.grams, { r.grams = it }, singleLine = true, suffix = { Text("g") }, isError = r.value == null,
+                            r.grams, { r.grams = it; r.reasoned = false }, singleLine = true, suffix = { Text("g") }, isError = r.value == null,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.width(110.dp),
                         )
                         IconButton({ rows.remove(r) }) { Icon(Icons.Rounded.Close, "Remove ${r.label}", tint = c.muted) }
@@ -395,7 +403,7 @@ fun ShakeBuilder(
                         val plain = tpl?.quick?.get(r.label) ?: tpl?.parts?.takeIf { it.isNotEmpty() }
                         val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"
                         (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else plain ?: Mix.quickAmounts(r.food)).forEach { (label, grams) ->
-                            FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} $unitWord") })
+                            FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams); r.reasoned = false }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} $unitWord") })
                         }
                     }
                 }
@@ -540,4 +548,18 @@ private fun FixDialog(
         confirmButton = { TextButton({ onPick(picked, keep) }) { Text("Use it") } },
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
     )
+}
+
+/**
+ * Shares what's left of the cup among the main ingredients whose amount the app worked out (not
+ * ones the user set), the same way as when they're typed: stars first, then 100 · 50/50 · 40/30/30.
+ */
+private fun reshare(rows: MutableList<MixRow>, tpl: com.mrboora.plate.data.Templates.Template) {
+    val H = com.mrboora.plate.data.HomeDish
+    val open = rows.filter { it.reasoned && it.label !in H.BASE }
+    if (open.isEmpty()) return
+    val fixed = rows.filter { it !in open }.sumOf { (it.value ?: 0f).toDouble() }.toFloat()
+    val room = (H.CUP_G - fixed).coerceAtLeast(H.CUP_G * 0.3f)
+    val split = H.split(open.map { it.label }, room, tpl.leads)
+    open.forEach { r -> split[r.label]?.let { r.grams = "%.0f".format(java.util.Locale.US, it) } }
 }

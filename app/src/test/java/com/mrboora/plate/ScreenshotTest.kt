@@ -388,6 +388,13 @@ class ScreenshotTest {
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
     }
 
+    /** An unknown word is said plainly and left out; the rest is still read and can be added. */
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun unknownWordFromText() = shot("unknown_word_from_text") {
+        val (foods, cnf) = mixFoods()
+        val draft = com.mrboora.plate.data.MixParser.parse("aloo gandola gajar or matar ki sabji", foods, search = { cnf.search(it, 1).firstOrNull() })
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
+    }
+
     /** Non-veg, same builder: "keema matar" works out the mince and the peas. */
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun keemaFromText() = shot("keema_from_text") {
         val (foods, cnf) = mixFoods()
@@ -455,6 +462,14 @@ class ScreenshotTest {
         org.junit.Assert.assertEquals("dish", com.mrboora.plate.data.Templates.forText("anda curry")?.id)
         org.junit.Assert.assertEquals("roti", com.mrboora.plate.data.Templates.forText("chicken curry with 2 roti")?.id)
         org.junit.Assert.assertEquals("chai", com.mrboora.plate.data.Templates.forText("masala chai")?.id)
+        // Word by word (#11): helpers ("or", "aur") join, an unknown word is reported, not swallowing the rest.
+        val w = com.mrboora.plate.data.MixParser.parse("aloo gandola gajar or matar ki sabji", foods, search = { cnf.search(it, 1).firstOrNull() })!!
+        org.junit.Assert.assertEquals(listOf("Potato", "Carrot", "Peas"), w.items.map { it.label }.filter { it !in com.mrboora.plate.data.HomeDish.BASE })
+        org.junit.Assert.assertEquals(listOf("gandola"), w.unknown)
+        org.junit.Assert.assertEquals(listOf("Potato", "Carrot", "Peas"), parse("aloo gajar aur matar ki sabji").map { it.label }.filter { it !in com.mrboora.plate.data.HomeDish.BASE })
+        // An amount stays with its own ingredient: "200 g aloo and gajar sabji".
+        val am = grams(parse("200 g aloo and gajar sabji"))
+        org.junit.Assert.assertEquals(200f, am.getValue("Potato"), 0.01f)
         // Just "sabji": an aloo sabji.
         org.junit.Assert.assertTrue("Potato" in grams(parse("sabji")))
         // Oil typed by the user stays theirs; the vegetables get what's left.
