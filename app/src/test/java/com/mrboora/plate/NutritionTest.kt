@@ -215,6 +215,11 @@ class NutritionTest {
         assertTrue(info.notes.isNotEmpty())
         // Downloads only from this repository.
         assertEquals(null, AppUpdates.parse("""{"versionCode":99,"versionName":"9","apk":"https://evil.example/x.apk"}"""))
+        // The installer's fingerprint travels with it, and the download is checked against it.
+        assertEquals(64, info.sha256.length)
+        val f = java.io.File.createTempFile("plate", ".apk").apply { writeText("abc") }
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", AppUpdates.sha256(f))
+        f.delete()
     }
 
     @Test fun addingAPortionScalesTheEntry() {

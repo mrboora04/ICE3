@@ -14,6 +14,7 @@ class MainActivity : ComponentActivity() {
         com.mrboora.plate.data.MenuUpdates.schedule(this)
         takeUpdateRequest(intent)
         takeShortcut(intent)
+        takeInstallStatus(intent)
         com.mrboora.plate.widget.Shortcuts.publish(this)
         setContent { PlateTheme { PlateApp() } }
     }
@@ -22,6 +23,15 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         takeUpdateRequest(intent)
         takeShortcut(intent)
+        takeInstallStatus(intent)
+    }
+
+    /** Android's installer answering: show its confirm screen, or why the update didn't install. */
+    private fun takeInstallStatus(intent: android.content.Intent?) {
+        if (intent?.action == com.mrboora.plate.data.AppUpdates.ACTION_STATUS) {
+            com.mrboora.plate.data.AppUpdates.onStatus(this, intent)
+            intent.action = android.content.Intent.ACTION_MAIN
+        }
     }
 
     /** Opened from a long-press shortcut: the app acts on it once it's ready. */

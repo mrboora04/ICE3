@@ -24,8 +24,11 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 49
-        versionName = "2.15.5"
+        versionCode = 50
+        versionName = "2.15.6"
+        // Where the app looks for updates: main for releases; test builds pass
+        // -Pplate.updateBranch=<test branch> so updates can be tried before a release.
+        buildConfigField("String", "UPDATE_BRANCH", "\"${project.findProperty("plate.updateBranch") ?: "main"}\"")
     }
 
     signingConfigs {
@@ -48,7 +51,7 @@ android {
         }
     }
 
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 
 
     compileOptions {
