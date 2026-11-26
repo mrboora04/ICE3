@@ -534,4 +534,19 @@ class NutritionTest {
         assertFalse(FoodRequest(2, "", "", 0, false, "a homemade dosa").trackable)
         assertEquals("a homemade dosa", FoodRequest(2, "", "", 0, false, "a homemade dosa").label)
     }
+
+    @Test
+    fun requestsForgiveTyposAndSabjisAreReadyAtOnce() {
+        assertTrue(com.mrboora.plate.data.Spelling.close("garaj", "gajar"))
+        assertTrue(com.mrboora.plate.data.Spelling.close("gajer", "gajar"))
+        assertFalse(com.mrboora.plate.data.Spelling.close("aloo", "gajar"))
+        // A typo in a restaurant request still finds the row once it's added.
+        val row = FoodItem("Iced Capp", brand = "Tim Hortons", kcal100 = 100f, protein100 = 1f, carbs100 = 20f, fat100 = 2f)
+        val req = FoodRequest(1, "Tim Hortons", "iced cpap", 0, false)
+        assertEquals(listOf(req), com.mrboora.plate.data.MenuUpdates.fulfilled(listOf(req), listOf(row)))
+        // A sabji is made in the builder: ready at once, even when only described.
+        val sabji = FoodRequest(2, "", "", 0, false, "aloo garaj sabji")
+        assertTrue(sabji.homemade && sabji.trackable)
+        assertEquals(listOf(sabji), com.mrboora.plate.data.MenuUpdates.fulfilled(listOf(sabji), emptyList()))
+    }
 }

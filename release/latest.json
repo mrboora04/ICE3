@@ -1,10 +1,11 @@
 {
-  "versionCode": 51,
-  "versionName": "2.15.7",
+  "versionCode": 52,
+  "versionName": "2.15.8",
   "notes": [
-    "Test: this update installed from inside Plate",
-    "Updates now download inside the app and open Android's Install screen"
+    "Sabji builder: type \"aloo gajar ki sabji\" (or potato and carrot) and Plate works out a katori",
+    "Requests forgive small typos, and sabji requests are ready right away",
+    "Updates install from inside Plate"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate-test.apk",
-  "sha256": "d7637c3dac152f9fc0b77c91f207ea7775fdbe45717787d2c310621ceb82b645"
+  "sha256": "c3ed3eeab13312d6803e3fbc74305c4331d2cc3a9461d36a7414a7bfb87aefad"
 }

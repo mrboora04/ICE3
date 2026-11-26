@@ -351,7 +351,9 @@ fun ShakeBuilder(
                     val isPizza = dishMode && r.food.name in Mix.CRUST_FOODS
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
                     // Eggs, roti, a spoon of sugar: Size · How many, the same as in Add food.
-                    val picks = if (isPizza) null else Portions.picks(r.food)
+                    // Only when the amount really is whole pieces (3 eggs, 2 rotis); a share of a
+                    // katori (64 g of potato) is shown in grams.
+                    val picks = if (isPizza || tpl?.id == "sabji") null else Portions.picks(r.food)?.takeIf { ps -> Portions.wholePieces(ps, r.value) }
                     LaunchedEffect(r) { if (r.types == null) r.types = foodTypes(r.food) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (isPizza) "Whole ${size.label.lowercase()} pizza (crust, sauce, cheese)" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -381,7 +383,8 @@ fun ShakeBuilder(
                         TextButton({ r.exact = true }, contentPadding = PaddingValues(0.dp)) { Text("Exact grams") }
                     } else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         // Plain words where the template has them: Small · Regular · Big, 1 tsp · 2 tsp.
-                        val plain = tpl?.quick?.get(r.label)
+                        // A sabji's vegetables in parts of the katori, the way it's served.
+                        val plain = tpl?.quick?.get(r.label) ?: if (tpl?.id == "sabji") com.mrboora.plate.data.Sabji.PARTS else null
                         val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"
                         (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else plain ?: Mix.quickAmounts(r.food)).forEach { (label, grams) ->
                             FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} $unitWord") })

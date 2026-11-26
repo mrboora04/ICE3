@@ -23,7 +23,11 @@ data class FoodRequest(
      * Whether the phone can tell by itself when it's been added: it names a restaurant (and maybe
      * an item). A request with only details is read by a person and can't be matched automatically.
      */
-    val trackable: Boolean get() = terms.isNotEmpty()
+    val trackable: Boolean get() = terms.isNotEmpty() || homemade
+
+    /** Something Plate's builders make (a shake, a sabji): it's ready as soon as the app has the builder. */
+    val homemade: Boolean get() = restaurant.isBlank() &&
+        (Mix.isShake("$item $details") || Templates.forText("$item $details")?.id == "sabji")
 }
 
 object Requests {

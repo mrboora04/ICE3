@@ -170,7 +170,14 @@ object Portions {
 
     /** The user's words: Small · Regular · Large (a "medium egg" is Regular). */
     val SIZES = listOf("Small", "Regular", "Large")
-    private val SIZE_WORDS = setOf("small", "medium", "regular", "large")
+    private val SIZE_WORDS = setOf("small", "medium", "regular", "large", "whole")
+
+    /** True when [grams] is close (within 15%) to a whole number of one of the sizes. */
+    fun wholePieces(picks: List<Pick>, grams: Float?): Boolean {
+        if (grams == null) return true
+        val (i, n) = nearest(picks, grams)
+        return kotlin.math.abs(picks[i].each * n - grams) <= grams * 0.15f
+    }
     /** How much a size step changes the weight: eggs are about 38 / 44 / 50 g, about 15% apart. */
     private const val SIZE_STEP = 0.15f
     /** Small · Medium · Large for spoon foods: teaspoon 5 ml, tablespoon 15 ml, heaped ≈ 22.5 ml. */

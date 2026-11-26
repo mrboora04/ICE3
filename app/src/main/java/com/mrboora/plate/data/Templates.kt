@@ -189,8 +189,71 @@ object Templates {
         unit = "bowl", dishName = "Rice bowl", main = setOf("Rice", "Brown rice"),
     )
 
+    /**
+     * Sabji: any "<vegetables> sabji" is a homemade vegetable dish. Hindi and English names both
+     * work (aloo = potato). The amounts are reasoned by [Sabji], not fixed here.
+     */
+    val SABJI = Template(
+        id = "sabji", title = "SABJI", subtitle = "Vegetables, a little tadka and oil, worked out from Health Canada numbers",
+        triggers = listOf("sabji", "sabzi", "subzi", "sabjee", "subji", "bhaji"),
+        chips = listOf(
+            "Aloo" to "Potato, flesh and skin, raw",
+            "Gajar" to "Carrot, raw",
+            "Gobhi" to "Cauliflower, raw",
+            "Matar" to "Peas, green, frozen, unprepared",
+            "Bhindi" to "Okra (gumbo), raw",
+            "Baingan" to "Eggplant (aubergine, brinjal), raw",
+            "Palak" to "Spinach, raw",
+            "Paneer" to "Paneer",
+            "Lauki" to "Gourd, white flowered (calabash gourd), raw",
+            "Turai" to "Gourd, dishcloth (towelgourd), raw",
+            "Karela" to "Balsam-pear (bitter gourd, bitter melon), pods, raw",
+            "Beans" to "Beans, snap (Italian, green or yellow), raw",
+            "Cabbage" to "Cabbage, raw",
+            "Kaddu" to "Pumpkin, raw",
+            "Arbi" to "Taro, raw",
+            "Shimla mirch" to "Pepper, sweet, green, raw",
+            "Mushroom" to "Mushroom, white, raw",
+            "Saag" to "Mustard greens, raw",
+            "Onion" to "Onion, raw",
+            "Tomato" to "Tomato, red, ripe, raw, year round average",
+            "Oil" to "Vegetable oil, canola",
+            "Ghee" to "Ghee",
+        ),
+        // Hindi and English: the same vegetable, whichever word is used.
+        aliases = listOf(
+            "aloo" to "Aloo", "alu" to "Aloo", "aaloo" to "Aloo", "batata" to "Aloo", "potato" to "Aloo", "potatoes" to "Aloo",
+            "gajar" to "Gajar", "carrot" to "Gajar", "carrots" to "Gajar",
+            "gobhi" to "Gobhi", "gobi" to "Gobhi", "phool gobhi" to "Gobhi", "cauliflower" to "Gobhi",
+            "matar" to "Matar", "mattar" to "Matar", "mutter" to "Matar", "peas" to "Matar", "pea" to "Matar",
+            "bhindi" to "Bhindi", "okra" to "Bhindi", "lady finger" to "Bhindi", "ladyfinger" to "Bhindi",
+            "baingan" to "Baingan", "bengan" to "Baingan", "brinjal" to "Baingan", "eggplant" to "Baingan", "aubergine" to "Baingan",
+            "palak" to "Palak", "spinach" to "Palak",
+            "paneer" to "Paneer", "cottage cheese" to "Paneer",
+            "lauki" to "Lauki", "ghiya" to "Lauki", "doodhi" to "Lauki", "bottle gourd" to "Lauki",
+            "turai" to "Turai", "tori" to "Turai", "tinda" to "Turai", "ridge gourd" to "Turai",
+            "karela" to "Karela", "bitter gourd" to "Karela", "bitter melon" to "Karela",
+            "beans" to "Beans", "green beans" to "Beans", "french beans" to "Beans",
+            "patta gobhi" to "Cabbage", "band gobhi" to "Cabbage", "cabbage" to "Cabbage",
+            "kaddu" to "Kaddu", "pumpkin" to "Kaddu", "arbi" to "Arbi", "taro" to "Arbi",
+            "shimla mirch" to "Shimla mirch", "capsicum" to "Shimla mirch", "bell pepper" to "Shimla mirch",
+            "mushroom" to "Mushroom", "mushrooms" to "Mushroom", "saag" to "Saag", "sarson" to "Saag", "mustard greens" to "Saag",
+            "onion" to "Onion", "pyaz" to "Onion", "pyaaz" to "Onion", "tomato" to "Tomato", "tamatar" to "Tomato",
+            "oil" to "Oil", "tel" to "Oil", "ghee" to "Ghee",
+        ),
+        starts = emptyList(),
+        usual = emptyMap(),
+        unit = "katori", dishName = "Sabji",
+        spoonIsTeaspoon = true,
+        quick = mapOf(
+            "Onion" to Sabji.TADKA, "Tomato" to Sabji.TADKA,
+            "Oil" to listOf("1 tsp" to 4.5f, "1½ tsp" to 6.75f, "2 tsp" to 9f),
+            "Ghee" to listOf("1 tsp" to 5f, "1½ tsp" to 7.5f, "2 tsp" to 10f),
+        ),
+    )
+
     /** In the order they're checked: a "rice bowl" is a bowl, not a roti meal with rice. */
-    val ALL = listOf(BOWL, CHAI, ROTI, SANDWICH, EGGS)
+    val ALL = listOf(SABJI, BOWL, CHAI, ROTI, SANDWICH, EGGS)
 
     /** Every food name any template uses, for loading. */
     val foodNames: Set<String> get() = ALL.flatMap { t -> t.chips.map { it.second } }.toSet()
@@ -205,3 +268,83 @@ object Templates {
 
     fun byId(id: String): Template? = ALL.firstOrNull { it.id == id }
 }
+
+/**
+ * How a sabji is put together, reasoned the way a home cook does: one katori (150 g cooked) is
+ * mostly the vegetables, a tadka of onion and tomato, and a little oil. Spices, salt, chilli and
+ * ginger have almost no calories and are counted as 0. Every amount can be changed in the builder.
+ */
+object Sabji {
+    /** One katori of sabji, cooked. */
+    const val KATORI_G = 150f
+    /** The onion and tomato tadka: about a tenth of the katori, half each. */
+    const val TADKA_SHARE = 0.10f
+    /** Oil: 1½ teaspoons a katori (a teaspoon of oil is about 4.5 g). */
+    const val OIL_G = 6.75f
+    /** Paneer, when it's in: about 30% of the vegetables' part. */
+    const val PANEER_SHARE = 0.30f
+
+    /** Quick amounts for a vegetable in the builder: parts of a katori. */
+    val PARTS: List<Pair<String, Float>> = listOf("¼ katori" to KATORI_G / 4, "½ katori" to KATORI_G / 2, "¾ katori" to KATORI_G * 3 / 4)
+
+    /** Onion or tomato in the tadka: half the usual, the usual, or twice as much. */
+    val TADKA: List<Pair<String, Float>> get() = (KATORI_G * TADKA_SHARE / 2).let { listOf("Less" to it / 2, "Usual" to it, "More" to it * 2) }
+
+    /** Not vegetables: they're the tadka and the fat, sized on their own. */
+    val BASE = setOf("Onion", "Tomato", "Oil", "Ghee")
+
+    /** How the vegetables share their part, in the order named: 100 · 50/50 · 40/30/30, then equal. */
+    fun shares(n: Int): List<Float> = when (n) {
+        0 -> emptyList()
+        1 -> listOf(1f)
+        2 -> listOf(0.5f, 0.5f)
+        3 -> listOf(0.4f, 0.3f, 0.3f)
+        else -> List(n) { 1f / n }
+    }
+
+    /**
+     * Grams for each vegetable named without an amount, given what's left of the katori after the
+     * tadka, the oil and anything with a typed amount. Paneer takes its fixed share first.
+     */
+    fun split(names: List<String>, room: Float): Map<String, Float> {
+        val paneer = "Paneer" in names
+        val veg = names.filter { it != "Paneer" }
+        val out = mutableMapOf<String, Float>()
+        val forVeg = if (paneer && veg.isNotEmpty()) room * (1f - PANEER_SHARE) else if (paneer) 0f else room
+        if (paneer) out["Paneer"] = if (veg.isEmpty()) room else room * PANEER_SHARE
+        veg.zip(shares(veg.size)).forEach { (v, s) -> out[v] = forVeg * s }
+        return out
+    }
+
+    /**
+     * The vegetables a sabji text names, in order, whatever the language or small typos:
+     * "potato and carrot sabji" and "aloo garaj ki sabji" both give Aloo, Gajar.
+     */
+    fun vegetables(text: String): List<String> {
+        val t = text.lowercase()
+        val aliases = Templates.SABJI.aliases.sortedByDescending { it.first.length }
+        val found = mutableListOf<String>()
+        // Two-word names first ("bottle gourd"), then each word on its own, allowing typos.
+        var rest = " $t "
+        aliases.filter { ' ' in it.first }.forEach { (a, l) -> if (rest.contains(" $a ")) { found += l; rest = rest.replace(" $a ", " ") } }
+        Spelling.words(rest).forEach { w ->
+            aliases.firstOrNull { (a, _) -> ' ' !in a && (a == w || (w.length >= 4 && Spelling.close(w, a))) }?.let { found += it.second }
+        }
+        return found.distinct().filter { it !in BASE }
+    }
+
+    /** "aloo gajar ki sabji" → "aloo, gajar, sabji": vegetables side by side become separate items. */
+    fun separate(text: String, aliases: List<String>): String {
+        val words = aliases.sortedByDescending { it.length }
+        var t = " " + text.lowercase().replace(Regex("""\b(ki|ka|ke|wali|wala|vali)\b"""), " ").replace(Regex("""\s+"""), " ").trim() + " "
+        // Put a comma after each vegetable word that's followed straight by another one.
+        val alt = words.joinToString("|") { Regex.escape(it) }
+        val pair = Regex("""\b($alt)\s+(?=($alt)\b)""")
+        while (true) {
+            val m = pair.find(t) ?: break
+            t = t.replaceRange(m.range, m.groupValues[1] + ", ")
+        }
+        return t.trim()
+    }
+}
+

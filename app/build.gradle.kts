@@ -24,8 +24,8 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 51
-        versionName = "2.15.7"
+        versionCode = 52
+        versionName = "2.15.8"
         // Where the app looks for updates: main for releases; test builds pass
         // -Pplate.updateBranch=<test branch> so updates can be tried before a release.
         buildConfigField("String", "UPDATE_BRANCH", "\"${project.findProperty("plate.updateBranch") ?: "main"}\"")

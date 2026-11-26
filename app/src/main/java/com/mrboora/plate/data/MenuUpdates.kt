@@ -93,9 +93,9 @@ object MenuUpdates {
     fun fulfilled(requests: List<FoodRequest>, rows: List<FoodItem>): List<FoodRequest> {
         val haystacks = rows.map { Spelling.words("${it.brand} ${it.name}").toSet() }
         return requests.filter { r ->
-            // Homemade shakes are made in the shake builder, never added as menu rows.
-            !r.done && (Mix.isShake(r.item) && r.restaurant.isBlank() ||
-                r.terms.isNotEmpty() && haystacks.any { words -> r.terms.all { t -> words.any { it.startsWith(t) } } })
+            // Homemade shakes and sabjis are made in their builders, never added as menu rows.
+            !r.done && (r.homemade ||
+                r.terms.isNotEmpty() && haystacks.any { words -> r.terms.all { t -> words.any { Spelling.close(t, it) } } })
         }
     }
 
@@ -125,6 +125,7 @@ object MenuUpdates {
         )
         val title = when {
             found.size == 1 && Mix.isShake(found[0].label) -> "Build your ${found[0].label} in Plate's shake builder"
+            found.size == 1 && found[0].homemade -> "Build your ${found[0].label} in Plate's ${Templates.forText(found[0].label)?.dishName?.lowercase() ?: "dish"} builder"
             found.size == 1 -> "${found[0].label} has been added"
             else -> "${found.size} foods you asked for have been added"
         }

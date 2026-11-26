@@ -11,6 +11,16 @@ object Spelling {
     fun words(text: String): List<String> =
         text.lowercase().replace("'", "").replace("’", "").split(split).filter { it.length >= 3 }
 
+    /**
+     * The same word, typed a little wrong: a start of it ("gaj" for "gajar"), the same letters in
+     * another order ("garaj"), or one letter off ("gajer").
+     */
+    fun close(typed: String, word: String): Boolean {
+        if (word.startsWith(typed)) return true
+        if (typed.length >= 4 && typed.length == word.length && typed.toList().sorted() == word.toList().sorted()) return true
+        return typed.length >= 4 && distance(typed, word) <= 1
+    }
+
     /** Optimal string alignment distance: insertions, deletions, substitutions and swaps. */
     fun distance(a: String, b: String): Int {
         val d = Array(a.length + 1) { IntArray(b.length + 1) }

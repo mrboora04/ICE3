@@ -295,7 +295,13 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         val keys = saved.map { it.key }.toMutableSet()
         val everyday = FoodCatalog.search(q).filter { keys.add(it.key) }
         val (chains, canada) = withContext(Dispatchers.Default) { restaurants.search(q) to canadian.search(q) }
-        return saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
+        // A sabji, however it's named ("potato and carrot sabji", "aloo gajar ki sabzi"): the chart row first.
+        val sabji = if (com.mrboora.plate.data.Templates.forText(q)?.id == "sabji") withContext(Dispatchers.Default) {
+            val veg = com.mrboora.plate.data.Sabji.vegetables(q)
+            if (veg.isEmpty()) emptyList() else restaurants.search(veg.joinToString(" ").lowercase())
+                .filter { it.brand == "Indian Dishes" && com.mrboora.plate.data.Sabji.vegetables(it.name).toSet() == veg.toSet() }
+        } else emptyList()
+        return sabji.filter { keys.add(it.key) } + saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
     }
 
     suspend fun searchOnline(query: String): Result<List<FoodItem>> = runCatching { OpenFoodFacts.search(query) }
