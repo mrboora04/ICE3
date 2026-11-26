@@ -524,6 +524,14 @@ class ScreenshotTest {
         }
     }
 
+    // Design preview for #10 (not in the app yet).
+    @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi") fun quickDishPreview() = shot("preview_quick_dish") {
+        com.mrboora.plate.preview.QuickDishPreview("Aloo gajar sabji", listOf("Aloo (potato)" to 66, "Gajar (carrot)" to 35), 86, 187, 1, 1)
+    }
+    @Test @Config(qualifiers = "w411dp-h891dp-xxhdpi") fun quickDishPreviewDark() = shot("preview_quick_dish_dark", dark = true) {
+        com.mrboora.plate.preview.QuickDishPreview("Keema matar", listOf("Keema (mince)" to 176, "Matar (peas)" to 43), 94, 313, 2, 2)
+    }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 
