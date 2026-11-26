@@ -214,33 +214,33 @@ object MixParser {
      * amount; the vegetables named without one share what's left (100 · 50/50 · 40/30/30, paneer
      * about 30%). Nothing named but the dish word: potato, the everyday one.
      */
-    private fun reasonVeg(items: MutableList<Item>, guessed: List<Item>, labels: Map<String, String>, foods: Map<String, FoodItem>) {
+    private fun reasonVeg(items: MutableList<Item>, guessed: List<Item>, labels: Map<String, String>, foods: Map<String, FoodItem>, tpl: Templates.Template) {
         fun food(l: String) = labels[l]?.let { foods[it] }
         fun isGuess(i: Item) = guessed.any { it === i }
-        if (items.none { it.label !in VegDish.BASE }) food("Potato")?.let { items.add(0, Item("Potato", it, 0f, null, false, "")) }
-        val tadkaEach = VegDish.CUP_G * VegDish.TADKA_SHARE / 2f
+        if (items.none { it.label !in HomeDish.BASE }) food("Potato")?.let { items.add(0, Item("Potato", it, 0f, null, false, "")) }
+        // Meat, fish or egg curries cook in more gravy: a bigger onion-tomato base.
+        val gravy = items.any { tpl.leads[it.label]?.gravy == true }
+        val baseShare = if (gravy) HomeDish.GRAVY_SHARE else HomeDish.TADKA_SHARE
+        val baseEach = HomeDish.CUP_G * baseShare / 2f
         for (l in listOf("Onion", "Tomato")) {
             val i = items.indexOfFirst { it.label == l }
-            val how = "the base, a tenth of the cup shared with ${if (l == "Onion") "tomato" else "onion"} ≈ ${fmt(tadkaEach)} g"
-            if (i < 0) food(l)?.let { items += Item(l, it, tadkaEach, null, false, how) }
-            else if (isGuess(items[i])) items[i] = items[i].copy(grams = tadkaEach, how = how)
+            val how = "the ${if (gravy) "gravy" else "base"}, ${if (gravy) "a quarter" else "a tenth"} of the cup shared with ${if (l == "Onion") "tomato" else "onion"} ≈ ${fmt(baseEach)} g"
+            if (i < 0) food(l)?.let { items += Item(l, it, baseEach, null, false, how) }
+            else if (isGuess(items[i])) items[i] = items[i].copy(grams = baseEach, how = how)
         }
         val fat = items.indexOfFirst { it.label == "Oil" || it.label == "Ghee" }
-        val oilHow = "2 tsp a cup (1 tsp ≈ 4.5 g) = ${fmt(VegDish.OIL_G)} g; change it if you used more or less"
-        if (fat < 0) food("Oil")?.let { items += Item("Oil", it, VegDish.OIL_G, null, false, oilHow) }
-        else if (isGuess(items[fat])) items[fat] = items[fat].copy(grams = VegDish.OIL_G, how = oilHow)
-        // What's left of the cup goes to the vegetables named without an amount, in the order named.
-        val open = items.filter { it.label !in VegDish.BASE && (isGuess(it) || it.grams == 0f) }
+        val oilHow = "2 tsp a cup (1 tsp ≈ 4.5 g) = ${fmt(HomeDish.OIL_G)} g; change it if you used more or less"
+        if (fat < 0) food("Oil")?.let { items += Item("Oil", it, HomeDish.OIL_G, null, false, oilHow) }
+        else if (isGuess(items[fat])) items[fat] = items[fat].copy(grams = HomeDish.OIL_G, how = oilHow)
+        // What's left of the cup goes to the main ingredients named without an amount.
+        val open = items.filter { it.label !in HomeDish.BASE && (isGuess(it) || it.grams == 0f) }
         val fixed = items.filter { it !in open }.sumOf { it.grams.toDouble() }.toFloat()
-        val room = (VegDish.CUP_G - fixed).coerceAtLeast(VegDish.CUP_G * 0.3f)
-        val split = VegDish.split(open.map { it.label }, room)
-        val n = open.count { it.label != "Paneer" }
+        val room = (HomeDish.CUP_G - fixed).coerceAtLeast(HomeDish.CUP_G * 0.3f)
+        val split = HomeDish.split(open.map { it.label }, room, tpl.leads)
         for (o in open) {
             val g = split[o.label] ?: continue
-            val share = if (o.label == "Paneer") (if (n > 0) "about 30% of" else "all of") else
-                VegDish.shares(n)[open.filter { it.label != "Paneer" }.indexOf(o)].let { "${(it * 100).roundToInt()}% of" }
             val idx = items.indexOf(o)
-            items[idx] = o.copy(grams = g, how = "$share the vegetables' ${fmt(room.roundToInt().toFloat())} g in a cup ≈ ${fmt(g.roundToInt().toFloat())} g")
+            items[idx] = o.copy(grams = g, how = "${(g / room * 100).roundToInt()}% of the ${fmt(room.roundToInt().toFloat())} g left in a cup ≈ ${fmt(g.roundToInt().toFloat())} g")
         }
     }
 
@@ -279,7 +279,7 @@ object MixParser {
         val unknown = mutableListOf<String>()
 
         // "aloo gajar ki sabji", "carrot potato stew": the vegetables are separate items; the dish word is just the dish.
-        val source = if (tpl?.reasoned == true) VegDish.separate(clean(text), tpl.aliases.map { it.first }) else clean(text)
+        val source = if (tpl?.reasoned == true) HomeDish.separate(clean(text), tpl.aliases.map { it.first }) else clean(text)
         for (raw in source.split(SPLIT)) {
             var piece = raw.trim()
             if (piece.isBlank()) continue
@@ -399,7 +399,7 @@ object MixParser {
         // "omelette with 3 eggs": the dish word and "3 eggs" both mean eggs; keep the one with the amount.
         items.removeAll { a -> guessed.any { it === a } && items.any { b -> b !== a && b.label == a.label && guessed.none { it === b } } }
         // A vegetable dish: the app reasons the amounts for one cup, like a home cook would.
-        if (tpl?.reasoned == true) reasonVeg(items, guessed, labels, foods)
+        if (tpl?.reasoned == true) reasonVeg(items, guessed, labels, foods, tpl)
         // A bare "chai" or "omelette": start from the template's usual recipe.
         if (tpl != null) {
             // Nothing but a base named: the whole usual recipe. Otherwise only the main thing if it's

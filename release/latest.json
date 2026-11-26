@@ -1,11 +1,11 @@
 {
-  "versionCode": 54,
-  "versionName": "2.15.10",
+  "versionCode": 55,
+  "versionName": "2.15.11",
   "notes": [
-    "Vegetable dish builder: sabji, stir-fry, stew, poriyal… in your own words; Plate works out a cup",
+    "Home-cooked dish builder: sabji, curry, keema, stew, stir-fry… veg or non-veg, in your own words",
     "Requests forgive small typos; homemade dishes are ready right away",
     "Updates install from inside Plate"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate-test.apk",
-  "sha256": "796b57292c916e078830593087bdd8186fb19e3cace6561f6fec60ef7accb693"
+  "sha256": "add891b11a1366035ffebf5934e9da97b9fffb01fdf6484a81dc842212978bdb"
 }

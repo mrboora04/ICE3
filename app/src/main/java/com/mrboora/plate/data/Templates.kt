@@ -43,7 +43,7 @@ object Templates {
         val sizeWords: Map<String, String> = emptyMap(),
         /** Amounts that follow the cup size, like Tim Hortons: 1, 2 or 3 sugars for small, regular, big. */
         val perSize: Map<String, Map<String, Float>> = emptyMap(),
-        /** Amounts are reasoned for the whole dish (vegetable dishes, see [VegDish]), not fixed per chip. */
+        /** Amounts are reasoned for the whole dish (home-cooked dishes, see [HomeDish]), not fixed per chip. */
         val reasoned: Boolean = false,
         /** Rows may show Size · How many for whole pieces (eggs, rotis). Off when everything is a share. */
         val wholePieces: Boolean = true,
@@ -53,7 +53,14 @@ object Templates {
         val nameFromParts: Boolean = false,
         /** A request for one is ready at once: the builder makes it, no menu row needed. */
         val homemade: Boolean = false,
+        /**
+         * The star ingredients of a reasoned dish and their share of it when there are vegetables
+         * too (chicken 60%, paneer 30%); [Lead.gravy]: cooked in more onion-tomato gravy.
+         */
+        val leads: Map<String, Lead> = emptyMap(),
     )
+
+    data class Lead(val share: Float, val gravy: Boolean = false)
 
     val CHAI = Template(
         id = "chai", title = "CHAI & COFFEE", subtitle = "Tea or coffee, milk and sugar, worked out from Health Canada numbers",
@@ -200,14 +207,18 @@ object Templates {
     )
 
     /**
-     * A vegetable dish, whatever it's called where you're from: sabji, tarkari, poriyal, stir-fry,
-     * stew, sauté, guisado… All the same thing: vegetables, a base of onion and tomato, a little
-     * oil. Vegetable names work in Hindi and English (aloo = potato). Amounts are reasoned by [VegDish].
-     * A new word for it is one more entry in [triggers]; the builder screen doesn't change.
+     * A home-cooked dish, veg or non-veg, whatever it's called where you're from: sabji, curry,
+     * keema, korma, poriyal, stir-fry, stew, guisado… All the same shape: the main ingredients, a base
+     * of onion and tomato, a little oil. Names work in Hindi and English (aloo = potato, murgh =
+     * chicken). Amounts are reasoned by [HomeDish]. A new word is one more entry in [triggers], a new
+     * ingredient one more chip; the builder screen doesn't change.
      */
-    val VEG = Template(
-        id = "veg", title = "VEGETABLE DISH", subtitle = "Vegetables, an onion-tomato base and a little oil, worked out from Health Canada numbers",
+    val DISH = Template(
+        id = "dish", title = "HOME-COOKED DISH", subtitle = "The main ingredients, an onion-tomato base and a little oil, worked out from Health Canada numbers",
         triggers = listOf(
+            // Curries and the like, veg or non-veg
+            "curry", "keema", "korma", "bhuna", "kadai", "kadhai", "karahi", "vindaloo", "do pyaza", "rogan josh",
+            "jalfrezi", "salan", "sukka", "chettinad", "casserole", "goulash", "adobo",
             // South Asia
             "sabji", "sabzi", "subzi", "sabjee", "subji", "bhaji", "bhujia", "tarkari", "torkari", "shaak", "shak",
             "poriyal", "thoran", "palya", "kootu", "kura",
@@ -233,6 +244,13 @@ object Templates {
             "Taro" to "Taro, raw",
             "Bell pepper" to "Pepper, sweet, green, raw",
             "Mushroom" to "Mushroom, white, raw",
+            "Chicken" to "Chicken, broiler, meat only, raw",
+            "Mutton" to "Lamb, Canadian, composite cuts, lean, raw",
+            "Mince" to "Beef, ground, lean, raw",
+            "Fish" to "Fish, tilapia, raw",
+            "Prawns" to "Crustaceans, shrimp, mixed species, raw",
+            "Egg" to "Egg, chicken, whole, fresh or frozen, raw",
+            "Tofu" to "Tofu, regular, medium firm or firm (prepared with calcium sulphate)",
             "Mustard greens" to "Mustard greens, raw",
             "Onion" to "Onion, raw",
             "Tomato" to "Tomato, red, ripe, raw, year round average",
@@ -260,21 +278,37 @@ object Templates {
             "mushroom" to "Mushroom", "mushrooms" to "Mushroom", "saag" to "Mustard greens", "sarson" to "Mustard greens", "mustard greens" to "Mustard greens",
             "onion" to "Onion", "pyaz" to "Onion", "pyaaz" to "Onion", "tomato" to "Tomato", "tamatar" to "Tomato",
             "oil" to "Oil", "tel" to "Oil", "ghee" to "Ghee",
+            "chicken" to "Chicken", "murgh" to "Chicken", "murg" to "Chicken",
+            "mutton" to "Mutton", "lamb" to "Mutton", "goat" to "Mutton", "gosht" to "Mutton", "bakra" to "Mutton",
+            "keema" to "Mince", "kheema" to "Mince", "qeema" to "Mince", "mince" to "Mince", "ground beef" to "Mince", "ground meat" to "Mince", "beef" to "Mince",
+            "fish" to "Fish", "machhi" to "Fish", "macchi" to "Fish", "machli" to "Fish", "meen" to "Fish",
+            "prawns" to "Prawns", "prawn" to "Prawns", "shrimp" to "Prawns", "jhinga" to "Prawns", "chingri" to "Prawns",
+            "egg" to "Egg", "eggs" to "Egg", "anda" to "Egg", "ande" to "Egg", "tofu" to "Tofu",
         ),
         starts = emptyList(),
         usual = emptyMap(),
-        unit = "cup", dishName = "Vegetable dish",
+        unit = "cup", dishName = "Home-cooked dish",
         spoonIsTeaspoon = true,
-        reasoned = true, wholePieces = false, parts = VegDish.PARTS, nameFromParts = true, homemade = true,
+        reasoned = true, wholePieces = false, parts = HomeDish.PARTS, nameFromParts = true, homemade = true,
+        // The star of the dish when there are vegetables too; on its own it's all of it.
+        leads = mapOf(
+            "Chicken" to Lead(0.6f, gravy = true), "Mutton" to Lead(0.6f, gravy = true), "Mince" to Lead(0.6f, gravy = true),
+            "Fish" to Lead(0.6f, gravy = true), "Prawns" to Lead(0.6f, gravy = true), "Egg" to Lead(0.5f, gravy = true),
+            "Paneer" to Lead(0.3f), "Tofu" to Lead(0.4f),
+        ),
         quick = mapOf(
-            "Onion" to VegDish.BASE_PARTS, "Tomato" to VegDish.BASE_PARTS,
+            "Onion" to HomeDish.BASE_PARTS, "Tomato" to HomeDish.BASE_PARTS,
             "Oil" to listOf("1 tsp" to 4.5f, "1½ tsp" to 6.75f, "2 tsp" to 9f),
             "Ghee" to listOf("1 tsp" to 5f, "1½ tsp" to 7.5f, "2 tsp" to 10f),
         ),
     )
 
-    /** In the order they're checked: a "rice bowl" is a bowl, not a roti meal with rice. */
-    val ALL = listOf(VEG, BOWL, CHAI, ROTI, SANDWICH, EGGS)
+    /**
+     * In the order they're checked: a "rice bowl" is a bowl, not a roti meal with rice; a meal
+     * ("chicken curry with roti") comes before the dish in it; "masala chai" is chai; an "egg
+     * curry" is a dish, not an omelette.
+     */
+    val ALL = listOf(BOWL, ROTI, CHAI, SANDWICH, DISH, EGGS)
 
     /** Every food name any template uses, for loading. */
     val foodNames: Set<String> get() = ALL.flatMap { t -> t.chips.map { it.second } }.toSet()
@@ -297,20 +331,20 @@ object Templates {
 }
 
 /**
- * How a vegetable dish is put together, reasoned the way a home cook does: one cup (250 ml, about 200 g
+ * How a home-cooked dish is put together, reasoned the way a home cook does: one cup (250 ml, about 200 g
  * cooked: vegetable pieces sit loosely, about 0.8 g per ml) is
  * mostly the vegetables, a tadka of onion and tomato, and a little oil. Spices, salt, chilli and
  * ginger have almost no calories and are counted as 0. Every amount can be changed in the builder.
  */
-object VegDish {
+object HomeDish {
     /** One cup of sabji, cooked: 250 ml at about 0.8 g/ml. Typing "katori" or "bowl" still works. */
     const val CUP_G = 200f
     /** The onion and tomato base (tadka, sofrito…): about a tenth of the cup, half each. */
     const val TADKA_SHARE = 0.10f
     /** Oil: 2 teaspoons a cup (a teaspoon of oil is about 4.5 g). */
     const val OIL_G = 9f
-    /** Paneer, when it's in: about 30% of the vegetables' part. */
-    const val PANEER_SHARE = 0.30f
+    /** The base when there's meat, fish or egg: more gravy, about a quarter of the cup. */
+    const val GRAVY_SHARE = 0.25f
 
     /** Quick amounts for a vegetable in the builder: parts of a cup. */
     val PARTS: List<Pair<String, Float>> = listOf("¼ cup" to CUP_G / 4, "½ cup" to CUP_G / 2, "¾ cup" to CUP_G * 3 / 4)
@@ -331,26 +365,35 @@ object VegDish {
     }
 
     /**
-     * Grams for each vegetable named without an amount, given what's left of the cup after the
-     * tadka, the oil and anything with a typed amount. Paneer takes its fixed share first.
+     * Grams for each main ingredient named without an amount, given what's left of the cup after
+     * the base, the oil and anything with a typed amount. Stars ([leads]: chicken, paneer…) take
+     * their share first, the vegetables share the rest 100 · 50/50 · 40/30/30. Only stars: theirs.
      */
-    fun split(names: List<String>, room: Float): Map<String, Float> {
-        val paneer = "Paneer" in names
-        val veg = names.filter { it != "Paneer" }
+    fun split(names: List<String>, room: Float, leads: Map<String, Templates.Lead>): Map<String, Float> {
+        val stars = names.filter { it in leads }
+        val veg = names.filter { it !in leads }
         val out = mutableMapOf<String, Float>()
-        val forVeg = if (paneer && veg.isNotEmpty()) room * (1f - PANEER_SHARE) else if (paneer) 0f else room
-        if (paneer) out["Paneer"] = if (veg.isEmpty()) room else room * PANEER_SHARE
+        if (veg.isEmpty()) {
+            val total = stars.sumOf { leads.getValue(it).share.toDouble() }.toFloat()
+            stars.forEach { out[it] = room * leads.getValue(it).share / total }
+            return out
+        }
+        // Stars together take at most 80%, so the vegetables are always there.
+        val wanted = stars.sumOf { leads.getValue(it).share.toDouble() }.toFloat()
+        val scale = if (wanted > 0.8f) 0.8f / wanted else 1f
+        stars.forEach { out[it] = room * leads.getValue(it).share * scale }
+        val forVeg = room - out.values.sum()
         veg.zip(shares(veg.size)).forEach { (v, s) -> out[v] = forVeg * s }
         return out
     }
 
     /**
-     * The vegetables a dish's text names, in order, whatever the language or small typos:
+     * The main ingredients a dish's text names, in order, whatever the language or small typos:
      * "potato and carrot sabji" and "aloo garaj ki sabji" both give Aloo, Gajar.
      */
     fun vegetables(text: String): List<String> {
         val t = text.lowercase()
-        val aliases = Templates.VEG.aliases.sortedByDescending { it.first.length }
+        val aliases = Templates.DISH.aliases.sortedByDescending { it.first.length }
         val found = mutableListOf<String>()
         // Two-word names first ("bottle gourd"), then each word on its own, allowing typos.
         var rest = " $t "

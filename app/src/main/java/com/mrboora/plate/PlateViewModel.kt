@@ -298,9 +298,9 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         // A vegetable dish, however it's named ("potato and carrot sabji", "aloo gajar ki sabzi",
         // "carrot potato stew"): a chart row with exactly those vegetables comes first.
         val dish = if (com.mrboora.plate.data.Templates.forText(q)?.reasoned == true) withContext(Dispatchers.Default) {
-            val veg = com.mrboora.plate.data.VegDish.vegetables(q)
+            val veg = com.mrboora.plate.data.HomeDish.vegetables(q)
             if (veg.isEmpty()) emptyList() else restaurants.search(veg.joinToString(" ").lowercase())
-                .filter { com.mrboora.plate.data.VegDish.vegetables(it.name).toSet() == veg.toSet() }
+                .filter { com.mrboora.plate.data.HomeDish.vegetables(it.name).toSet() == veg.toSet() }
         } else emptyList()
         return dish.filter { keys.add(it.key) } + saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
     }

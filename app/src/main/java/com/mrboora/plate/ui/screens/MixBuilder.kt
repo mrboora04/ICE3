@@ -147,8 +147,8 @@ fun ShakeBuilder(
     } else if (tpl?.nameFromParts == true) {
         // "Aloo gajar sabji", "Carrot potato stew": what's in it, then the user's own word for it.
         val word = draft?.word ?: tpl.dishName.lowercase()
-        (rows.filter { it.label !in com.mrboora.plate.data.VegDish.BASE }.map { it.said.ifBlank { it.label }.lowercase() } + word)
-            .joinToString(" ").replaceFirstChar { it.uppercase() }
+        val parts = rows.filter { it.label !in com.mrboora.plate.data.HomeDish.BASE }.map { it.said.ifBlank { it.label }.lowercase() }
+        (if (word in parts) parts else parts + word).joinToString(" ").replaceFirstChar { it.uppercase() }
     } else if (tpl != null) {
         val main = if (tpl.id == "chai" && rows.any { it.label == "Coffee" }) "Coffee" else tpl.dishName
         val rest = rows.map { it.label }.filter { it != main && it !in tpl.main }.map { it.lowercase() } +
