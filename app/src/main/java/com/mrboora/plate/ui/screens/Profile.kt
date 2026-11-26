@@ -220,6 +220,19 @@ fun ProfileScreen(
                     "Built-in foods include information from Health Canada's Canadian Nutrient File, licensed under the Open Government Licence – Canada. Restaurant menus from USDA FoodData Central (public domain). Online food data from Open Food Facts, available under the Open Database License.",
                     style = MaterialTheme.typography.bodySmall, color = c.muted, modifier = Modifier.padding(top = 6.dp),
                 )
+                // The installed version, read from the app itself, so it's always the one you have.
+                val version = remember {
+                    runCatching {
+                        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+                        "Plate ${info.versionName} · build ${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info)}"
+                    }.getOrNull()
+                }
+                if (version != null) {
+                    Text(
+                        version, style = MaterialTheme.typography.labelMedium.merge(tab), color = c.muted,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
             }
         }
         item { Spacer(Modifier.height(12.dp)) }
