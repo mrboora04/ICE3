@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.rounded.Visibility
 import com.mrboora.plate.ui.components.StatusColors
 import com.mrboora.plate.ui.components.LocalUnits
 import com.mrboora.plate.data.weightValue
@@ -107,6 +109,14 @@ fun ProgressScreen(
     selfies: @Composable () -> Unit = {},
     /** Opened from the "Log weight" shortcut: show the weight dialog straight away. */
     startLogging: Boolean = false,
+    /** Days with a selfie: their cards show it, blurred until tapped. */
+    selfieDays: Set<Long> = emptySet(),
+    selfieVersion: Int = 0,
+    /** Selfies may be shown (the screen lock was passed, if it's on). */
+    selfiesUnlocked: Boolean = false,
+    onUnlockSelfies: () -> Unit = {},
+    /** Cards whose selfie starts out shown (screenshots). */
+    selfiesOpen: Set<Long> = emptySet(),
 ) {
     val c = Plate.colors
     var logging by remember { mutableStateOf(startLogging) }
@@ -116,6 +126,9 @@ fun ProgressScreen(
     val streak = remember(history) { History.streak(history) }
     val current = weights.lastOrNull()?.kg ?: profile.weightKg
     val start = weights.firstOrNull()?.kg ?: profile.weightKg
+    // Day cards whose selfie was tapped open. They blur again when Plate leaves the screen.
+    val openSelfies = remember { androidx.compose.runtime.mutableStateListOf<Long>().apply { addAll(selfiesOpen) } }
+    com.mrboora.plate.ui.components.SecureWhile(selfiesUnlocked && openSelfies.isNotEmpty())
 
     LazyColumn(contentPadding = contentPadding, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
@@ -159,7 +172,19 @@ fun ProgressScreen(
         } else {
             item { Eyebrow("Your days", Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) }
             items(history.take(shown), key = { it.day }) { d ->
-                DayCard(d, targets.kcal, { onOpenDay(d.day) }, Modifier.padding(horizontal = 16.dp))
+                val hasSelfie = d.day in selfieDays
+                DayCard(
+                    d, targets.kcal, { onOpenDay(d.day) }, Modifier.padding(horizontal = 16.dp),
+                    selfie = if (!hasSelfie) null else SelfieThumb(
+                        version = selfieVersion,
+                        shown = selfiesUnlocked && d.day in openSelfies,
+                        onTap = {
+                            // One tap shows it (asking for the screen lock first if it's on); the next blurs it.
+                            if (d.day in openSelfies && selfiesUnlocked) openSelfies.remove(d.day)
+                            else { if (d.day !in openSelfies) openSelfies.add(d.day); if (!selfiesUnlocked) onUnlockSelfies() }
+                        },
+                    ),
+                )
             }
             if (history.size > shown) {
                 item {
@@ -317,9 +342,12 @@ private fun WeightCard(
     }
 }
 
+/** A day's selfie on its card: shown sharp or blurred, and what a tap does. */
+internal class SelfieThumb(val version: Int, val shown: Boolean, val onTap: () -> Unit)
+
 /** One day: eaten vs target, hit or missed, what was eaten, and the rest of the day's numbers. */
 @Composable
-private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Modifier) {
+private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Modifier, selfie: SelfieThumb? = null) {
     val c = Plate.colors
     val u = LocalUnits.current
     val strong = StatusColors.strong(d.status, c)
@@ -346,30 +374,50 @@ private fun DayCard(d: DaySummary, target: Int, onOpen: () -> Unit, modifier: Mo
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("%,d".format(d.kcal.roundToInt()), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
-            Text(" / %,d KCAL".format(target), style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
-            Spacer(Modifier.weight(1f))
-            if (d.status == DayStatus.ON_TARGET && diff < 0) {
-                Text("%,d left".format(-diff), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
+        val numbers: @Composable () -> Unit = {
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("%,d".format(d.kcal.roundToInt()), style = PosterType.number.copy(fontSize = 34.sp, lineHeight = 32.sp))
+                Text(" / %,d KCAL".format(target), style = PosterType.index, color = c.muted, modifier = Modifier.padding(bottom = 3.dp))
+                Spacer(Modifier.weight(1f))
+                if (d.status == DayStatus.ON_TARGET && diff < 0) {
+                    Text("%,d left".format(-diff), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted, modifier = Modifier.padding(bottom = 4.dp))
+                }
             }
-        }
-        Spacer(Modifier.height(6.dp))
-        // Bar: filled to eaten / target, capped at 125% with the target marked.
-        Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(c.card.copy(alpha = 0.7f))) {
-            Box(Modifier.fillMaxWidth((d.kcal / (target * 1.25f)).coerceIn(0f, 1f)).height(10.dp).clip(CircleShape).background(strong))
-            Box(Modifier.fillMaxWidth(0.8f).height(10.dp)) {
-                Box(Modifier.align(Alignment.CenterEnd).width(2.dp).height(10.dp).background(c.ink.copy(alpha = 0.6f)))
+            Spacer(Modifier.height(6.dp))
+            // Bar: filled to eaten / target, capped at 125% with the target marked.
+            Box(Modifier.fillMaxWidth().height(10.dp).clip(CircleShape).background(c.card.copy(alpha = 0.7f))) {
+                Box(Modifier.fillMaxWidth((d.kcal / (target * 1.25f)).coerceIn(0f, 1f)).height(10.dp).clip(CircleShape).background(strong))
+                Box(Modifier.fillMaxWidth(0.8f).height(10.dp)) {
+                    Box(Modifier.align(Alignment.CenterEnd).width(2.dp).height(10.dp).background(c.ink.copy(alpha = 0.6f)))
+                }
             }
+            Spacer(Modifier.height(10.dp))
+            val bits = buildList {
+                add("P ${d.protein.roundToInt()} g · C ${d.carbs.roundToInt()} g · F ${d.fat.roundToInt()} g")
+                if (d.waterMl > 0) add("💧 ${u.volume(d.waterMl)}")
+                d.weightKg?.let { add("⚖ ${u.weight(it)}") }
+            }
+            Text(bits.joinToString("   "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
         }
-        Spacer(Modifier.height(10.dp))
-        val bits = buildList {
-            add("P ${d.protein.roundToInt()} g · C ${d.carbs.roundToInt()} g · F ${d.fat.roundToInt()} g")
-            if (d.waterMl > 0) add("💧 ${u.volume(d.waterMl)}")
-            d.weightKg?.let { add("⚖ ${u.weight(it)}") }
+        if (selfie == null) numbers()
+        else Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // That day's selfie, on the left: blurred until tapped, tap again to blur it.
+            Box(
+                Modifier.width(76.dp).aspectRatio(4f / 5f).clip(RoundedCornerShape(14.dp)).clickable(
+                    onClickLabel = if (selfie.shown) "Hide selfie" else "Show selfie", onClick = selfie.onTap,
+                ),
+                contentAlignment = Alignment.Center,
+            ) {
+                com.mrboora.plate.ui.components.SelfiePicture(
+                    d.day, selfie.version, revealed = selfie.shown, locked = false, onReveal = selfie.onTap,
+                    modifier = Modifier.fillMaxSize(), badge = false,
+                )
+                if (!selfie.shown) Icon(Icons.Rounded.Visibility, null, tint = c.card, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f).padding(bottom = 2.dp)) { numbers() }
         }
-        Text(bits.joinToString("   "), style = MaterialTheme.typography.bodySmall.merge(tab), color = c.muted)
         if (d.foods.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             val names = d.foods.take(4).joinToString(" · ") { it.first }

@@ -121,6 +121,21 @@ class ScreenshotTest {
         )
         ProgressScreen(profile, targets, weights, history, pad, {}, {})
     }
+
+    /** Day cards with that day's selfie on the left: blurred, and one tapped open. */
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressSelfies() = shot("progress_selfies") {
+        listOf(today, today - 1, today - 4).forEach(::fakeSelfie)
+        // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
+        val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
+        val sample = kcals.mapIndexed { i, k -> entries.map { it.copy(day = today - i) }.let { list ->
+            val f = if (k == 0f) 0f else k / list.sumOf { it.kcal.toDouble() }.toFloat()
+            list.map { it.copy(kcal = it.kcal * f, protein = it.protein * f, carbs = it.carbs * f, fat = it.fat * f) }.filter { k > 0f }
+        } }.flatten()
+        val history = com.mrboora.plate.data.History.summarise(
+            sample, listOf(com.mrboora.plate.data.Water(today, 1750)), weights, targets.kcal,
+        )
+        ProgressScreen(profile, targets, weights, history, pad, {}, {}, selfieDays = setOf(today, today - 1, today - 4), selfiesUnlocked = true, selfiesOpen = setOf(today - 1))
+    }
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun progressDaysDark() = shot("progress_days_dark", dark = true) {
         // A week of days: kcal per day (0 = nothing logged), to show every kind of card.
         val kcals = listOf(1650f, 2310f, 1820f, 0f, 1240f, 1900f, 1760f)
@@ -183,6 +198,29 @@ class ScreenshotTest {
             androidx.compose.foundation.layout.Spacer(Modifier.padding(12.dp_))
             com.mrboora.plate.ui.screens.PortionHelper(FoodItem("Whisky", kcal100 = 250f, protein100 = 0f, carbs100 = 0f, fat100 = 0f), null) {}
         }
+    }
+
+    /** Compare lines photos up by the eyes: the after photo's eyes land on the before photo's. */
+    @Test fun selfiesLineUp() {
+        val A = com.mrboora.plate.data.SelfieAlign
+        // Before: eyes at the middle, 40% down, 20% of the width apart, in a 600 × 750 photo.
+        val before = com.mrboora.plate.data.SelfieAlign.Eyes(0.5f, 0.4f, 0.2f)
+        // After: further away and off to the left (eyes 10% apart, at 30% across, 50% down).
+        val after = com.mrboora.plate.data.SelfieAlign.Eyes(0.3f, 0.5f, 0.1f)
+        val view = 400f to 500f
+        val b = A.fill(600, 750, view.first, view.second)
+        val p = A.match(before, 600, 750, after, 600, 750, view.first, view.second)!!
+        // Eyes land on the same spot...
+        org.junit.Assert.assertEquals(b.dx + 0.5f * 600 * b.scale, p.dx + 0.3f * 600 * p.scale, 0.5f)
+        org.junit.Assert.assertEquals(b.dy + 0.4f * 750 * b.scale, p.dy + 0.5f * 750 * p.scale, 0.5f)
+        // ...the same distance apart (so the after photo is drawn twice as big).
+        org.junit.Assert.assertEquals(0.2f * 600 * b.scale, 0.1f * 600 * p.scale, 0.5f)
+        // No face in one photo: nothing to line up.
+        org.junit.Assert.assertNull(A.match(null, 600, 750, after, 600, 750, 400f, 500f))
+        // Face photo vs body photo.
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.SelfieAlign.Kind.FACE, A.kind(before))
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.SelfieAlign.Kind.BODY, A.kind(com.mrboora.plate.data.SelfieAlign.Eyes(0.5f, 0.15f, 0.04f)))
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.SelfieAlign.Kind.BODY, A.kind(null))
     }
 
     /** A stand-in photo: warm gradient with a soft face-like circle. */

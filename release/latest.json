@@ -1,10 +1,10 @@
 {
-  "versionCode": 48,
-  "versionName": "2.15.4",
+  "versionCode": 49,
+  "versionName": "2.15.5",
   "notes": [
-    "Units: kg or lb, cm or ft in, ml or fl oz, each on its own (Profile → Units)",
-    "Progress: each day's card is lightly green, red or blue, and the calendar matches",
-    "Today's calorie card turns light red when you go over"
+    "Units: kg or lb, cm or ft in, ml or fl oz (Profile → Units)",
+    "Progress: days coloured by how they went, with that day's selfie (tap to see, tap to blur)",
+    "Compare lines your selfies up by the eyes, face with face and body with body"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/main/release/Plate.apk"
 }

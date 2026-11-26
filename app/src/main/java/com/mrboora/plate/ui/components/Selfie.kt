@@ -1,5 +1,7 @@
 package com.mrboora.plate.ui.components
 
+import androidx.compose.runtime.LaunchedEffect
+import com.mrboora.plate.data.SelfieAlign
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.animation.animateContentSize
@@ -288,6 +290,25 @@ fun SelfieCompare(days: List<Long>, version: Int, onDismiss: () -> Unit) {
     var before by remember { mutableStateOf(days.first()) }
     var after by remember { mutableStateOf(days.last()) }
     var split by remember { mutableFloatStateOf(0.5f) }
+    var lineUp by remember { mutableStateOf(true) }
+    var picked by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    // Where the eyes are in each photo (found once, in the background, newest first).
+    val found = remember { androidx.compose.runtime.mutableStateMapOf<Long, Found>() }
+    LaunchedEffect(days, version) {
+        for (d in days.reversed()) {
+            if (d in found) continue
+            found[d] = Found(withContext(Dispatchers.IO) { Selfies.load(context, d, 640)?.let(SelfieAlign::eyes) })
+            // Start with two photos of the same kind: the newest, and the first one like it.
+            if (!picked && after in found) {
+                val kind = SelfieAlign.kind(found[after]?.eyes)
+                days.firstOrNull { it != after && it in found && SelfieAlign.kind(found[it]?.eyes) == kind }
+                    ?.takeIf { SelfieAlign.kind(found[before]?.eyes) != kind || before !in found }
+                    ?.let { before = it }
+            }
+        }
+    }
+    fun kindOf(d: Long) = found[d]?.let { SelfieAlign.kind(it.eyes) }
     SecureWhile(true)
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         // The dialog has its own window; keep it out of screenshots too.
@@ -319,17 +340,19 @@ fun SelfieCompare(days: List<Long>, version: Int, onDismiss: () -> Unit) {
                     }
                     .semantics { contentDescription = "Before ${shortDay(before)} and after ${shortDay(after)}, drag sideways to compare" },
             ) {
-                val afterPic = rememberSelfie(after, Selfies.MAX_SIDE, version)
-                val beforePic = rememberSelfie(before, Selfies.MAX_SIDE, version)
-                afterPic?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-                beforePic?.let {
-                    Image(
-                        it.asImageBitmap(), null,
-                        Modifier.fillMaxSize().drawWithContent {
-                            clipRect(right = size.width * split) { this@drawWithContent.drawContent() }
-                        },
-                        contentScale = ContentScale.Crop,
-                    )
+                val afterPic = rememberSelfie(after, Selfies.MAX_SIDE, version)?.asImageBitmap()
+                val beforePic = rememberSelfie(before, Selfies.MAX_SIDE, version)?.asImageBitmap()
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val w = size.width; val h = size.height
+                    val bPlace = beforePic?.let { SelfieAlign.fill(it.width, it.height, w, h) }
+                    // The after photo moved and sized so its eyes sit on the before photo's eyes.
+                    val aPlace = afterPic?.let { a ->
+                        (if (lineUp && beforePic != null) SelfieAlign.match(
+                            found[before]?.eyes, beforePic.width, beforePic.height, found[after]?.eyes, a.width, a.height, w, h,
+                        ) else null) ?: SelfieAlign.fill(a.width, a.height, w, h)
+                    }
+                    if (afterPic != null && aPlace != null) photo(afterPic, aPlace)
+                    if (beforePic != null && bPlace != null) clipRect(right = w * split) { photo(beforePic, bPlace) }
                 }
                 val x = maxWidth * split
                 Box(Modifier.offset(x = x - 1.5.dp).width(3.dp).fillMaxHeight().background(c.card))
@@ -340,10 +363,30 @@ fun SelfieCompare(days: List<Long>, version: Int, onDismiss: () -> Unit) {
                 Tag(shortDay(before), Modifier.align(Alignment.TopStart).padding(12.dp))
                 Tag(shortDay(after), Modifier.align(Alignment.TopEnd).padding(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
-            DayStrip("Before", days, before) { before = it }
+            Spacer(Modifier.height(10.dp))
+            // Line up: on by default; off shows both photos just as they were taken.
+            val bothFaces = found[before]?.eyes != null && found[after]?.eyes != null
+            val sameKind = kindOf(before) == kindOf(after)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Line up by the eyes", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        when {
+                            before !in found || after !in found -> "Finding faces…"
+                            !bothFaces -> "No face found in one photo, so it's shown as taken"
+                            !sameKind -> "A face photo and a body photo: pick two of the same kind"
+                            lineUp -> "Same spot, same size. Your photos aren't changed"
+                            else -> "Shown as taken"
+                        },
+                        style = MaterialTheme.typography.bodySmall, color = c.muted,
+                    )
+                }
+                Switch(lineUp, { lineUp = it }, enabled = bothFaces)
+            }
+            Spacer(Modifier.height(8.dp))
+            DayStrip("Before", days, before, ::kindOf) { before = it; picked = true }
             Spacer(Modifier.height(6.dp))
-            DayStrip("After", days, after) { after = it }
+            DayStrip("After", days, after, ::kindOf) { after = it; picked = true }
         }
     }
 }
@@ -357,15 +400,28 @@ private fun Tag(text: String, modifier: Modifier) {
 }
 
 @Composable
-private fun DayStrip(label: String, days: List<Long>, selected: Long, onPick: (Long) -> Unit) {
+private fun DayStrip(label: String, days: List<Long>, selected: Long, kindOf: (Long) -> SelfieAlign.Kind?, onPick: (Long) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Eyebrow(label, Modifier.width(56.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(days.reversed(), key = { it }) { d ->
-                FilterChip(d == selected, { onPick(d) }, label = { Text(shortDay(d)) })
+                // "Nov 20 · Face" / "Nov 21 · Body", so it's easy to pick two alike.
+                FilterChip(d == selected, { onPick(d) }, label = { Text(shortDay(d) + (kindOf(d)?.let { " · ${it.label}" } ?: "")) })
             }
         }
     }
+}
+
+/** What the face finder found in one photo (null eyes: no face). */
+private class Found(val eyes: SelfieAlign.Eyes?)
+
+/** Draws a photo scaled and moved into place. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.photo(img: androidx.compose.ui.graphics.ImageBitmap, p: SelfieAlign.Place) {
+    drawImage(
+        img, dstOffset = androidx.compose.ui.unit.IntOffset(p.dx.toInt(), p.dy.toInt()),
+        dstSize = androidx.compose.ui.unit.IntSize((img.width * p.scale).toInt(), (img.height * p.scale).toInt()),
+        filterQuality = FilterQuality.Medium,
+    )
 }
 
 /** Selfie settings on the Profile screen. */

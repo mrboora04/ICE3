@@ -304,6 +304,8 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                 ProgressScreen(
                     profile, targets, weights, history, content, vm::logWeight, vm::deleteWeight,
                     startLogging = openWeightLog,
+                    selfieDays = selfieDays.toSet(), selfieVersion = selfieVersion,
+                    selfiesUnlocked = selfiesShown, onUnlockSelfies = revealSelfies,
                     selfies = {
                         com.mrboora.plate.ui.components.SelfieProgressCard(
                             selfieDays,
