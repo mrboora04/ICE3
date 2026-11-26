@@ -210,17 +210,18 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     }
 
     /** Saves the request (so we can notify when it's added) and opens a pre-filled email. */
-    fun sendRequest(restaurant: String, item: String) {
-        vm.saveRequest(restaurant, item)
+    fun sendRequest(restaurant: String, item: String, details: String) {
+        vm.saveRequest(restaurant, item, details)
         if (android.os.Build.VERSION.SDK_INT >= 33) notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        val what = listOf(restaurant, item).filter { it.isNotBlank() }.joinToString(" – ")
+        val what = listOf(restaurant, item).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { details.take(40) }
         val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
         val email = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:"))
             .putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(com.mrboora.plate.data.Requests.EMAIL))
             .putExtra(android.content.Intent.EXTRA_SUBJECT, "Plate food request: $what")
             .putExtra(
                 android.content.Intent.EXTRA_TEXT,
-                "Please add this to Plate:\n\nRestaurant: ${restaurant.ifBlank { "-" }}\nFood/item: ${item.ifBlank { "-" }}\n\nPlate $version",
+                "Please add this to Plate:\n\nRestaurant: ${restaurant.ifBlank { "-" }}\nFood/item: ${item.ifBlank { "-" }}" +
+                    (if (details.isNotBlank()) "\nDetails: ${details.trim()}" else "") + "\n\nPlate $version",
             )
         try {
             context.startActivity(email)
@@ -375,7 +376,7 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
                     shelfFoods = vm::shelfFoods,
                     foodTypes = vm::foodTypes,
                     didYouMean = vm::didYouMean,
-                    onRequest = { restaurant, item -> sendRequest(restaurant, item) },
+                    onRequest = { restaurant, item, details -> sendRequest(restaurant, item, details) },
                     onCreate = { vm.createFood(it) },
                     onForget = { vm.forgetFood(it) },
                     onAdd = { food, g -> vm.addEntry(meal, food, g) },

@@ -510,4 +510,23 @@ class NutritionTest {
         assertEquals(com.mrboora.plate.data.Units.Weight.KG, com.mrboora.plate.data.Units.phoneDefault(java.util.Locale.CANADA).weight)
         assertEquals(com.mrboora.plate.data.Units.Weight.KG, com.mrboora.plate.data.Units.phoneDefault(java.util.Locale("en", "IN")).weight)
     }
+
+    @Test
+    fun requestRules() {
+        val R = com.mrboora.plate.data.Requests
+        // Anything specific is enough on its own.
+        assertNull(R.problem("", "", "Dragon fruit smoothie bowl"))
+        // A menu item needs its restaurant...
+        assertTrue(R.problem("", "Iced capp", "") != null)
+        assertNull(R.problem("Tim Hortons", "Iced capp", ""))
+        // ...unless they described it below.
+        assertNull(R.problem("", "Iced capp", "the one at Tim's, large"))
+        // A restaurant alone asks for its menu; an empty form can't be sent.
+        assertNull(R.problem("Osmow's", "", ""))
+        assertTrue(R.problem("", "", "") != null)
+        // The phone can recognise named requests by itself; one with only details is read by a person.
+        assertTrue(FoodRequest(1, "Osmow's", "", 0, false).trackable)
+        assertFalse(FoodRequest(2, "", "", 0, false, "a homemade dosa").trackable)
+        assertEquals("a homemade dosa", FoodRequest(2, "", "", 0, false, "a homemade dosa").label)
+    }
 }

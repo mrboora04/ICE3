@@ -108,7 +108,7 @@ fun AddFoodScreen(
     restaurantMenu: suspend (String) -> List<FoodItem>,
     shelfFoods: suspend (Set<String>) -> List<FoodItem>,
     didYouMean: suspend (String) -> String?,
-    onRequest: (restaurant: String, item: String) -> Unit,
+    onRequest: (restaurant: String, item: String, details: String) -> Unit,
     onCreate: (FoodItem) -> Unit,
     onForget: (FoodItem) -> Unit,
     onAdd: (FoodItem, Float) -> Unit,
@@ -515,9 +515,9 @@ fun AddFoodScreen(
         }
     }
     if (showRequest) {
-        RequestDialog(query, onDismiss = { showRequest = false }, onBuildShake = { showRequest = false; showShake = true }) { restaurant, item ->
+        RequestDialog(query, onDismiss = { showRequest = false }, onBuildShake = { showRequest = false; showShake = true }) { restaurant, item, details ->
             showRequest = false
-            onRequest(restaurant, item)
+            onRequest(restaurant, item, details)
         }
     }
     if (showCreate) {
@@ -774,29 +774,50 @@ private fun Small(label: String, v: String, on: (String) -> Unit, modifier: Modi
 }
 
 @Composable
-private fun RequestDialog(initial: String, onDismiss: () -> Unit, onBuildShake: () -> Unit, onSend: (String, String) -> Unit) {
+private fun RequestDialog(initial: String, onDismiss: () -> Unit, onBuildShake: () -> Unit, onSend: (String, String, String) -> Unit) {
     var restaurant by remember { mutableStateOf("") }
     var item by remember { mutableStateOf(initial) }
+    var details by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Request a food") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("This opens your email app with the request filled in. Tap Send there.", style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(restaurant, { restaurant = it }, label = { Text("Restaurant (if any), e.g. Osmow's") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(item, { item = it }, label = { Text("Food or menu item") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                // A homemade shake doesn't need a request: the builder makes it now.
-                if (restaurant.isBlank() && com.mrboora.plate.data.Mix.isShake(item)) {
-                    Text("Homemade shake? You don't need to wait for it:", style = MaterialTheme.typography.bodyMedium)
-                    Button(onBuildShake) { Text("Build it now") }
-                }
-            }
-        },
+        text = { RequestForm(restaurant, item, details, { restaurant = it }, { item = it }, { details = it }, onBuildShake) },
         confirmButton = {
-            TextButton({ onSend(restaurant, item) }, enabled = restaurant.isNotBlank() || item.isNotBlank()) { Text("Send request") }
+            TextButton({ onSend(restaurant, item, details) }, enabled = com.mrboora.plate.data.Requests.problem(restaurant, item, details) == null) { Text("Send request") }
         },
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
     )
+}
+
+/** The request's three boxes: restaurant, menu item, and anything specific. */
+@Composable
+internal fun RequestForm(
+    restaurant: String, item: String, details: String,
+    onRestaurant: (String) -> Unit, onItem: (String) -> Unit, onDetails: (String) -> Unit,
+    onBuildShake: () -> Unit,
+) {
+    val problem = com.mrboora.plate.data.Requests.problem(restaurant, item, details)
+    // Say what's missing only once something is typed, not on an empty form.
+    val showProblem = problem != null && (restaurant.isNotBlank() || item.isNotBlank())
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("This opens your email app with the request filled in. Tap Send there. For a restaurant food, Plate lets you know when it's added.", style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(
+            restaurant, onRestaurant, label = { Text("Restaurant, e.g. Osmow's") }, singleLine = true,
+            isError = showProblem && item.isNotBlank() && restaurant.isBlank(), modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(item, onItem, label = { Text("Menu item (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            details, onDetails, label = { Text("Anything specific? (optional)") },
+            placeholder = { Text("A size, a flavour, or a food that isn't from a restaurant") },
+            minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth(),
+        )
+        if (showProblem) Text(problem!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        // A homemade shake doesn't need a request: the builder makes it now.
+        if (restaurant.isBlank() && com.mrboora.plate.data.Mix.isShake(item)) {
+            Text("Homemade shake? You don't need to wait for it:", style = MaterialTheme.typography.bodyMedium)
+            Button(onBuildShake) { Text("Build it now") }
+        }
+    }
 }
 
 /** Kitchen measures and the hand guide, each already turned into grams for this food. */

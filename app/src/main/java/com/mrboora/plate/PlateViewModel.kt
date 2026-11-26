@@ -76,8 +76,10 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         com.mrboora.plate.data.Spelling.suggest(query, v)
     }
 
-    fun saveRequest(restaurant: String, item: String) {
-        com.mrboora.plate.data.Requests.add(getApplication(), restaurant, item)
+    fun saveRequest(restaurant: String, item: String, details: String = "") {
+        val r = com.mrboora.plate.data.Requests.add(getApplication(), restaurant, item, details)
+        // Check every hour until it arrives (only for requests the phone can recognise by itself).
+        if (r.trackable) com.mrboora.plate.data.MenuUpdates.watch(getApplication())
     }
 
     suspend fun restaurantChains(): List<com.mrboora.plate.data.Chain> = withContext(Dispatchers.Default) { restaurants.chains() }

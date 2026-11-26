@@ -163,7 +163,7 @@ class ScreenshotTest {
     @Test fun addFood() = shot("add_food") {
         AddFoodScreen(
             Meal.LUNCH, "Today", FoodCatalog.foods.filter { it.name in setOf("Roti / chapati", "Dal (lentil curry)", "Paneer", "Basmati rice, cooked") },
-            { emptyList() }, { Result.success(emptyList()) }, { Result.success(null) }, { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _ -> }, {}, {}, { _, _ -> }, {},
+            { emptyList() }, { Result.success(emptyList()) }, { Result.success(null) }, { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _, _ -> }, {}, {}, { _, _ -> }, {},
         )
     }
 
@@ -362,7 +362,7 @@ class ScreenshotTest {
         AddFoodScreen(
             Meal.SNACK, "Today", emptyList(),
             { q -> FoodCatalog.search(q) + cnf.search(q, 5) }, { Result.success(emptyList()) }, { Result.success(null) },
-            { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _ -> }, {}, {}, { _, _ -> }, {},
+            { emptyList() }, { emptyList() }, { emptyList() }, { null }, { _, _, _ -> }, {}, {}, { _, _ -> }, {},
             startQuery = "peanut butter two spoon",
         )
     }
@@ -384,6 +384,13 @@ class ScreenshotTest {
         val draft = com.mrboora.plate.data.MixParser.parse("omelette with 3 eggs and onion", foods, search = { cnf.search(it, 1).firstOrNull() })
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft,
             foodTypes = { f -> com.mrboora.plate.data.Portions.types(f, cnf::startingWith) })
+    }
+
+    /** An item typed without its restaurant: the form says what's missing. */
+    @Test fun requestForm() = shot("request_form") {
+        androidx.compose.foundation.layout.Column(Modifier.padding(24.dp_)) {
+            com.mrboora.plate.ui.screens.RequestForm("", "Iced capp", "", {}, {}, {}, {})
+        }
     }
 
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }

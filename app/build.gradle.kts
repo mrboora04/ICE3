@@ -24,8 +24,8 @@ android {
         applicationId = "com.mrboora.plate"
         minSdk = 26
         targetSdk = 35
-        versionCode = 47
-        versionName = "2.15.3"
+        versionCode = 48
+        versionName = "2.15.4"
     }
 
     signingConfigs {

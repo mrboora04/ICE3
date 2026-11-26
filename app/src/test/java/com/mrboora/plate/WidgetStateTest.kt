@@ -16,6 +16,7 @@ import com.mrboora.plate.widget.loadState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -85,5 +86,19 @@ class WidgetStateTest {
         assertEquals(2, com.mrboora.plate.data.UserAliases.load(ctx).size)
         com.mrboora.plate.data.UserAliases.forget(ctx, "milk")
         assertEquals(null, com.mrboora.plate.data.UserAliases.load(ctx)["milk"])
+    }
+
+    @Test
+    fun requestsSaveDetailsAndOnlyNamedOnesAreWatched() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val R = com.mrboora.plate.data.Requests
+        R.add(ctx, "Tim Hortons", "Iced capp", "large, with milk")
+        R.add(ctx, "", "", "my mom's poha recipe")
+        val all = R.all(ctx)
+        assertEquals("large, with milk", all.first { it.restaurant == "Tim Hortons" }.details)
+        // Only the named one is checked for every hour; the other goes by email only.
+        assertEquals(listOf("Tim Hortons"), R.pending(ctx).map { it.restaurant })
+        R.markDone(ctx, R.pending(ctx).map { it.id }.toSet())
+        assertTrue(R.pending(ctx).isEmpty())
     }
 }
