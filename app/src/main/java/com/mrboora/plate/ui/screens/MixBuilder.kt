@@ -352,7 +352,7 @@ fun ShakeBuilder(
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = c.line)
                     // Eggs, roti, a spoon of sugar: Size · How many, the same as in Add food.
                     // Only when the amount really is whole pieces (3 eggs, 2 rotis); a share of a
-                    // katori (64 g of potato) is shown in grams.
+                    // cup (85 g of potato) is shown in grams.
                     val picks = if (isPizza || tpl?.id == "sabji") null else Portions.picks(r.food)?.takeIf { ps -> Portions.wholePieces(ps, r.value) }
                     LaunchedEffect(r) { if (r.types == null) r.types = foodTypes(r.food) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -383,7 +383,7 @@ fun ShakeBuilder(
                         TextButton({ r.exact = true }, contentPadding = PaddingValues(0.dp)) { Text("Exact grams") }
                     } else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         // Plain words where the template has them: Small · Regular · Big, 1 tsp · 2 tsp.
-                        // A sabji's vegetables in parts of the katori, the way it's served.
+                        // A sabji's vegetables in parts of a cup.
                         val plain = tpl?.quick?.get(r.label) ?: if (tpl?.id == "sabji") com.mrboora.plate.data.Sabji.PARTS else null
                         val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"
                         (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else plain ?: Mix.quickAmounts(r.food)).forEach { (label, grams) ->

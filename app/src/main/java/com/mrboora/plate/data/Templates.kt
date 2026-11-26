@@ -243,7 +243,7 @@ object Templates {
         ),
         starts = emptyList(),
         usual = emptyMap(),
-        unit = "katori", dishName = "Sabji",
+        unit = "cup", dishName = "Sabji",
         spoonIsTeaspoon = true,
         quick = mapOf(
             "Onion" to Sabji.TADKA, "Tomato" to Sabji.TADKA,
@@ -270,25 +270,26 @@ object Templates {
 }
 
 /**
- * How a sabji is put together, reasoned the way a home cook does: one katori (150 g cooked) is
+ * How a sabji is put together, reasoned the way a home cook does: one cup (250 ml, about 200 g
+ * cooked: vegetable pieces sit loosely, about 0.8 g per ml) is
  * mostly the vegetables, a tadka of onion and tomato, and a little oil. Spices, salt, chilli and
  * ginger have almost no calories and are counted as 0. Every amount can be changed in the builder.
  */
 object Sabji {
-    /** One katori of sabji, cooked. */
-    const val KATORI_G = 150f
-    /** The onion and tomato tadka: about a tenth of the katori, half each. */
+    /** One cup of sabji, cooked: 250 ml at about 0.8 g/ml. Typing "katori" or "bowl" still works. */
+    const val CUP_G = 200f
+    /** The onion and tomato tadka: about a tenth of the cup, half each. */
     const val TADKA_SHARE = 0.10f
-    /** Oil: 1½ teaspoons a katori (a teaspoon of oil is about 4.5 g). */
-    const val OIL_G = 6.75f
+    /** Oil: 2 teaspoons a cup (a teaspoon of oil is about 4.5 g). */
+    const val OIL_G = 9f
     /** Paneer, when it's in: about 30% of the vegetables' part. */
     const val PANEER_SHARE = 0.30f
 
-    /** Quick amounts for a vegetable in the builder: parts of a katori. */
-    val PARTS: List<Pair<String, Float>> = listOf("¼ katori" to KATORI_G / 4, "½ katori" to KATORI_G / 2, "¾ katori" to KATORI_G * 3 / 4)
+    /** Quick amounts for a vegetable in the builder: parts of a cup. */
+    val PARTS: List<Pair<String, Float>> = listOf("¼ cup" to CUP_G / 4, "½ cup" to CUP_G / 2, "¾ cup" to CUP_G * 3 / 4)
 
     /** Onion or tomato in the tadka: half the usual, the usual, or twice as much. */
-    val TADKA: List<Pair<String, Float>> get() = (KATORI_G * TADKA_SHARE / 2).let { listOf("Less" to it / 2, "Usual" to it, "More" to it * 2) }
+    val TADKA: List<Pair<String, Float>> get() = (CUP_G * TADKA_SHARE / 2).let { listOf("Less" to it / 2, "Usual" to it, "More" to it * 2) }
 
     /** Not vegetables: they're the tadka and the fat, sized on their own. */
     val BASE = setOf("Onion", "Tomato", "Oil", "Ghee")
@@ -303,7 +304,7 @@ object Sabji {
     }
 
     /**
-     * Grams for each vegetable named without an amount, given what's left of the katori after the
+     * Grams for each vegetable named without an amount, given what's left of the cup after the
      * tadka, the oil and anything with a typed amount. Paneer takes its fixed share first.
      */
     fun split(names: List<String>, room: Float): Map<String, Float> {
@@ -336,7 +337,9 @@ object Sabji {
     /** "aloo gajar ki sabji" → "aloo, gajar, sabji": vegetables side by side become separate items. */
     fun separate(text: String, aliases: List<String>): String {
         val words = aliases.sortedByDescending { it.length }
-        var t = " " + text.lowercase().replace(Regex("""\b(ki|ka|ke|wali|wala|vali)\b"""), " ").replace(Regex("""\s+"""), " ").trim() + " "
+        // "1 katori", "2 bowls of", "a cup": how much sabji was eaten, not an amount of one vegetable.
+        val serving = Regex("""\b(\d+(?:[.,]\d+)?|a|an|one|half|1/2)\s*(katoris?|bowls?|cups?|plates?)\s*(of\s+)?""")
+        var t = " " + serving.replace(text.lowercase(), " ").replace(Regex("""\b(ki|ka|ke|wali|wala|vali)\b"""), " ").replace(Regex("""\s+"""), " ").trim() + " "
         // Put a comma after each vegetable word that's followed straight by another one.
         val alt = words.joinToString("|") { Regex.escape(it) }
         val pair = Regex("""\b($alt)\s+(?=($alt)\b)""")
