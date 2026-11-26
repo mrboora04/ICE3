@@ -295,13 +295,14 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         val keys = saved.map { it.key }.toMutableSet()
         val everyday = FoodCatalog.search(q).filter { keys.add(it.key) }
         val (chains, canada) = withContext(Dispatchers.Default) { restaurants.search(q) to canadian.search(q) }
-        // A sabji, however it's named ("potato and carrot sabji", "aloo gajar ki sabzi"): the chart row first.
-        val sabji = if (com.mrboora.plate.data.Templates.forText(q)?.id == "sabji") withContext(Dispatchers.Default) {
-            val veg = com.mrboora.plate.data.Sabji.vegetables(q)
+        // A vegetable dish, however it's named ("potato and carrot sabji", "aloo gajar ki sabzi",
+        // "carrot potato stew"): a chart row with exactly those vegetables comes first.
+        val dish = if (com.mrboora.plate.data.Templates.forText(q)?.reasoned == true) withContext(Dispatchers.Default) {
+            val veg = com.mrboora.plate.data.VegDish.vegetables(q)
             if (veg.isEmpty()) emptyList() else restaurants.search(veg.joinToString(" ").lowercase())
-                .filter { it.brand == "Indian Dishes" && com.mrboora.plate.data.Sabji.vegetables(it.name).toSet() == veg.toSet() }
+                .filter { com.mrboora.plate.data.VegDish.vegetables(it.name).toSet() == veg.toSet() }
         } else emptyList()
-        return sabji.filter { keys.add(it.key) } + saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
+        return dish.filter { keys.add(it.key) } + saved + chains.filter { keys.add(it.key) } + everyday + canada.filter { keys.add(it.key) }
     }
 
     suspend fun searchOnline(query: String): Result<List<FoodItem>> = runCatching { OpenFoodFacts.search(query) }

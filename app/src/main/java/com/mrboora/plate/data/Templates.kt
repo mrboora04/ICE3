@@ -43,6 +43,16 @@ object Templates {
         val sizeWords: Map<String, String> = emptyMap(),
         /** Amounts that follow the cup size, like Tim Hortons: 1, 2 or 3 sugars for small, regular, big. */
         val perSize: Map<String, Map<String, Float>> = emptyMap(),
+        /** Amounts are reasoned for the whole dish (vegetable dishes, see [VegDish]), not fixed per chip. */
+        val reasoned: Boolean = false,
+        /** Rows may show Size · How many for whole pieces (eggs, rotis). Off when everything is a share. */
+        val wholePieces: Boolean = true,
+        /** Quick amounts for any chip without its own ([quick]): e.g. ¼ · ½ · ¾ cup. */
+        val parts: List<Pair<String, Float>> = emptyList(),
+        /** Named from what's in it and the user's own word: "Aloo gajar sabji", "Carrot potato stew". */
+        val nameFromParts: Boolean = false,
+        /** A request for one is ready at once: the builder makes it, no menu row needed. */
+        val homemade: Boolean = false,
     )
 
     val CHAI = Template(
@@ -190,70 +200,81 @@ object Templates {
     )
 
     /**
-     * Sabji: any "<vegetables> sabji" is a homemade vegetable dish. Hindi and English names both
-     * work (aloo = potato). The amounts are reasoned by [Sabji], not fixed here.
+     * A vegetable dish, whatever it's called where you're from: sabji, tarkari, poriyal, stir-fry,
+     * stew, sauté, guisado… All the same thing: vegetables, a base of onion and tomato, a little
+     * oil. Vegetable names work in Hindi and English (aloo = potato). Amounts are reasoned by [VegDish].
+     * A new word for it is one more entry in [triggers]; the builder screen doesn't change.
      */
-    val SABJI = Template(
-        id = "sabji", title = "SABJI", subtitle = "Vegetables, a little tadka and oil, worked out from Health Canada numbers",
-        triggers = listOf("sabji", "sabzi", "subzi", "sabjee", "subji", "bhaji"),
+    val VEG = Template(
+        id = "veg", title = "VEGETABLE DISH", subtitle = "Vegetables, an onion-tomato base and a little oil, worked out from Health Canada numbers",
+        triggers = listOf(
+            // South Asia
+            "sabji", "sabzi", "subzi", "sabjee", "subji", "bhaji", "bhujia", "tarkari", "torkari", "shaak", "shak",
+            "poriyal", "thoran", "palya", "kootu", "kura",
+            // Elsewhere
+            "stir fry", "stir fried", "stirfry", "stew", "saute", "sauté", "sauteed", "sautéed",
+            "guisado", "salteado", "ratatouille", "veggie mix", "mixed veg",
+        ),
         chips = listOf(
-            "Aloo" to "Potato, flesh and skin, raw",
-            "Gajar" to "Carrot, raw",
-            "Gobhi" to "Cauliflower, raw",
-            "Matar" to "Peas, green, frozen, unprepared",
-            "Bhindi" to "Okra (gumbo), raw",
-            "Baingan" to "Eggplant (aubergine, brinjal), raw",
-            "Palak" to "Spinach, raw",
+            "Potato" to "Potato, flesh and skin, raw",
+            "Carrot" to "Carrot, raw",
+            "Cauliflower" to "Cauliflower, raw",
+            "Peas" to "Peas, green, frozen, unprepared",
+            "Okra" to "Okra (gumbo), raw",
+            "Eggplant" to "Eggplant (aubergine, brinjal), raw",
+            "Spinach" to "Spinach, raw",
             "Paneer" to "Paneer",
-            "Lauki" to "Gourd, white flowered (calabash gourd), raw",
-            "Turai" to "Gourd, dishcloth (towelgourd), raw",
-            "Karela" to "Balsam-pear (bitter gourd, bitter melon), pods, raw",
-            "Beans" to "Beans, snap (Italian, green or yellow), raw",
+            "Bottle gourd" to "Gourd, white flowered (calabash gourd), raw",
+            "Ridge gourd" to "Gourd, dishcloth (towelgourd), raw",
+            "Bitter gourd" to "Balsam-pear (bitter gourd, bitter melon), pods, raw",
+            "Green beans" to "Beans, snap (Italian, green or yellow), raw",
             "Cabbage" to "Cabbage, raw",
-            "Kaddu" to "Pumpkin, raw",
-            "Arbi" to "Taro, raw",
-            "Shimla mirch" to "Pepper, sweet, green, raw",
+            "Pumpkin" to "Pumpkin, raw",
+            "Taro" to "Taro, raw",
+            "Bell pepper" to "Pepper, sweet, green, raw",
             "Mushroom" to "Mushroom, white, raw",
-            "Saag" to "Mustard greens, raw",
+            "Mustard greens" to "Mustard greens, raw",
             "Onion" to "Onion, raw",
             "Tomato" to "Tomato, red, ripe, raw, year round average",
             "Oil" to "Vegetable oil, canola",
             "Ghee" to "Ghee",
         ),
-        // Hindi and English: the same vegetable, whichever word is used.
+        // Labels in English so everyone can read them; Hindi and other names point to them
+        // (the dish's name keeps the user's own word: "Aloo gajar sabji").
         aliases = listOf(
-            "aloo" to "Aloo", "alu" to "Aloo", "aaloo" to "Aloo", "batata" to "Aloo", "potato" to "Aloo", "potatoes" to "Aloo",
-            "gajar" to "Gajar", "carrot" to "Gajar", "carrots" to "Gajar",
-            "gobhi" to "Gobhi", "gobi" to "Gobhi", "phool gobhi" to "Gobhi", "cauliflower" to "Gobhi",
-            "matar" to "Matar", "mattar" to "Matar", "mutter" to "Matar", "peas" to "Matar", "pea" to "Matar",
-            "bhindi" to "Bhindi", "okra" to "Bhindi", "lady finger" to "Bhindi", "ladyfinger" to "Bhindi",
-            "baingan" to "Baingan", "bengan" to "Baingan", "brinjal" to "Baingan", "eggplant" to "Baingan", "aubergine" to "Baingan",
-            "palak" to "Palak", "spinach" to "Palak",
+            "aloo" to "Potato", "alu" to "Potato", "aaloo" to "Potato", "batata" to "Potato", "potato" to "Potato", "potatoes" to "Potato",
+            "gajar" to "Carrot", "carrot" to "Carrot", "carrots" to "Carrot",
+            "gobhi" to "Cauliflower", "gobi" to "Cauliflower", "phool gobhi" to "Cauliflower", "cauliflower" to "Cauliflower",
+            "matar" to "Peas", "mattar" to "Peas", "mutter" to "Peas", "peas" to "Peas", "pea" to "Peas",
+            "bhindi" to "Okra", "okra" to "Okra", "lady finger" to "Okra", "ladyfinger" to "Okra",
+            "baingan" to "Eggplant", "bengan" to "Eggplant", "brinjal" to "Eggplant", "eggplant" to "Eggplant", "aubergine" to "Eggplant",
+            "palak" to "Spinach", "spinach" to "Spinach",
             "paneer" to "Paneer", "cottage cheese" to "Paneer",
-            "lauki" to "Lauki", "ghiya" to "Lauki", "doodhi" to "Lauki", "bottle gourd" to "Lauki",
-            "turai" to "Turai", "tori" to "Turai", "tinda" to "Turai", "ridge gourd" to "Turai",
-            "karela" to "Karela", "bitter gourd" to "Karela", "bitter melon" to "Karela",
-            "beans" to "Beans", "green beans" to "Beans", "french beans" to "Beans",
+            "lauki" to "Bottle gourd", "ghiya" to "Bottle gourd", "doodhi" to "Bottle gourd", "bottle gourd" to "Bottle gourd",
+            "turai" to "Ridge gourd", "tori" to "Ridge gourd", "tinda" to "Ridge gourd", "ridge gourd" to "Ridge gourd",
+            "karela" to "Bitter gourd", "bitter gourd" to "Bitter gourd", "bitter melon" to "Bitter gourd",
+            "beans" to "Green beans", "green beans" to "Green beans", "french beans" to "Green beans",
             "patta gobhi" to "Cabbage", "band gobhi" to "Cabbage", "cabbage" to "Cabbage",
-            "kaddu" to "Kaddu", "pumpkin" to "Kaddu", "arbi" to "Arbi", "taro" to "Arbi",
-            "shimla mirch" to "Shimla mirch", "capsicum" to "Shimla mirch", "bell pepper" to "Shimla mirch",
-            "mushroom" to "Mushroom", "mushrooms" to "Mushroom", "saag" to "Saag", "sarson" to "Saag", "mustard greens" to "Saag",
+            "kaddu" to "Pumpkin", "pumpkin" to "Pumpkin", "arbi" to "Taro", "taro" to "Taro",
+            "shimla mirch" to "Bell pepper", "capsicum" to "Bell pepper", "bell pepper" to "Bell pepper",
+            "mushroom" to "Mushroom", "mushrooms" to "Mushroom", "saag" to "Mustard greens", "sarson" to "Mustard greens", "mustard greens" to "Mustard greens",
             "onion" to "Onion", "pyaz" to "Onion", "pyaaz" to "Onion", "tomato" to "Tomato", "tamatar" to "Tomato",
             "oil" to "Oil", "tel" to "Oil", "ghee" to "Ghee",
         ),
         starts = emptyList(),
         usual = emptyMap(),
-        unit = "cup", dishName = "Sabji",
+        unit = "cup", dishName = "Vegetable dish",
         spoonIsTeaspoon = true,
+        reasoned = true, wholePieces = false, parts = VegDish.PARTS, nameFromParts = true, homemade = true,
         quick = mapOf(
-            "Onion" to Sabji.TADKA, "Tomato" to Sabji.TADKA,
+            "Onion" to VegDish.BASE_PARTS, "Tomato" to VegDish.BASE_PARTS,
             "Oil" to listOf("1 tsp" to 4.5f, "1½ tsp" to 6.75f, "2 tsp" to 9f),
             "Ghee" to listOf("1 tsp" to 5f, "1½ tsp" to 7.5f, "2 tsp" to 10f),
         ),
     )
 
     /** In the order they're checked: a "rice bowl" is a bowl, not a roti meal with rice. */
-    val ALL = listOf(SABJI, BOWL, CHAI, ROTI, SANDWICH, EGGS)
+    val ALL = listOf(VEG, BOWL, CHAI, ROTI, SANDWICH, EGGS)
 
     /** Every food name any template uses, for loading. */
     val foodNames: Set<String> get() = ALL.flatMap { t -> t.chips.map { it.second } }.toSet()
@@ -267,18 +288,24 @@ object Templates {
     }
 
     fun byId(id: String): Template? = ALL.firstOrNull { it.id == id }
+
+    /** The word that opened [tpl] in [text], as typed ("sabzi", "stew"), for naming the dish. */
+    fun wordIn(text: String, tpl: Template): String? {
+        val t = text.lowercase()
+        return tpl.triggers.sortedByDescending { it.length }.firstOrNull { Regex("""\b${Regex.escape(it)}s?\b""").containsMatchIn(t) }
+    }
 }
 
 /**
- * How a sabji is put together, reasoned the way a home cook does: one cup (250 ml, about 200 g
+ * How a vegetable dish is put together, reasoned the way a home cook does: one cup (250 ml, about 200 g
  * cooked: vegetable pieces sit loosely, about 0.8 g per ml) is
  * mostly the vegetables, a tadka of onion and tomato, and a little oil. Spices, salt, chilli and
  * ginger have almost no calories and are counted as 0. Every amount can be changed in the builder.
  */
-object Sabji {
+object VegDish {
     /** One cup of sabji, cooked: 250 ml at about 0.8 g/ml. Typing "katori" or "bowl" still works. */
     const val CUP_G = 200f
-    /** The onion and tomato tadka: about a tenth of the cup, half each. */
+    /** The onion and tomato base (tadka, sofrito…): about a tenth of the cup, half each. */
     const val TADKA_SHARE = 0.10f
     /** Oil: 2 teaspoons a cup (a teaspoon of oil is about 4.5 g). */
     const val OIL_G = 9f
@@ -288,8 +315,8 @@ object Sabji {
     /** Quick amounts for a vegetable in the builder: parts of a cup. */
     val PARTS: List<Pair<String, Float>> = listOf("¼ cup" to CUP_G / 4, "½ cup" to CUP_G / 2, "¾ cup" to CUP_G * 3 / 4)
 
-    /** Onion or tomato in the tadka: half the usual, the usual, or twice as much. */
-    val TADKA: List<Pair<String, Float>> get() = (CUP_G * TADKA_SHARE / 2).let { listOf("Less" to it / 2, "Usual" to it, "More" to it * 2) }
+    /** Onion or tomato in the base: half the usual, the usual, or twice as much. */
+    val BASE_PARTS: List<Pair<String, Float>> get() = (CUP_G * TADKA_SHARE / 2).let { listOf("Less" to it / 2, "Usual" to it, "More" to it * 2) }
 
     /** Not vegetables: they're the tadka and the fat, sized on their own. */
     val BASE = setOf("Onion", "Tomato", "Oil", "Ghee")
@@ -318,12 +345,12 @@ object Sabji {
     }
 
     /**
-     * The vegetables a sabji text names, in order, whatever the language or small typos:
+     * The vegetables a dish's text names, in order, whatever the language or small typos:
      * "potato and carrot sabji" and "aloo garaj ki sabji" both give Aloo, Gajar.
      */
     fun vegetables(text: String): List<String> {
         val t = text.lowercase()
-        val aliases = Templates.SABJI.aliases.sortedByDescending { it.first.length }
+        val aliases = Templates.VEG.aliases.sortedByDescending { it.first.length }
         val found = mutableListOf<String>()
         // Two-word names first ("bottle gourd"), then each word on its own, allowing typos.
         var rest = " $t "

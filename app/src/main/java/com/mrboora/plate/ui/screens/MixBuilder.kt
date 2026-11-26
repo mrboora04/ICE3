@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
 private fun g(v: Float) = if (v < 10f) "%.1f".format(java.util.Locale.ROOT, v) else "${v.roundToInt()}"
 
 /** One editable ingredient row's state. */
-private class MixRow(val label: String, food: FoodItem, grams: String) {
+private class MixRow(val label: String, food: FoodItem, grams: String, val said: String = "") {
     /** Can change kind (an egg: whole or white). */
     var food by mutableStateOf(food)
     var grams by mutableStateOf(grams)
@@ -120,7 +120,7 @@ fun ShakeBuilder(
     var started by remember { mutableStateOf(false) }
     if (!started && draft != null) {
         started = true
-        draft.parts.forEach { rows += MixRow(it.label, it.food, g(it.grams)) }
+        draft.parts.forEach { rows += MixRow(it.label, it.food, g(it.grams), it.said) }
         draft.base?.let { b ->
             if (Mix.BASES.any { it.first == b.label }) { base = b.label; baseMl = "${(b.ml ?: 250f).roundToInt()}" }
             else rows += MixRow(b.label, b.food, g(b.grams))
@@ -144,6 +144,11 @@ fun ShakeBuilder(
         val tops = rows.filter { it.food.name !in Mix.CRUST_FOODS }.map { it.label.lowercase() }
         "${size.label} ${if (crust.label == "Regular") "" else crust.label.lowercase() + " crust "}cheese pizza" +
             if (tops.isEmpty()) "" else " with " + tops.joinToString(" & ")
+    } else if (tpl?.nameFromParts == true) {
+        // "Aloo gajar sabji", "Carrot potato stew": what's in it, then the user's own word for it.
+        val word = draft?.word ?: tpl.dishName.lowercase()
+        (rows.filter { it.label !in com.mrboora.plate.data.VegDish.BASE }.map { it.said.ifBlank { it.label }.lowercase() } + word)
+            .joinToString(" ").replaceFirstChar { it.uppercase() }
     } else if (tpl != null) {
         val main = if (tpl.id == "chai" && rows.any { it.label == "Coffee" }) "Coffee" else tpl.dishName
         val rest = rows.map { it.label }.filter { it != main && it !in tpl.main }.map { it.lowercase() } +
@@ -230,7 +235,10 @@ fun ShakeBuilder(
                     Spacer(Modifier.height(6.dp))
                     draft.items.forEachIndexed { idx, i ->
                         Text(
-                            "${readLabels.getOrElse(idx) { i.label }}: ${i.how}",
+                            "${readLabels.getOrElse(idx) { i.label }.let { l ->
+                                // In the user's own word, with the food it means: "Aloo (potato)".
+                                if (i.said.isNotBlank() && l == i.label && !i.said.equals(l, true) && tpl?.nameFromParts == true) "${i.said.replaceFirstChar { it.uppercase() }} (${l.lowercase()})" else l
+                            }}: ${i.how}",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.fillMaxWidth().clickable(onClickLabel = "Change ${i.label}") { fixing = idx }.padding(vertical = 4.dp),
                         )
@@ -353,7 +361,7 @@ fun ShakeBuilder(
                     // Eggs, roti, a spoon of sugar: Size · How many, the same as in Add food.
                     // Only when the amount really is whole pieces (3 eggs, 2 rotis); a share of a
                     // cup (85 g of potato) is shown in grams.
-                    val picks = if (isPizza || tpl?.id == "sabji") null else Portions.picks(r.food)?.takeIf { ps -> Portions.wholePieces(ps, r.value) }
+                    val picks = if (isPizza || tpl?.wholePieces == false) null else Portions.picks(r.food)?.takeIf { ps -> Portions.wholePieces(ps, r.value) }
                     LaunchedEffect(r) { if (r.types == null) r.types = foodTypes(r.food) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (isPizza) "Whole ${size.label.lowercase()} pizza (crust, sauce, cheese)" else r.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -384,7 +392,7 @@ fun ShakeBuilder(
                     } else FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         // Plain words where the template has them: Small · Regular · Big, 1 tsp · 2 tsp.
                         // A sabji's vegetables in parts of a cup.
-                        val plain = tpl?.quick?.get(r.label) ?: if (tpl?.id == "sabji") com.mrboora.plate.data.Sabji.PARTS else null
+                        val plain = tpl?.quick?.get(r.label) ?: tpl?.parts?.takeIf { it.isNotEmpty() }
                         val unitWord = if (plain != null && r.label in setOf("Tea", "Coffee")) "ml" else "g"
                         (if (isPizza) listOf("1 pizza" to size.grams, "2 pizzas" to size.grams * 2) else plain ?: Mix.quickAmounts(r.food)).forEach { (label, grams) ->
                             FilterChip(r.value == grams.roundToInt().toFloat() || r.value == grams, { r.grams = g(grams) }, label = { Text(if (label.endsWith(" g")) label else "$label · ${g(grams)} $unitWord") })

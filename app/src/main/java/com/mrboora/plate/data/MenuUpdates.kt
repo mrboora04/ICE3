@@ -125,7 +125,7 @@ object MenuUpdates {
         )
         val title = when {
             found.size == 1 && Mix.isShake(found[0].label) -> "Build your ${found[0].label} in Plate's shake builder"
-            found.size == 1 && found[0].homemade -> "Build your ${found[0].label} in Plate's ${Templates.forText(found[0].label)?.dishName?.lowercase() ?: "dish"} builder"
+            found.size == 1 && found[0].homemade -> "Build your ${found[0].label} in Plate's ${Templates.forText(found[0].label + " " + found[0].details)?.dishName?.lowercase() ?: "dish"} builder"
             found.size == 1 -> "${found[0].label} has been added"
             else -> "${found.size} foods you asked for have been added"
         }

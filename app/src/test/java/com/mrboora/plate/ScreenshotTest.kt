@@ -388,6 +388,13 @@ class ScreenshotTest {
         com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
     }
 
+    /** Another word for the same dish: the same builder, named "Carrot potato stew". */
+    @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun stewFromText() = shot("stew_from_text") {
+        val (foods, cnf) = mixFoods()
+        val draft = com.mrboora.plate.data.MixParser.parse("carrot and potato stew", foods, search = { cnf.search(it, 1).firstOrNull() })
+        com.mrboora.plate.ui.screens.ShakeBuilder({ foods }, { emptyList() }, {}, { _, _ -> }, preview = foods, draft = draft)
+    }
+
     /** "aloo gajar ki sabji": the app reasons one cup by itself, and shows its working. */
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun sabjiFromText() = shot("sabji_from_text") {
         val (foods, cnf) = mixFoods()
@@ -401,11 +408,11 @@ class ScreenshotTest {
         fun grams(items: List<com.mrboora.plate.data.MixParser.Item>) = items.associate { it.label to it.grams }
         // Two vegetables share the cup 50/50, after a tenth for the tadka and 2 tsp of oil.
         val a = grams(parse("aloo gajar ki sabji"))
-        org.junit.Assert.assertEquals(setOf("Aloo", "Gajar", "Onion", "Tomato", "Oil"), a.keys)
-        org.junit.Assert.assertEquals(a.getValue("Aloo"), a.getValue("Gajar"), 0.01f)
+        org.junit.Assert.assertEquals(setOf("Potato", "Carrot", "Onion", "Tomato", "Oil"), a.keys)
+        org.junit.Assert.assertEquals(a.getValue("Potato"), a.getValue("Carrot"), 0.01f)
         org.junit.Assert.assertEquals(10f, a.getValue("Onion"), 0.01f)
-        org.junit.Assert.assertEquals(com.mrboora.plate.data.Sabji.OIL_G, a.getValue("Oil"), 0.01f)
-        org.junit.Assert.assertEquals(com.mrboora.plate.data.Sabji.CUP_G, a.values.sum(), 0.5f)
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.VegDish.OIL_G, a.getValue("Oil"), 0.01f)
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.VegDish.CUP_G, a.values.sum(), 0.5f)
         // How much was eaten ("1 katori", "a bowl of") is the serving, not an amount of aloo.
         org.junit.Assert.assertEquals(a, grams(parse("1 katori aloo gajar ki sabji")))
         org.junit.Assert.assertEquals(a, grams(parse("a bowl of aloo gajar sabji")))
@@ -413,19 +420,30 @@ class ScreenshotTest {
         org.junit.Assert.assertEquals(a, grams(parse("potato and carrot sabji")))
         // Three vegetables: 40 / 30 / 30, in the order named.
         val b = grams(parse("aloo gobhi matar sabzi"))
-        org.junit.Assert.assertEquals(b.getValue("Aloo") / 4f * 3f, b.getValue("Gobhi"), 0.5f)
+        org.junit.Assert.assertEquals(b.getValue("Potato") / 4f * 3f, b.getValue("Cauliflower"), 0.5f)
         // With paneer: paneer about 30% of the vegetables' part, matar the rest.
         val c = grams(parse("matar paneer sabji"))
-        org.junit.Assert.assertEquals(0.3f / 0.7f, c.getValue("Paneer") / c.getValue("Matar"), 0.01f)
+        org.junit.Assert.assertEquals(0.3f / 0.7f, c.getValue("Paneer") / c.getValue("Peas"), 0.01f)
+        // Other people's words for the same dish: one category, one builder, the same reasoning.
+        listOf("carrot and potato stew", "potato carrot stir fry", "aloo gajar tarkari", "gajar aloo poriyal").forEach {
+            org.junit.Assert.assertEquals(it, a, grams(parse(it)))
+        }
+        // The word as typed is kept for the dish's name.
+        val draft = com.mrboora.plate.data.MixParser.parse("carrot and potato stew", foods, search = { cnf.search(it, 1).firstOrNull() })!!
+        org.junit.Assert.assertEquals("stew", draft.word)
+        org.junit.Assert.assertEquals("veg", draft.template?.id)
+        // Not a vegetable dish: "vegetable oil" and "chicken curry" stay what they were.
+        org.junit.Assert.assertNotEquals("veg", com.mrboora.plate.data.Templates.forText("vegetable oil")?.id)
+        org.junit.Assert.assertNotEquals("veg", com.mrboora.plate.data.Templates.forText("2 roti with chicken curry")?.id)
         // Just "sabji": an aloo sabji.
-        org.junit.Assert.assertTrue("Aloo" in grams(parse("sabji")))
+        org.junit.Assert.assertTrue("Potato" in grams(parse("sabji")))
         // Oil typed by the user stays theirs; the vegetables get what's left.
         val d = grams(parse("aloo sabji with 2 tsp oil"))
-        org.junit.Assert.assertTrue(d.getValue("Oil") > com.mrboora.plate.data.Sabji.OIL_G)
-        org.junit.Assert.assertEquals(com.mrboora.plate.data.Sabji.CUP_G, d.values.sum(), 0.5f)
+        org.junit.Assert.assertTrue(d.getValue("Oil") > com.mrboora.plate.data.VegDish.OIL_G)
+        org.junit.Assert.assertEquals(com.mrboora.plate.data.VegDish.CUP_G, d.values.sum(), 0.5f)
         // Names and small typos: the request "aloo garaj sabji" is aloo and gajar.
-        org.junit.Assert.assertEquals(listOf("Aloo", "Gajar"), com.mrboora.plate.data.Sabji.vegetables("aloo garaj ki sabji"))
-        org.junit.Assert.assertEquals(listOf("Aloo", "Gajar"), com.mrboora.plate.data.Sabji.vegetables("Aloo Gajar Sabji"))
+        org.junit.Assert.assertEquals(listOf("Potato", "Carrot"), com.mrboora.plate.data.VegDish.vegetables("aloo garaj ki sabji"))
+        org.junit.Assert.assertEquals(listOf("Potato", "Carrot"), com.mrboora.plate.data.VegDish.vegetables("Aloo Gajar Sabji"))
     }
 
     @Test @Config(qualifiers = "w411dp-h2400dp-xxhdpi") fun rotiFromText() = shot("roti_from_text") {

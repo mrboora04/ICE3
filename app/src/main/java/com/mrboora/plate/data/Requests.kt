@@ -27,7 +27,7 @@ data class FoodRequest(
 
     /** Something Plate's builders make (a shake, a sabji): it's ready as soon as the app has the builder. */
     val homemade: Boolean get() = restaurant.isBlank() &&
-        (Mix.isShake("$item $details") || Templates.forText("$item $details")?.id == "sabji")
+        (Mix.isShake("$item $details") || Templates.forText("$item $details")?.homemade == true)
 }
 
 object Requests {

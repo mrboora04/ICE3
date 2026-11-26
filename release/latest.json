@@ -1,11 +1,11 @@
 {
-  "versionCode": 53,
-  "versionName": "2.15.9",
+  "versionCode": 54,
+  "versionName": "2.15.10",
   "notes": [
-    "Sabji builder: type \"aloo gajar sabji\" (or potato and carrot) and Plate works out a cup",
-    "Requests forgive small typos, and sabji requests are ready right away",
+    "Vegetable dish builder: sabji, stir-fry, stew, poriyal… in your own words; Plate works out a cup",
+    "Requests forgive small typos; homemade dishes are ready right away",
     "Updates install from inside Plate"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate-test.apk",
-  "sha256": "9732a9dc2085603f8286c6f8df0bc3aff6c4529496f2b96c678e9736fccaed4e"
+  "sha256": "796b57292c916e078830593087bdd8186fb19e3cace6561f6fec60ef7accb693"
 }
