@@ -1,5 +1,10 @@
 package com.mrboora.plate.ui.screens
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.ui.unit.sp
@@ -95,7 +100,7 @@ import kotlin.math.roundToInt
 
 private val tab = TextStyle(fontFeatureSettings = TABULAR)
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddFoodScreen(
     meal: Meal,
@@ -161,6 +166,9 @@ fun AddFoodScreen(
     var online by remember { mutableStateOf<List<FoodItem>>(emptyList()) }
     var onlineState by remember { mutableStateOf<String?>(null) } // null idle, "loading", or a message
     var picked by remember { mutableStateOf<FoodItem?>(null) }
+    /** The row it was tapped on ("r" + key…), so that row can grow into the food page and back. */
+    var pickedFrom by remember { mutableStateOf<String?>(null) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     /** An amount read from the search ("two spoon"), to start the amount sheet with. */
     var pickedAmount by remember { mutableStateOf<Float?>(null) }
     var showBarcode by remember { mutableStateOf(false) }
@@ -266,6 +274,30 @@ fun AddFoodScreen(
     val filter = query.trim().lowercase()
     fun matches(f: FoodItem) = filter.isEmpty() || filter.split(' ').all { "${f.brand} ${f.name}".lowercase().contains(it) }
 
+    // The food list and the food page live in one layout, so the tapped row itself grows into the
+    // page (and shrinks back on Back) instead of a sheet fading in over it.
+    androidx.compose.animation.SharedTransitionLayout {
+    androidx.compose.animation.AnimatedContent(
+        targetState = picked,
+        contentKey = { it?.key },
+        transitionSpec = {
+            androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.KeepUntilTransitionsFinished
+        },
+        label = "food page",
+    ) { open ->
+    CompositionLocalProvider(LocalShared provides SharedScopes(this@SharedTransitionLayout, this@AnimatedContent)) {
+    if (open != null) {
+        FoodPage(
+            open, pickedFrom, onBack = { picked = null; pickedAmount = null },
+        ) {
+            AmountSheet(open, initial = pickedAmount, onDismiss = { picked = null; pickedAmount = null }, foodTypes = foodTypes, inline = true) { chosen, grams ->
+                pickedAmount = null
+                onAdd(chosen, grams)
+                picked = null
+                onBack()
+            }
+        }
+    } else
     Scaffold(
         topBar = {
             TopAppBar(
@@ -287,6 +319,7 @@ fun AddFoodScreen(
     ) { pad ->
         LazyColumn(
             Modifier.fillMaxSize().padding(pad).imePadding(),
+            state = listState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -357,7 +390,7 @@ fun AddFoodScreen(
                 } else {
                     val shown = shelfItems.filter(::matches)
                     item { Eyebrow("${shown.size} items") }
-                    items(shown, key = { "s" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
+                    items(shown, key = { "s" + it.key }) { FoodRow(it, "s" + it.key, { pickedFrom = "s" + it.key; picked = it }, null, ::quickAdd) }
                 }
             } else if (query.isBlank()) {
                 item {
@@ -403,7 +436,7 @@ fun AddFoodScreen(
                 }
                 if (recent.isNotEmpty()) {
                     item { Eyebrow("Recent and your foods", Modifier.padding(top = 8.dp)) }
-                    items(recent, key = { "r" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
+                    items(recent, key = { "r" + it.key }) { FoodRow(it, "r" + it.key, { pickedFrom = "r" + it.key; picked = it }, onForget, ::quickAdd) }
                 }
             } else {
                 // Typed a food with an amount ("peanut butter two spoon", "4 eggs"): add it in one tap.
@@ -420,7 +453,7 @@ fun AddFoodScreen(
                         Text(how, style = MaterialTheme.typography.bodySmall, color = c.muted)
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                             Button({ onAdd(food, grams); onBack() }) { Text("Add · ≈ %,d kcal".format(food.kcalFor(grams).roundToInt())) }
-                            TextButton({ pickedAmount = grams; picked = food }) { Text("Change") }
+                            TextButton({ pickedAmount = grams; pickedFrom = null; picked = food }) { Text("Change") }
                         }
                     }
                 }
@@ -469,11 +502,11 @@ fun AddFoodScreen(
                 }
                 if (local.isNotEmpty()) {
                     item { Eyebrow("On this phone", Modifier.padding(top = 8.dp)) }
-                    items(local, key = { "l" + it.key }) { FoodRow(it, { picked = it }, onForget, ::quickAdd) }
+                    items(local, key = { "l" + it.key }) { FoodRow(it, "l" + it.key, { pickedFrom = "l" + it.key; picked = it }, onForget, ::quickAdd) }
                 }
                 if (online.isNotEmpty()) {
                     item { Eyebrow("Packaged foods · Open Food Facts", Modifier.padding(top = 8.dp)) }
-                    items(online, key = { "o" + it.key }) { FoodRow(it, { picked = it }, null, ::quickAdd) }
+                    items(online, key = { "o" + it.key }) { FoodRow(it, "o" + it.key, { pickedFrom = "o" + it.key; picked = it }, null, ::quickAdd) }
                 }
                 item {
                     when (val st = onlineState) {
@@ -500,18 +533,13 @@ fun AddFoodScreen(
         }
     }
 
-    picked?.let { food ->
-        AmountSheet(food, initial = pickedAmount, onDismiss = { picked = null; pickedAmount = null }, foodTypes = foodTypes) { chosen, grams ->
-            pickedAmount = null
-            onAdd(chosen, grams)
-            picked = null
-            onBack()
-        }
+    }
+    }
     }
     if (showBarcode) {
         BarcodeDialog(lookupBarcode, onDismiss = { showBarcode = false }) { found ->
             showBarcode = false
-            picked = found
+            pickedFrom = null; picked = found
         }
     }
     if (showRequest) {
@@ -524,15 +552,58 @@ fun AddFoodScreen(
         CreateFoodDialog(initialName = query, onDismiss = { showCreate = false }) { food ->
             showCreate = false
             onCreate(food)
-            picked = food
+            pickedFrom = null; picked = food
         }
     }
 }
 
+/** The scopes a row needs to travel into the food page (null in previews and tests without them). */
+@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+private class SharedScopes(val layout: androidx.compose.animation.SharedTransitionScope, val visibility: androidx.compose.animation.AnimatedVisibilityScope)
+private val LocalShared = androidx.compose.runtime.compositionLocalOf<SharedScopes?> { null }
+
+/**
+ * This element is the same thing on both screens: its box moves and resizes between them in
+ * 300 ms. What's inside swaps at once: no fade (a fade only hides the join).
+ */
+@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
-private fun FoodRow(food: FoodItem, onClick: () -> Unit, onForget: ((FoodItem) -> Unit)?, onQuickAdd: ((FoodItem) -> Unit)? = null) {
+private fun Modifier.travels(key: String): Modifier {
+    val s = LocalShared.current ?: return this
+    return with(s.layout) {
+        this@travels.sharedBounds(
+            rememberSharedContentState(key), s.visibility,
+            enter = androidx.compose.animation.EnterTransition.None, exit = androidx.compose.animation.ExitTransition.None,
+            boundsTransform = { _, _ -> androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing) },
+            resizeMode = androidx.compose.animation.SharedTransitionScope.ResizeMode.RemeasureToBounds,
+        )
+    }
+}
+
+/** A food's page: the tapped row, grown to fill the screen, with the amount and Add. Back shrinks it back. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FoodPage(food: FoodItem, fromRow: String?, onBack: () -> Unit, content: @Composable () -> Unit) {
     val c = Plate.colors
-    PlateCard(Modifier.clickable(onClick = onClick), padding = 14.dp) {
+    androidx.activity.compose.BackHandler(onBack = onBack)
+    Column(Modifier.fillMaxSize().background(c.ground).statusBarsPadding()) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
+            IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+            Text("ADD FOOD", style = PosterType.section)
+        }
+        Column(
+            Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+                .let { if (fromRow != null) it.travels("food-$fromRow") else it }
+                .clip(RoundedCornerShape(24.dp)).background(c.card)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+        ) { content() }
+    }
+}
+
+@Composable
+private fun FoodRow(food: FoodItem, rowKey: String, onClick: () -> Unit, onForget: ((FoodItem) -> Unit)?, onQuickAdd: ((FoodItem) -> Unit)? = null) {
+    val c = Plate.colors
+    PlateCard(Modifier.travels("food-$rowKey").clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 val approx = if (food.isEstimate) "≈" else ""
@@ -604,7 +675,8 @@ internal fun AmountSheet(
                     types = types?.map { it.first }, type = typeIdx, things = Portions.things(chosen),
                     onType = { t -> typeIdx = t; Portions.picks(types!![t].second)?.let { pick(it, sizeIdx, count) } },
                 )
-                val noun = Portions.noun(chosen)?.let { n -> if (typeIdx > 0) "$n ${types!![typeIdx].first.lowercase()}" else n }
+                // What's counted: "egg", "roti", or the food itself when its serving is just "1 medium" (banana).
+                val noun = (Portions.noun(chosen) ?: chosen.name.substringBefore(',').substringBefore('(').trim().lowercase().takeIf { !Portions.spoonFood(chosen) && it.isNotBlank() })?.let { n -> if (typeIdx > 0) "$n ${types!![typeIdx].first.lowercase()}" else n }
                 Text(
                     if (noun != null) "$count ${picks[sizeIdx].label.lowercase()} $noun${if (count > 1) "s" else ""} = ${(g ?: 0f).clean()} g"
                     else "$count ${picks[sizeIdx].hint}${if (count > 1) "s" else ""} = ${(g ?: 0f).clean()} g",

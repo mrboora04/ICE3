@@ -76,9 +76,7 @@ class ScreenshotTest {
         // Let pictures loaded off the main thread arrive, then draw one more frame.
         Thread.sleep(800)
         rule.mainClock.advanceTimeBy(100)
-        val view = rule.activity.window.decorView
-        val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        rule.runOnUiThread { view.draw(android.graphics.Canvas(bmp)) }
+        val bmp = capture(rule.activity)
         val dir = File(System.getProperty("screenshots.dir") ?: "build/screenshots").apply { mkdirs() }
         File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
@@ -536,3 +534,16 @@ class ScreenshotTest {
 }
 
 private val Int.dp_ get() = androidx.compose.ui.unit.Dp(this.toFloat())
+
+/** The whole window as Android draws it (hardware copy), layers included. */
+internal fun capture(activity: android.app.Activity): Bitmap {
+    val window = activity.window
+    val view = window.decorView
+    val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+    val latch = java.util.concurrent.CountDownLatch(1)
+    android.view.PixelCopy.request(window, bmp, { latch.countDown() }, android.os.Handler(android.os.Looper.getMainLooper()))
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+    latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+    return bmp
+}
+

@@ -1,11 +1,11 @@
 {
-  "versionCode": 58,
-  "versionName": "2.15.14",
+  "versionCode": 59,
+  "versionName": "2.15.15",
   "notes": [
     "Request any food, not just restaurant items: the food comes first, the restaurant only if there is one",
     "Home-cooked dish builder: sabji, curry, keema, stew… in your own words",
     "Requests are checked every hour and when you open Plate"
   ],
   "apk": "https://raw.githubusercontent.com/mrboora04/ICE3/ccr-fa2ad2cf-j3wji2/release/Plate-test.apk",
-  "sha256": "ac622c5a350732ba816d782311f3f8d9d0bb2e3ea98c64a5465de7b28ed0d440"
+  "sha256": "5e73dda23856a8eb9bb75e193d49ab1a40233aa4a27dd586e42a89385e365c30"
 }
