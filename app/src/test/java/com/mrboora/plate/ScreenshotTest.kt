@@ -530,6 +530,9 @@ class ScreenshotTest {
         com.mrboora.plate.preview.QuickDishPreview("Keema matar", listOf("Keema (mince)" to 176, "Matar (peas)" to 43), 94, 313, 2, 2)
     }
 
+    // Design preview: Add food sorted into scan · make it yourself · restaurants · food groups (not in the app yet).
+    @Test fun addFoodTopPreviewDark() = shot("preview_add_food_top_dark", dark = true) { com.mrboora.plate.preview.AddFoodTopPreview() }
+
     @Test fun onboarding() = shot("onboarding") { OnboardingScreen {} }
 }
 
