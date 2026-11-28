@@ -75,19 +75,43 @@ object MenuUpdates {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // Only download when the file changed since our copy (GitHub answers "not modified" otherwise).
         val known = prefs.getString("etag", null)?.takeIf { localFile(context).exists() }
-        val got = download(URL_MENUS, known) ?: return@withContext emptyList()
-        val (text, etag) = got
-        val rows = text.lineSequence().mapNotNull(RestaurantFoods::parseCanadianLine).toList()
-        // Refuse anything that doesn't look like the real file (empty, an error page, a truncated download).
-        if (rows.size < 1000) return@withContext emptyList()
-        val tmp = File(context.filesDir, "$FILE.tmp")
-        tmp.writeText(text)
-        tmp.renameTo(localFile(context))
-        prefs.edit().putString("etag", etag).apply()
+        val got = download(URL_MENUS, known)
+        var rows = got?.first?.lineSequence()?.mapNotNull(RestaurantFoods::parseCanadianLine)?.toList()
+        if (got != null && rows != null && rows.size >= 1000) {
+            val tmp = File(context.filesDir, "$FILE.tmp")
+            tmp.writeText(got.first)
+            tmp.renameTo(localFile(context))
+            prefs.edit().putString("etag", got.second).apply()
+        } else {
+            // Not changed (or a bad download, which is refused): the requests are still checked against
+            // the copy already on the phone. A food added before the request was made counts too.
+            rows = runCatching { localFile(context).takeIf { it.exists() }?.useLines { l -> l.mapNotNull(RestaurantFoods::parseCanadianLine).toList() } }
+                .getOrNull().orEmpty()
+        }
+        prefs.edit().putLong("checked", System.currentTimeMillis()).apply()
         val found = fulfilled(Requests.all(context), rows)
         Requests.markDone(context, found.map { it.id }.toSet())
+        // If Plate may not show notifications, the app says it next time it's opened instead.
+        if (found.isNotEmpty() && !canNotify(context)) {
+            val unseen = prefs.getStringSet("unseen", emptySet()).orEmpty() + found.map { it.label }
+            prefs.edit().putStringSet("unseen", unseen).apply()
+        }
         found
     }
+
+    /** When the requests were last checked, or 0. */
+    fun lastChecked(context: Context): Long = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong("checked", 0)
+
+    /** Requests that arrived while notifications weren't allowed; cleared once read. */
+    fun takeUnseen(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val unseen = prefs.getStringSet("unseen", emptySet()).orEmpty().toList()
+        if (unseen.isNotEmpty()) prefs.edit().remove("unseen").apply()
+        return unseen
+    }
+
+    private fun canNotify(context: Context) = Build.VERSION.SDK_INT < 33 ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
     /** Pending requests whose words all appear in some restaurant row (chain + item). */
     fun fulfilled(requests: List<FoodRequest>, rows: List<FoodItem>): List<FoodRequest> {

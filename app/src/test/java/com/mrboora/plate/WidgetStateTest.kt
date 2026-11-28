@@ -101,4 +101,19 @@ class WidgetStateTest {
         R.markDone(ctx, R.pending(ctx).map { it.id }.toSet())
         assertTrue(R.pending(ctx).isEmpty())
     }
+
+    @Test
+    fun aFoodAlreadyOnThePhoneStillCompletesARequest() = runBlocking {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        // The phone already has a menu file with the food in it (downloaded before the request).
+        val header = "brand,name,kcal,protein,carbs,fat,grams,label,url"
+        val filler = (1..1100).joinToString("\n") { "Chain $it,Item $it,100,1,10,1,100,1 item,https://x" }
+        com.mrboora.plate.data.MenuUpdates.localFile(ctx).writeText("$header\n$filler\nTim Hortons,Iced Capp,250,4,40,9,300,1 medium,https://x")
+        com.mrboora.plate.data.Requests.add(ctx, "Tim Hortons", "iced capp")
+        // No network in tests: the download fails, which is the same as "not modified".
+        val found = com.mrboora.plate.data.MenuUpdates.refresh(ctx)
+        assertEquals(listOf("Tim Hortons – iced capp"), found.map { it.label })
+        assertTrue(com.mrboora.plate.data.Requests.pending(ctx).isEmpty())
+        assertTrue(com.mrboora.plate.data.MenuUpdates.lastChecked(ctx) > 0)
+    }
 }

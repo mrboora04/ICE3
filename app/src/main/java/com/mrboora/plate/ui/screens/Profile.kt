@@ -227,6 +227,17 @@ fun ProfileScreen(
                         "Plate ${info.versionName} · build ${androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(info)}"
                     }.getOrNull()
                 }
+                // Food requests still waiting, and when Plate last looked for them.
+                val waiting = remember { com.mrboora.plate.data.Requests.pending(context) }
+                if (waiting.isNotEmpty()) {
+                    val checked = com.mrboora.plate.data.MenuUpdates.lastChecked(context)
+                    Text(
+                        "Waiting for: " + waiting.joinToString(" · ") { it.label } + "\n" +
+                            (if (checked > 0) "Checked every hour · last " + java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(checked)) else "Checked every hour"),
+                        style = MaterialTheme.typography.bodySmall, color = c.muted,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
                 if (version != null) {
                     Text(
                         version, style = MaterialTheme.typography.labelMedium.merge(tab), color = c.muted,

@@ -59,6 +59,17 @@ class PlateViewModel(app: Application) : AndroidViewModel(app) {
         val freed = com.mrboora.plate.data.AppUpdates.cleanUpInstalled(getApplication())
         if (freed > 0) _notice.value = "Updated. Removed the old installer (%.0f MB freed)".format(freed / 1_048_576.0)
         viewModelScope.launch { _update.value = com.mrboora.plate.data.AppUpdates.check(getApplication()) }
+        // Opening the app checks waiting requests too: Android may run the hourly check late.
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            if (com.mrboora.plate.data.Requests.pending(app).isNotEmpty()) {
+                com.mrboora.plate.data.MenuUpdates.notify(app, com.mrboora.plate.data.MenuUpdates.refresh(app))
+                if (com.mrboora.plate.data.Requests.pending(app).isEmpty()) com.mrboora.plate.data.MenuUpdates.stopWatching(app)
+            }
+            com.mrboora.plate.data.MenuUpdates.takeUnseen(app).takeIf { it.isNotEmpty() }?.let { added ->
+                _notice.value = "Added to Plate: " + added.joinToString(", ") + ". Search for it to log it."
+            }
+        }
     }
 
     /** "Later" hides the card; the update badge on Today stays until the app is updated. */
