@@ -517,10 +517,10 @@ class ScreenshotTest {
             foodTypes = { f -> com.mrboora.plate.data.Portions.types(f, cnf::startingWith) })
     }
 
-    /** An item typed without its restaurant: the form says what's missing. */
+    /** A plain food, no restaurant needed. */
     @Test fun requestForm() = shot("request_form") {
         androidx.compose.foundation.layout.Column(Modifier.padding(24.dp_)) {
-            com.mrboora.plate.ui.screens.RequestForm("", "Iced capp", "", {}, {}, {}, {})
+            com.mrboora.plate.ui.screens.RequestForm("", "banana skin", "", {}, {}, {}, {})
         }
     }
 

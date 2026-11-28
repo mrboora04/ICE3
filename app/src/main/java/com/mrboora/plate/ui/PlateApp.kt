@@ -213,14 +213,14 @@ private fun Main(vm: PlateViewModel, profile: Profile) {
     fun sendRequest(restaurant: String, item: String, details: String) {
         vm.saveRequest(restaurant, item, details)
         if (android.os.Build.VERSION.SDK_INT >= 33) notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        val what = listOf(restaurant, item).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { details.take(40) }
+        val what = listOf(item, restaurant).filter { it.isNotBlank() }.joinToString(" from ").ifBlank { details.take(40) }
         val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
         val email = android.content.Intent(android.content.Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:"))
             .putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(com.mrboora.plate.data.Requests.EMAIL))
             .putExtra(android.content.Intent.EXTRA_SUBJECT, "Plate food request: $what")
             .putExtra(
                 android.content.Intent.EXTRA_TEXT,
-                "Please add this to Plate:\n\nRestaurant: ${restaurant.ifBlank { "-" }}\nFood/item: ${item.ifBlank { "-" }}" +
+                "Please add this to Plate:\n\nFood: ${item.ifBlank { "-" }}\nRestaurant: ${restaurant.ifBlank { "- (not from a restaurant)" }}" +
                     (if (details.isNotBlank()) "\nDetails: ${details.trim()}" else "") + "\n\nPlate $version",
             )
         try {

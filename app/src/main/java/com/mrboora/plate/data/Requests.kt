@@ -16,7 +16,7 @@ data class FoodRequest(
 ) {
     val label: String get() = listOf(restaurant, item).filter { it.isNotBlank() }.joinToString(" – ").ifBlank { details.take(40) }
 
-    /** Words that must all appear in a restaurant row for the request to count as added. */
+    /** Words that must all appear in a menu row (a restaurant's, or Ingredients for plain foods) for the request to count as added. */
     val terms: List<String> get() = Spelling.words("$restaurant $item")
 
     /**
@@ -55,15 +55,12 @@ object Requests {
     }
 
     /**
-     * What's missing before a request can be sent, or null when it's fine. Anything specific is
-     * enough on its own; a menu item needs its restaurant; a restaurant alone asks for its menu.
+     * What's missing before a request can be sent, or null when it's fine. Any one of them is
+     * enough: a food on its own (banana skin), a restaurant's item, a restaurant's whole menu, or a
+     * description. Plain foods matter most: anyone can eat them, a restaurant item only its customers.
      */
-    fun problem(restaurant: String, item: String, details: String): String? = when {
-        details.isNotBlank() -> null
-        item.isNotBlank() && restaurant.isBlank() -> "Which restaurant is it from? Or describe it below."
-        restaurant.isBlank() -> "Name a restaurant, or write what you'd like below."
-        else -> null
-    }
+    fun problem(restaurant: String, item: String, details: String): String? =
+        if (item.isBlank() && restaurant.isBlank() && details.isBlank()) "Name the food, or describe it below." else null
 
     /** Requests still waiting that the phone can check for by itself. */
     fun pending(c: Context): List<FoodRequest> = all(c).filter { !it.done && it.trackable }

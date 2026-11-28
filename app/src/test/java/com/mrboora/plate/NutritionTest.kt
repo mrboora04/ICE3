@@ -521,11 +521,14 @@ class NutritionTest {
         val R = com.mrboora.plate.data.Requests
         // Anything specific is enough on its own.
         assertNull(R.problem("", "", "Dragon fruit smoothie bowl"))
-        // A menu item needs its restaurant...
-        assertTrue(R.problem("", "Iced capp", "") != null)
+        // A plain food on its own is enough (most foods aren't from a restaurant); so is a menu item.
+        assertNull(R.problem("", "banana skin", ""))
         assertNull(R.problem("Tim Hortons", "Iced capp", ""))
-        // ...unless they described it below.
-        assertNull(R.problem("", "Iced capp", "the one at Tim's, large"))
+        // A plain food request is tracked, and found in the Ingredients rows once added.
+        val skin = FoodRequest(9, "", "banana skin", 0, false)
+        assertTrue(skin.trackable)
+        val row = FoodItem("Banana Skin", brand = "Ingredients", kcal100 = 70f, protein100 = 1f, carbs100 = 19f, fat100 = 0.3f)
+        assertEquals(listOf(skin), com.mrboora.plate.data.MenuUpdates.fulfilled(listOf(skin), listOf(row)))
         // A restaurant alone asks for its menu; an empty form can't be sent.
         assertNull(R.problem("Osmow's", "", ""))
         assertTrue(R.problem("", "", "") != null)

@@ -796,22 +796,16 @@ internal fun RequestForm(
     onRestaurant: (String) -> Unit, onItem: (String) -> Unit, onDetails: (String) -> Unit,
     onBuildShake: () -> Unit,
 ) {
-    val problem = com.mrboora.plate.data.Requests.problem(restaurant, item, details)
-    // Say what's missing only once something is typed, not on an empty form.
-    val showProblem = problem != null && (restaurant.isNotBlank() || item.isNotBlank())
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("This opens your email app with the request filled in. Tap Send there. For a restaurant food, Plate lets you know when it's added.", style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(
-            restaurant, onRestaurant, label = { Text("Restaurant, e.g. Osmow's") }, singleLine = true,
-            isError = showProblem && item.isNotBlank() && restaurant.isBlank(), modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(item, onItem, label = { Text("Menu item (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Text("This opens your email app with the request filled in. Tap Send there. Plate lets you know when it's added.", style = MaterialTheme.typography.bodySmall)
+        // The food comes first: plain foods (a banana skin, a fruit, a spice) matter to everyone.
+        OutlinedTextField(item, onItem, label = { Text("Food, e.g. banana skin or a menu item") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(restaurant, onRestaurant, label = { Text("Restaurant (only if it's from one)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(
             details, onDetails, label = { Text("Anything specific? (optional)") },
-            placeholder = { Text("A size, a flavour, or a food that isn't from a restaurant") },
+            placeholder = { Text("A size, a flavour, a brand, or how it's made") },
             minLines = 2, maxLines = 4, modifier = Modifier.fillMaxWidth(),
         )
-        if (showProblem) Text(problem!!, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         // A homemade shake doesn't need a request: the builder makes it now.
         if (restaurant.isBlank() && com.mrboora.plate.data.Mix.isShake(item)) {
             Text("Homemade shake? You don't need to wait for it:", style = MaterialTheme.typography.bodyMedium)
